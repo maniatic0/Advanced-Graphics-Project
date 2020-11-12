@@ -1,4 +1,4 @@
-# lighthouse2
+# Fork of lighthouse2
 Lighthouse 2 framework for real-time ray tracing
 
 This is the public repo for Lighthouse 2, a rendering framework for real-time ray tracing / path tracing experiments. 
