@@ -38,6 +38,8 @@ public:
 		return Ray(origin, direction);
 	}
 
+	inline Ray() {}
+
 	inline Ray(const float4 &ori, const float4 &dir)
 	{
 		assert(almost_equal(1, length(dir))); // "Unormalized Vector"
