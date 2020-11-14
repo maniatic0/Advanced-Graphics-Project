@@ -38,7 +38,7 @@ public:
 		return Ray(origin, direction);
 	}
 
-	inline Ray() {}
+	inline Ray() { origin = make_float4(0);  direction = make_float4(1, 0, 0, 0); }
 
 	inline Ray(const float4 &ori, const float4 &dir)
 	{
