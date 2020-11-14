@@ -29,6 +29,8 @@ public:
 	Ray(const Ray&) = delete;
 	Ray& operator=(const Ray&) = delete;
 
+	inline Ray() {}
+
 	inline Ray(const float4 &ori, const float4 &dir)
 	{
 		origin = ori;

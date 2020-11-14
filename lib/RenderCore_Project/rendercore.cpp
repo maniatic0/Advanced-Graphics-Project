@@ -65,13 +65,20 @@ void RenderCore::Render( const ViewPyramid& view, const Convergence converge, bo
 {
 	// render
 	screen->Clear();
-	for (Mesh& mesh : meshes) for (int i = 0; i < mesh.vcount; i++)
+	Ray ray;
+	ray.origin = make_float4(view.pos);
+
+	for (int y = 0; y < screen->height; y++)
 	{
-		// convert a vertex position to a screen coordinate
-		int screenx = mesh.vertices[i].x / 80 * (float)screen->width + screen->width / 2;
-		int screeny = mesh.vertices[i].z / 80 * (float)screen->height + screen->height / 2;
-		screen->Plot( screenx, screeny, 0xffffff /* white */ );
+		float v = ((float)y + 0.5f) / (float)screen->height;
+		for (int x = 0; x < screen->width; x++)
+		{
+			float u = ((float)x + 0.5f) / (float)screen->width;
+			float3 dir = normalize(view.p1 + u * (view.p2 - view.p1) + v * (view.p3 - view.p1) - view.pos);
+			ray.direction = make_float4(dir);
+		}
 	}
+
 	// copy pixel buffer to OpenGL render target texture
 	glBindTexture( GL_TEXTURE_2D, targetTextureID );
 	glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, screen->width, screen->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, screen->pixels );
