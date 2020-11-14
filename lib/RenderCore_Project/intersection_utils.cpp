@@ -4,6 +4,7 @@ namespace lh2core
 {
 
 bool interceptRayTriangle(
+	const bool backCulling,
 	const Ray& r, 
 	const float4& v0, const float4& v1, const float4& v2, 
 	RayTriangleInterceptInfo& hitInfo)
@@ -14,7 +15,9 @@ bool interceptRayTriangle(
 	float4 pvec = cross(r.direction, v0v2);
 	float det = dot(v0v1, pvec);
 
-	if (fabs(det) < kEps)
+	if (
+		(backCulling && (det < kEps)) // Back culling triangles
+		|| (!backCulling && (fabs(det) < kEps))) // Only cull parallel rays
 	{
 		// No intersection
 		return false;

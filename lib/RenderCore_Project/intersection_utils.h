@@ -160,6 +160,6 @@ public:
 };
 
 [[nodiscard]] 
-bool interceptRayTriangle(const Ray& r, const float4& v0, const float4& v1, const float4& v2, RayTriangleInterceptInfo& hitInfo);
+bool interceptRayTriangle(const bool backCulling, const Ray& r, const float4& v0, const float4& v1, const float4& v2, RayTriangleInterceptInfo& hitInfo);
 
 }
