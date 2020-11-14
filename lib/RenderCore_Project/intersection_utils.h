@@ -115,6 +115,11 @@ public:
 
 	inline RayTriangleInterceptInfo()
 	{
+		Reset();
+	}
+
+	inline void Reset()
+	{
 		t = std::numeric_limits<float>::infinity();
 		u = 0;
 		v = 0;
@@ -123,7 +128,7 @@ public:
 
 	inline float GetWCoord() const
 	{
-		assert(!isinf(t));
+		assert(!isinf(t)); // Bad Interception
 		return 1 - u - v;
 	}
 
@@ -161,11 +166,39 @@ public:
 
 };
 
+/// <summary>
+/// Ray Mesh Interception Info
+/// </summary>
 struct RayMeshInterceptInfo
 {
 public:
+	/// <summary>
+	/// Triangle Interception Info
+	/// </summary>
 	RayTriangleInterceptInfo triIntercept;
-	int meshId = 0; int triId = 0;
+
+	/// <summary>
+	/// Mesh Id
+	/// </summary>
+	int meshId; 
+	
+	/// <summary>
+	/// Triangle Id
+	/// </summary>
+	int triId;
+
+
+	inline RayMeshInterceptInfo()
+	{
+		Reset();
+	}
+
+	inline void Reset()
+	{
+		triIntercept.Reset();
+		meshId = -1;
+		triId = -1;
+	}
 
 	// No copy by accident
 	RayMeshInterceptInfo(const RayMeshInterceptInfo&) = delete;
@@ -199,9 +232,41 @@ public:
 	}
 };
 
-[[nodiscard]] 
+
+/// <summary>
+/// Test for Ray Triangle Interception
+/// </summary>
+/// <param name="backCulling">If back faced triangles</param>
+/// <param name="r">Ray</param>
+/// <param name="v0">Vertex 0</param>
+/// <param name="v1">Vertex 1</param>
+/// <param name="v2">Vertex 2</param>
+/// <param name="hitInfo">Output info</param>
+/// <returns>If there was intersection</returns>
+[[nodiscard]]
 bool interceptRayTriangle(const bool backCulling, const Ray& r, const float4& v0, const float4& v1, const float4& v2, RayTriangleInterceptInfo& hitInfo);
 
+/// <summary>
+/// Test for Ray Mesh Interception
+/// </summary>
+/// <param name="backCulling">If back faced triangles</param>
+/// <param name="r">Ray</param>
+/// <param name="m">Mesh</param>
+/// <param name="hitInfo">Output info</param>
+/// <returns>If there was intersection</returns>
+[[nodiscard]]
+bool interceptRayMesh(const bool backCulling, const Ray& r, const Mesh& m, RayMeshInterceptInfo& hitInfo);
 
+
+/// <summary>
+/// Test for Ray and a list of Meshes Interception
+/// </summary>
+/// <param name="backCulling">If back faced triangles</param>
+/// <param name="r">Ray</param>
+/// <param name="meshes">Meshes</param>
+/// <param name="hitInfo">Output info</param>
+/// <returns>If there was intersection</returns>
+[[nodiscard]]
+bool interceptRayMeshes(const bool backCulling, const Ray& r, const vector<Mesh>& meshes, RayMeshInterceptInfo& hitInfo);
 
 }

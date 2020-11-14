@@ -46,4 +46,57 @@ bool interceptRayTriangle(
 	return true;
 }
 
+
+bool interceptRayMesh(const bool backCulling, const Ray& r, const Mesh& m, RayMeshInterceptInfo& hitInfo)
+{
+	assert(m.vcount % 3 == 0); // No weird meshes
+	RayTriangleInterceptInfo tempHitInfo;
+	bool hit = false;
+	int triCount = m.vcount / 3;
+	int vPos;
+
+	for (int i = 0; i < triCount; i++)
+	{
+		vPos = i * 3;
+		if (interceptRayTriangle(backCulling, r, m.vertices[vPos + 0], m.vertices[vPos + 1], m.vertices[vPos + 2], tempHitInfo))
+		{
+			if (tempHitInfo < hitInfo.triIntercept)
+			{
+				hit = true;
+				tempHitInfo.CopyTo(hitInfo.triIntercept);
+			}
+		}
+	}
+
+	if (!hit)
+	{
+		return false;
+	}
+
+
+	hitInfo.meshId = m.meshID;
+	return true;
+}
+
+bool interceptRayMeshes(const bool backCulling, const Ray& r, const vector<Mesh>& meshes, RayMeshInterceptInfo& hitInfo)
+{
+	RayMeshInterceptInfo tempInfo;
+	bool hit = false;
+	hitInfo.Reset();
+	for (size_t i = 0; i < meshes.size(); i++)
+	{
+		const Mesh& m = meshes[i];
+		if (interceptRayMesh(backCulling, r, m, tempInfo))
+		{
+			if (tempInfo < hitInfo)
+			{
+				hit = true;
+				tempInfo.CopyTo(tempInfo);
+			}
+		}
+	}
+
+	return hit;
+}
+
 }
