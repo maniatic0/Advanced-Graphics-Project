@@ -66,7 +66,7 @@ void RenderCore::Render( const ViewPyramid& view, const Convergence converge, bo
 	// render
 	screen->Clear();
 	Ray ray;
-	ray.origin = make_float4(view.pos);
+	ray.SetOrigin(view.pos);
 
 	for (int y = 0; y < screen->height; y++)
 	{
@@ -75,7 +75,7 @@ void RenderCore::Render( const ViewPyramid& view, const Convergence converge, bo
 		{
 			float u = ((float)x + 0.5f) / (float)screen->width;
 			float3 dir = normalize(view.p1 + u * (view.p2 - view.p1) + v * (view.p3 - view.p1) - view.pos);
-			ray.direction = make_float4(dir);
+			ray.SetDirection(dir);
 		}
 	}
 

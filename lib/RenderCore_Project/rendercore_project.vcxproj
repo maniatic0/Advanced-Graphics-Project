@@ -120,6 +120,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="core_settings.h" />
+    <ClInclude Include="general_utils.h" />
     <ClInclude Include="intersection_utils.h" />
     <ClInclude Include="rendercore.h" />
   </ItemGroup>

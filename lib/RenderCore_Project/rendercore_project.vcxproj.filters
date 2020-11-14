@@ -8,5 +8,6 @@
     <ClInclude Include="rendercore.h" />
     <ClInclude Include="core_settings.h" />
     <ClInclude Include="intersection_utils.h" />
+    <ClInclude Include="general_utils.h" />
   </ItemGroup>
 </Project>
