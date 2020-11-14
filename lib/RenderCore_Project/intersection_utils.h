@@ -81,8 +81,6 @@ public:
 	{
 		return origin + (t * direction);
 	}
-
-	
 };
 
 
@@ -120,7 +118,6 @@ public:
 		backFacing = false;
 	}
 
-
 	inline float GetWCoord()
 	{
 		return 1 - u - v;
@@ -136,6 +133,31 @@ public:
 		info.u = u;
 		info.v = v;
 		info.backFacing = backFacing;
+	}
+
+	/// <summary>
+	/// Comparison of t Value
+	/// </summary>
+	/// <param name="other">Other to Compare</param>
+	/// <returns>If this is closer to ray origin</returns>
+	inline bool operator<(const RayTriangleInterceptInfo& other)
+	{
+		return t < other.t;
+	}
+
+	inline bool operator>(const RayTriangleInterceptInfo& other)
+	{
+		return !(*this < other);
+	}
+
+	inline bool operator==(const RayTriangleInterceptInfo& other)
+	{
+		return t == other.t;
+	}
+
+	inline bool operator!=(const RayTriangleInterceptInfo& other)
+	{
+		return !(*this == other);
 	}
 
 };
