@@ -63,10 +63,12 @@ public:
 
 	inline void SetDirection(const float4& dir)
 	{
+		assert(almost_equal(1, length(dir))); // "Unormalized Vector"
 		direction = dir;
 	}
 	inline void SetDirection(const float3& dir)
 	{
+		assert(almost_equal(1, length(dir))); // "Unormalized Vector"
 		direction = make_float4(dir);
 	}
 
