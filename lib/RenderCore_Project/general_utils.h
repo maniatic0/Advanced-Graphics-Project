@@ -18,9 +18,9 @@ inline bool approximately(float eps, float target, float value)
 /// <summary>
 /// General epsilon to use
 /// </summary>
-constexpr float eps = 0.00001;
+constexpr float kEps = 0.00001;
 
-#define almost_equal(target, value) approximately(eps, (target), (value))
+#define almost_equal(target, value) approximately(kEps, (target), (value))
 
 
 }
