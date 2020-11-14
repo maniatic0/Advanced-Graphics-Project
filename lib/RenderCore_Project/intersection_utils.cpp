@@ -17,7 +17,8 @@ bool interceptRayTriangle(
 
 	if (
 		(backCulling && (det < kEps)) // Back culling triangles
-		|| (!backCulling && (fabs(det) < kEps))) // Only cull parallel rays
+		|| (!backCulling && (fabs(det) < kEps)) // Only cull parallel rays
+		) 
 	{
 		// No intersection
 		return false;
