@@ -48,6 +48,7 @@ void RenderCore::SetGeometry( const int meshIdx, const float4* vertexData, const
 	Mesh newMesh;
 	// copy the supplied vertices; we cannot assume that the render system does not modify
 	// the original data after we leave this function.
+	newMesh.meshID = static_cast<int>(meshes.size());
 	newMesh.vertices = new float4[vertexCount];
 	newMesh.vcount = vertexCount;
 	memcpy( newMesh.vertices, vertexData, vertexCount * sizeof( float4 ) );

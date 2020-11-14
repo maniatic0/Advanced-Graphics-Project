@@ -12,8 +12,9 @@ class Mesh
 {
 public:
 	float4* vertices = 0;							// vertex data received via SetGeometry
-	int vcount = 0;									// vertex count
 	CoreTri* triangles = 0;							// 'fat' triangle data
+	int vcount = 0;									// vertex count
+	int meshID = 0;									// mesh id
 };
 
 //  +-----------------------------------------------------------------------------+
@@ -33,7 +34,7 @@ public:
 	/// Copy Ray
 	/// </summary>
 	/// <returns>New Copied Ray</returns>
-	inline Ray Copy()
+	inline Ray Copy() const
 	{
 		return Ray(origin, direction);
 	}
@@ -79,7 +80,7 @@ public:
 	/// </summary>
 	/// <param name="t">Parameter</param>
 	/// <returns>Position</returns>
-	inline float4 Evaluate(const float t)
+	inline float4 Evaluate(const float t) const
 	{
 		return origin + (t * direction);
 	}
@@ -114,14 +115,15 @@ public:
 
 	inline RayTriangleInterceptInfo()
 	{
-		t = 0;
+		t = std::numeric_limits<float>::infinity();
 		u = 0;
 		v = 0;
 		backFacing = false;
 	}
 
-	inline float GetWCoord()
+	inline float GetWCoord() const
 	{
+		assert(!isinf(t));
 		return 1 - u - v;
 	}
 
@@ -129,7 +131,7 @@ public:
 	RayTriangleInterceptInfo(const RayTriangleInterceptInfo&) = delete;
 	RayTriangleInterceptInfo& operator=(const RayTriangleInterceptInfo&) = delete;
 
-	inline void CopyTo(RayTriangleInterceptInfo& info)
+	inline void CopyTo(RayTriangleInterceptInfo& info) const
 	{
 		info.t = t;
 		info.u = u;
@@ -142,7 +144,7 @@ public:
 	/// </summary>
 	/// <param name="other">Other to Compare</param>
 	/// <returns>If this is closer than other to ray origin</returns>
-	inline bool operator<(const RayTriangleInterceptInfo& other)
+	inline bool operator<(const RayTriangleInterceptInfo& other) const
 	{
 		return t < other.t;
 	}
@@ -152,14 +154,54 @@ public:
 	/// </summary>
 	/// <param name="other">Other to Compare</param>
 	/// <returns>If this is farther than other to ray origin</returns>
-	inline bool operator>(const RayTriangleInterceptInfo& other)
+	inline bool operator>(const RayTriangleInterceptInfo& other) const
 	{
 		return !(*this < other);
 	}
 
 };
 
+struct RayMeshInterceptInfo
+{
+public:
+	RayTriangleInterceptInfo triIntercept;
+	int meshId = 0; int triId = 0;
+
+	// No copy by accident
+	RayMeshInterceptInfo(const RayMeshInterceptInfo&) = delete;
+	RayMeshInterceptInfo& operator=(const RayMeshInterceptInfo&) = delete;
+
+	inline void CopyTo(RayMeshInterceptInfo& info) const
+	{
+		triIntercept.CopyTo(info.triIntercept);
+		info.meshId = meshId;
+		info.triId = triId;
+	}
+
+	/// <summary>
+	/// Comparison of t Value
+	/// </summary>
+	/// <param name="other">Other to Compare</param>
+	/// <returns>If this is closer than other to ray origin</returns>
+	inline bool operator<(const RayMeshInterceptInfo& other) const
+	{
+		return triIntercept < other.triIntercept;
+	}
+
+	/// <summary>
+	/// Comparison of t Value
+	/// </summary>
+	/// <param name="other">Other to Compare</param>
+	/// <returns>If this is farther than other to ray origin</returns>
+	inline bool operator>(const RayMeshInterceptInfo& other) const
+	{
+		return !(*this < other);
+	}
+};
+
 [[nodiscard]] 
 bool interceptRayTriangle(const bool backCulling, const Ray& r, const float4& v0, const float4& v1, const float4& v2, RayTriangleInterceptInfo& hitInfo);
+
+
 
 }
