@@ -22,5 +22,12 @@ constexpr float kEps = 0.00001;
 
 #define almost_equal(target, value) approximately(kEps, (target), (value))
 
+/// <summary>
+/// 3D Cross product using float 4
+/// </summary>
+/// <param name="a"></param>
+/// <param name="b"></param>
+/// <returns></returns>
+inline float4 cross(float4 a, float4 b) { return make_float4(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x, 0); }
 
 }

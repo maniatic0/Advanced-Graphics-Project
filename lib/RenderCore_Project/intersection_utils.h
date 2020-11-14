@@ -141,28 +141,25 @@ public:
 	/// Comparison of t Value
 	/// </summary>
 	/// <param name="other">Other to Compare</param>
-	/// <returns>If this is closer to ray origin</returns>
+	/// <returns>If this is closer than other to ray origin</returns>
 	inline bool operator<(const RayTriangleInterceptInfo& other)
 	{
 		return t < other.t;
 	}
 
+	/// <summary>
+	/// Comparison of t Value
+	/// </summary>
+	/// <param name="other">Other to Compare</param>
+	/// <returns>If this is farther than other to ray origin</returns>
 	inline bool operator>(const RayTriangleInterceptInfo& other)
 	{
 		return !(*this < other);
 	}
 
-	inline bool operator==(const RayTriangleInterceptInfo& other)
-	{
-		return t == other.t;
-	}
-
-	inline bool operator!=(const RayTriangleInterceptInfo& other)
-	{
-		return !(*this == other);
-	}
-
 };
 
+[[nodiscard]] 
+bool interceptRayTriangle(const Ray& r, const float4& v0, const float4& v1, const float4& v2, RayTriangleInterceptInfo& hitInfo);
 
 }
