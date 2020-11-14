@@ -7,5 +7,6 @@
   <ItemGroup>
     <ClInclude Include="rendercore.h" />
     <ClInclude Include="core_settings.h" />
+    <ClInclude Include="intersection_utils.h" />
   </ItemGroup>
 </Project>
