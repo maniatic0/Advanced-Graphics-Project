@@ -142,12 +142,10 @@ void RenderCore::SetMaterials(CoreMaterial* mat, const int materialCount)
 	// copy the supplied array of materials
 	for (int i = 0; i < materialCount; i++)
 	{
-		Material* m;
-		if (i < scene.matList.size()) m = scene.matList[i];
-		else scene.matList.push_back(m = new Material());
-		m->r = mat[i].color.value.x;
-		m->g = mat[i].color.value.y;
-		m->b = mat[i].color.value.z;
+		const CoreMaterial& matO = mat[i];
+		Material m;
+		m.color = matO.color.value;
+		scene.matList.push_back(m);
 	}
 }
 
@@ -161,11 +159,11 @@ float4 RenderCore::Trace(const Ray& r) const
 
 	// Just for testing
 	// float depth = 1.0f - clamp(hitInfo.triIntercept.t / 100.0f, 0.0f, 1.0f);
-	CoreTri triangle = meshes[hitInfo.meshId].triangles[hitInfo.triId];
-	Material* material = scene.matList[triangle.material];
+	const CoreTri &triangle = meshes[hitInfo.meshId].triangles[hitInfo.triId];
+	const Material &material = scene.matList[triangle.material];
 
 	// return make_float4(depth, depth, depth, 1.0f);
-	return make_float4(material->r, material->g, material->b, 1.0f);
+	return make_float4(material.color, 1.0f);
 }
 
 // EOF

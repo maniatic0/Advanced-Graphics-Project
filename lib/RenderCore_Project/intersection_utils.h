@@ -26,9 +26,7 @@ public:
 	// constructor / destructor
 	Material() = default;
 	// data members
-	float r;
-	float g;
-	float b;
+	float3 color;
 };
 
 // -----------------------------------------------------------
@@ -41,7 +39,7 @@ public:
 	// constructor / destructor
 	Scene() = default;
 	// data members
-	vector<Material*> matList;
+	vector<Material> matList;
 };
 
 //  +-----------------------------------------------------------------------------+
