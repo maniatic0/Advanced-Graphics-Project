@@ -54,8 +54,26 @@ private:
 
 	// data members
 	Bitmap* screen = 0;								// temporary storage of RenderCore output; will be copied to render target
+	float4* fscreen = 0;							// HDR temp storage
 	int targetTextureID = 0;						// ID of the target OpenGL texture
 	vector<Mesh> meshes;							// mesh data storage
+
+	uint yScanline;
+
+	float4 Trace(const Ray &r) const;
+
+	/// <summary>
+	/// Note this trick only works single threaded. We would need threadlocal stuff
+	/// </summary>
+	mutable RayMeshInterceptInfo hitInfo;
+
+	template <bool backCulling>
+	[[nodiscard]]
+	inline bool IntersectMeshes(const Ray& v, RayMeshInterceptInfo& hit) const
+	{
+		return interceptRayMeshes<backCulling>(v, meshes, hit);
+	}
+
 public:
 	CoreStats coreStats;							// rendering statistics
 };

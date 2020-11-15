@@ -111,7 +111,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Use</PrecompiledHeader>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">core_settings.h</PrecompiledHeaderFile>
     </ClCompile>
-    <ClCompile Include="intersection_utils.cpp" />
+    <ClInclude Include="intersection_utils.impl.h" />
     <ClCompile Include="rendercore.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">core_settings.h</PrecompiledHeaderFile>

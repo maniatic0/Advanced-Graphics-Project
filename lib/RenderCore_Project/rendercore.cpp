@@ -36,7 +36,10 @@ void RenderCore::SetTarget( GLTexture* target, const uint )
 	targetTextureID = target->ID;
 	if (screen != 0 && target->width == screen->width && target->height == screen->height) return; // nothing changed
 	delete screen;
+	delete fscreen;
 	screen = new Bitmap( target->width, target->height );
+	fscreen = new float4[static_cast<size_t>(target->width) * static_cast<size_t>(target->height)];
+	yScanline = 0;
 }
 
 //  +-----------------------------------------------------------------------------+
@@ -65,20 +68,46 @@ void RenderCore::SetGeometry( const int meshIdx, const float4* vertexData, const
 void RenderCore::Render( const ViewPyramid& view, const Convergence converge, bool async )
 {
 	// render
-	screen->Clear();
+	//screen->Clear(); // TODO: un comment when we have achieved useful times
 	Ray ray;
 	ray.SetOrigin(view.pos);
 
-	for (int y = 0; y < screen->height; y++)
+	float v, u;
+	float invHeight = 1.0f / (float)screen->height;
+	float invWidth = 1.0f / (float)screen->width;
+	uint base, base2;
+
+	v = ((float)yScanline + 0.5f) * invHeight;
+	base = yScanline * screen->width;
+	for (uint x = 0; x < screen->width; x++)
 	{
-		float v = ((float)y + 0.5f) / (float)screen->height;
-		for (int x = 0; x < screen->width; x++)
-		{
-			float u = ((float)x + 0.5f) / (float)screen->width;
-			float3 dir = normalize(view.p1 + u * (view.p2 - view.p1) + v * (view.p3 - view.p1) - view.pos);
-			ray.SetDirection(dir);
-		}
+		u = ((float)x + 0.5f) * invWidth;
+		float3 dir = normalize(view.p1 + u * (view.p2 - view.p1) + v * (view.p3 - view.p1) - view.pos);
+		ray.SetDirection(dir);
+
+		fscreen[x + base] = Trace(ray);
+		//fscreen[x + base] = make_float4(u, v, 0, 1);
+		//fscreen[x + base] = make_float4(0, 0, 0, 1);
 	}
+
+	uint color;
+	// HDR to 255 colors
+	base = yScanline * screen->width;
+	for (uint x = 0; x < screen->width; x++)
+	{
+		base2 = x + base;
+		fscreen[base2] *= 255.0f;
+		fscreen[base2] = clamp(fscreen[base2], 0, 255);
+		// AABBGGRR
+		color =
+			((((uint)fscreen[base2].w) << 24) & 0xFF000000)
+			| ((((uint)fscreen[base2].z) << 16) & 0xFF0000)
+			| ((((uint)fscreen[base2].y) << 8) & 0xFF00)
+			| (((uint)fscreen[base2].x) & 0xFF);
+		screen->Plot(x, yScanline, color);
+	}
+
+	yScanline = (yScanline + 1) % screen->height;
 
 	// copy pixel buffer to OpenGL render target texture
 	glBindTexture( GL_TEXTURE_2D, targetTextureID );
@@ -101,6 +130,21 @@ CoreStats RenderCore::GetCoreStats() const
 void RenderCore::Shutdown()
 {
 	delete screen;
+	delete fscreen;
+}
+
+
+float4 RenderCore::Trace(const Ray& r) const
+{
+	// This works only single threaded
+	if (!IntersectMeshes<true>(r, hitInfo))
+	{
+		return make_float4(0);
+	}
+
+	// Just for testing
+	float depth = 1.0f - clamp(hitInfo.triIntercept.t / 100.0f, 0.0f, 1.0f);
+	return make_float4(depth, depth, depth, 1.0f);
 }
 
 // EOF

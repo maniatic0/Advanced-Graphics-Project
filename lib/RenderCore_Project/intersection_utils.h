@@ -243,8 +243,9 @@ public:
 /// <param name="v2">Vertex 2</param>
 /// <param name="hitInfo">Output info</param>
 /// <returns>If there was intersection</returns>
+template <bool backCulling>
 [[nodiscard]]
-bool interceptRayTriangle(const bool backCulling, const Ray& r, const float4& v0, const float4& v1, const float4& v2, RayTriangleInterceptInfo& hitInfo);
+bool interceptRayTriangle(const Ray& r, const float4& v0, const float4& v1, const float4& v2, RayTriangleInterceptInfo& hitInfo);
 
 /// <summary>
 /// Test for Ray Mesh Interception
@@ -254,8 +255,9 @@ bool interceptRayTriangle(const bool backCulling, const Ray& r, const float4& v0
 /// <param name="m">Mesh</param>
 /// <param name="hitInfo">Output info</param>
 /// <returns>If there was intersection</returns>
+template <bool backCulling>
 [[nodiscard]]
-bool interceptRayMesh(const bool backCulling, const Ray& r, const Mesh& m, RayMeshInterceptInfo& hitInfo);
+bool interceptRayMesh(const Ray& r, const Mesh& m, RayMeshInterceptInfo& hitInfo);
 
 
 /// <summary>
@@ -266,7 +268,10 @@ bool interceptRayMesh(const bool backCulling, const Ray& r, const Mesh& m, RayMe
 /// <param name="meshes">Meshes</param>
 /// <param name="hitInfo">Output info</param>
 /// <returns>If there was intersection</returns>
+template <bool backCulling>
 [[nodiscard]]
-bool interceptRayMeshes(const bool backCulling, const Ray& r, const vector<Mesh>& meshes, RayMeshInterceptInfo& hitInfo);
+bool interceptRayMeshes(const Ray& r, const vector<Mesh>& meshes, RayMeshInterceptInfo& hitInfo);
 
 }
+
+#include "intersection_utils.impl.h"

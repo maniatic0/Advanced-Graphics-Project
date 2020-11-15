@@ -1,10 +1,8 @@
-#include "core_settings.h" // not sure
-
 namespace lh2core
 {
 
+template <bool backCulling>
 bool interceptRayTriangle(
-	const bool backCulling,
 	const Ray& r, 
 	const float4& v0, const float4& v1, const float4& v2, 
 	RayTriangleInterceptInfo& hitInfo)
@@ -15,14 +13,27 @@ bool interceptRayTriangle(
 	float4 pvec = cross(r.direction, v0v2);
 	float det = dot(v0v1, pvec);
 
-	if (
-		(backCulling && (det < kEps)) // Back culling triangles
-		|| (!backCulling && (fabs(det) < kEps)) // Only cull parallel rays
-		) 
+	// Cool C++17 trick
+	if constexpr (backCulling)
 	{
-		// No intersection
-		return false;
+		if (backCulling && (det < kEps)) // Back culling triangles
+		{
+			// No intersection
+			return false;
+		}
 	}
+	else
+	{
+		if (
+			!backCulling && (fabs(det) < kEps) // Only cull parallel rays (No backculling)
+			)
+		{
+			// No intersection
+			return false;
+		}
+	}
+
+	
 	hitInfo.backFacing = det < 0;
 
 	float invDet = 1 / det;
@@ -43,11 +54,16 @@ bool interceptRayTriangle(
 
 	hitInfo.t = dot(v0v2, qvec) * invDet;
 
+	if (hitInfo.t < kEps)
+	{
+		return false;
+	}
+
 	return true;
 }
 
-
-bool interceptRayMesh(const bool backCulling, const Ray& r, const Mesh& m, RayMeshInterceptInfo& hitInfo)
+template <bool backCulling>
+bool interceptRayMesh(const Ray& r, const Mesh& m, RayMeshInterceptInfo& hitInfo)
 {
 	assert(m.vcount % 3 == 0); // No weird meshes
 	RayTriangleInterceptInfo tempHitInfo;
@@ -58,12 +74,13 @@ bool interceptRayMesh(const bool backCulling, const Ray& r, const Mesh& m, RayMe
 	for (int i = 0; i < triCount; i++)
 	{
 		vPos = i * 3;
-		if (interceptRayTriangle(backCulling, r, m.vertices[vPos + 0], m.vertices[vPos + 1], m.vertices[vPos + 2], tempHitInfo))
+		if (interceptRayTriangle<backCulling>(r, m.vertices[vPos + 0], m.vertices[vPos + 1], m.vertices[vPos + 2], tempHitInfo))
 		{
 			if (tempHitInfo < hitInfo.triIntercept)
 			{
 				hit = true;
 				tempHitInfo.CopyTo(hitInfo.triIntercept);
+				hitInfo.triId = i;
 			}
 		}
 	}
@@ -78,7 +95,8 @@ bool interceptRayMesh(const bool backCulling, const Ray& r, const Mesh& m, RayMe
 	return true;
 }
 
-bool interceptRayMeshes(const bool backCulling, const Ray& r, const vector<Mesh>& meshes, RayMeshInterceptInfo& hitInfo)
+template <bool backCulling>
+bool interceptRayMeshes(const Ray& r, const vector<Mesh>& meshes, RayMeshInterceptInfo& hitInfo)
 {
 	RayMeshInterceptInfo tempInfo;
 	bool hit = false;
@@ -86,12 +104,12 @@ bool interceptRayMeshes(const bool backCulling, const Ray& r, const vector<Mesh>
 	for (size_t i = 0; i < meshes.size(); i++)
 	{
 		const Mesh& m = meshes[i];
-		if (interceptRayMesh(backCulling, r, m, tempInfo))
+		if (interceptRayMesh<backCulling>(r, m, tempInfo))
 		{
 			if (tempInfo < hitInfo)
 			{
 				hit = true;
-				tempInfo.CopyTo(tempInfo);
+				tempInfo.CopyTo(hitInfo);
 			}
 		}
 	}
