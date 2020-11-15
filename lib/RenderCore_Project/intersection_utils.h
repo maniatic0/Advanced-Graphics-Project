@@ -17,6 +17,33 @@ public:
 	int meshID = 0;									// mesh id
 };
 
+// -----------------------------------------------------------
+// Material class
+// basic material properties
+// -----------------------------------------------------------
+class Material {
+public:
+	// constructor / destructor
+	Material() = default;
+	// data members
+	float r;
+	float g;
+	float b;
+};
+
+// -----------------------------------------------------------
+// Scene class
+// owner of the scene graph;
+// owner of the material and texture list
+// -----------------------------------------------------------
+class Scene {
+public:
+	// constructor / destructor
+	Scene() = default;
+	// data members
+	vector<Material*> matList;
+};
+
 //  +-----------------------------------------------------------------------------+
 //  |  Ray                                                                        |
 //  |  Minimalistic ray storage.											  2020|

@@ -30,6 +30,8 @@ public:
 	void SetTarget( GLTexture* target, const uint spp );
 	void SetGeometry( const int meshIdx, const float4* vertexData, const int vertexCount, const int triangleCount, const CoreTri* triangles );
 	void Render( const ViewPyramid& view, const Convergence converge, bool async );
+	void SetMaterials(CoreMaterial* mat, const int materialCount);
+
 	void WaitForRender() { /* this core does not support asynchronous rendering yet */ }
 	CoreStats GetCoreStats() const override;
 	void Shutdown();
@@ -38,7 +40,6 @@ public:
 	inline void SetProbePos( const int2 pos ) override {}
 	inline void Setting( const char* name, float value ) override {}
 	inline void SetTextures( const CoreTexDesc* tex, const int textureCount ) override {}
-	inline void SetMaterials( CoreMaterial* mat, const int materialCount ) override {}
 	inline void SetLights( const CoreLightTri* triLights, const int triLightCount,
 		const CorePointLight* pointLights, const int pointLightCount,
 		const CoreSpotLight* spotLights, const int spotLightCount,
@@ -57,6 +58,7 @@ private:
 	float4* fscreen = 0;							// HDR temp storage
 	int targetTextureID = 0;						// ID of the target OpenGL texture
 	vector<Mesh> meshes;							// mesh data storage
+	Scene scene;									// color and texture data storage 
 
 	uint yScanline;
 

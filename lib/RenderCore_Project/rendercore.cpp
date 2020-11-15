@@ -23,7 +23,7 @@ using namespace lh2core;
 //  +-----------------------------------------------------------------------------+
 void RenderCore::Init()
 {
-	// initialize core
+	// initialize
 }
 
 //  +-----------------------------------------------------------------------------+
@@ -133,6 +133,23 @@ void RenderCore::Shutdown()
 	delete fscreen;
 }
 
+//  +-----------------------------------------------------------------------------+
+//  |  RenderCore::SetMaterials                                                   |
+//  |  Set the material data.                                               LH2'19|
+//  +-----------------------------------------------------------------------------+
+void RenderCore::SetMaterials(CoreMaterial* mat, const int materialCount)
+{
+	// copy the supplied array of materials
+	for (int i = 0; i < materialCount; i++)
+	{
+		Material* m;
+		if (i < scene.matList.size()) m = scene.matList[i];
+		else scene.matList.push_back(m = new Material());
+		m->r = mat[i].color.value.x;
+		m->g = mat[i].color.value.y;
+		m->b = mat[i].color.value.z;
+	}
+}
 
 float4 RenderCore::Trace(const Ray& r) const
 {
@@ -143,8 +160,12 @@ float4 RenderCore::Trace(const Ray& r) const
 	}
 
 	// Just for testing
-	float depth = 1.0f - clamp(hitInfo.triIntercept.t / 100.0f, 0.0f, 1.0f);
-	return make_float4(depth, depth, depth, 1.0f);
+	// float depth = 1.0f - clamp(hitInfo.triIntercept.t / 100.0f, 0.0f, 1.0f);
+	CoreTri triangle = meshes[hitInfo.meshId].triangles[hitInfo.triId];
+	Material* material = scene.matList[triangle.material];
+
+	// return make_float4(depth, depth, depth, 1.0f);
+	return make_float4(material->r, material->g, material->b, 1.0f);
 }
 
 // EOF
