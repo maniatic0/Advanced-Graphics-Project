@@ -34,12 +34,25 @@ static std::bitset<1024> keystates;
 void PrepareScene()
 {
 	// initialize scene
-	renderer->AddScene( "scene.gltf", "../_shareddata/pica/" );
-	renderer->SetNodeTransform( renderer->FindNode( "RootNode (gltf orientation matrix)" ), mat4::RotateX( -PI / 2 ) );
-	int lightMat = renderer->AddMaterial( make_float3( 100, 100, 80 ) );
-	int lightQuad = renderer->AddQuad( make_float3( 0, -1, 0 ), make_float3( 0, 26.0f, 0 ), 6.9f, 6.9f, lightMat );
+	//renderer->AddScene( "scene.gltf", "../_shareddata/pica/" );
+	//renderer->SetNodeTransform( renderer->FindNode( "RootNode (gltf orientation matrix)" ), mat4::RotateX( -PI / 2 ) );
+	//int lightMat = renderer->AddMaterial( make_float3( 100, 100, 80 ) );
+	//int lightQuad = renderer->AddQuad( make_float3( 0, -1, 0 ), make_float3( 0, 26.0f, 0 ), 6.9f, 6.9f, lightMat );
+	//renderer->AddInstance( lightQuad );
+	//car = renderer->AddInstance( renderer->AddMesh( "legocar.obj", "../_shareddata/", 10.0f ) );
+
+	int lightMat = renderer->AddMaterial(make_float3(1, 1, 1));
+	int lightQuad = renderer->AddQuad( make_float3( 1, 1, 0 ), make_float3( 0, 0, 0 ), 10.0f, 10.0f, lightMat );
 	renderer->AddInstance( lightQuad );
-	car = renderer->AddInstance( renderer->AddMesh( "legocar.obj", "../_shareddata/", 10.0f ) );
+	int lightMat2 = renderer->AddMaterial(make_float3(1, 0, 0));
+	int lightQuad2 = renderer->AddQuad(make_float3(1, 1, 0), make_float3(0, 0, 20), 10.0f, 10.0f, lightMat2);
+	renderer->AddInstance(lightQuad2);
+	int lightMat3 = renderer->AddMaterial(make_float3(0, 1, 0));
+	int lightQuad3 = renderer->AddQuad(make_float3(1, 1, 0), make_float3(0, 0, -20), 10.0f, 10.0f, lightMat3);
+	renderer->AddInstance(lightQuad3);
+	int lightMat4 = renderer->AddMaterial(make_float3(0, 0, 1));
+	int lightQuad4 = renderer->AddQuad(make_float3(1, 1, 0), make_float3(0, -20, 0), 10.0f, 10.0f, lightMat4);
+	renderer->AddInstance(lightQuad4);
 }
 
 //  +-----------------------------------------------------------------------------+
@@ -97,7 +110,7 @@ int main()
 		HandleInput( 0.025f );
 		// minimal rigid animation example
 		static float r = 0;
-		renderer->SetNodeTransform( car, mat4::RotateY( r * 2.0f ) * mat4::RotateZ( 0.2f * sinf( r * 8.0f ) ) * mat4::Translate( make_float3( 0, 5, 0 ) ) );
+		//renderer->SetNodeTransform( car, mat4::RotateY( r * 2.0f ) * mat4::RotateZ( 0.2f * sinf( r * 8.0f ) ) * mat4::Translate( make_float3( 0, 5, 0 ) ) );
 		r += 0.025f * 0.3f; if (r > 2 * PI) r -= 2 * PI;
 		// finalize and present
 		shader->Bind();
