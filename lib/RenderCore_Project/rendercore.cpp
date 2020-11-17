@@ -172,7 +172,7 @@ void RenderCore::SetLights(const CoreLightTri* triLights, const int triLightCoun
 float4 RenderCore::Trace(const Ray& r) const
 {
 	// This works only single threaded
-	if (!IntersectMeshes<true>(r, hitInfo))
+	if (!IntersectScene<true>(r, hitInfo))
 	{
 		return make_float4(0);
 	}
@@ -186,25 +186,85 @@ float4 RenderCore::Trace(const Ray& r) const
 	const CoreTri &triangle = meshes[hitInfo.meshId].triangles[hitInfo.triId];
 	const CoreMaterial &material = scene.matList[triangle.material];
 
-	// Note that this could be a texture map of normals
-	const float3& N = normalize(material.normals.value);
+	// Note that this could be a texture map of normals in material
+	const float3& N 
+		= normalize(triangle.vN0 * hitInfo.triIntercept.u + triangle.vN1 * hitInfo.triIntercept.v + triangle.vN2 * hitInfo.triIntercept.GetWCoord())
+			* (hitInfo.triIntercept.backFacing ? -1.0f : 1.0f);
 
 	float diffuse, reflection, refraction;
 	getLightComponents(material, diffuse, reflection, refraction);
 
+	// Note that N should could be flipped if this is glass
 	return  make_float4(diffuse * material.color.value * Illuminate(I, N, -1, hitInfo.meshId, hitInfo.triId), 1.0f) ;
 }
 
 
-float3 RenderCore::Illuminate(const float3 &p, const float3 &N, int instanceId, int meshId, int triID) const
+float3 RenderCore::Illuminate(const float3 &p, const float3 &N, int instanceId, int meshId, int triId) const
 {
-	// TODO add point and spot lights
+	// TODO spot lights
+	// TODO Check if back culling is okay
 	float3 intensity = make_float3(0);
 	for (int i = 0; i < scene.directionalLights.size(); i++)
 	{
 		// Note that we don't care about back facing directional lights. Glass doesn't care about diffuse
-		intensity += clamp(dot(N, scene.directionalLights[i].direction), 0.0f, 1.0f) * scene.directionalLights[i].radiance;
+		intensity += clamp(dot(N, (-1) * scene.directionalLights[i].direction), 0.0f, 1.0f) * scene.directionalLights[i].radiance;
 	}
+
+
+	float3 lightToP;
+	float3 lightDir;
+	float distSqr;
+	float dist;
+	float invDistSqr;
+	float dotVal;
+	for (int i = 0; i < scene.pointLights.size(); i++)
+	{
+		const CorePointLight& light = scene.pointLights[i];
+		float3 pToLight = p - light.position;
+
+		distSqr = sqrlength(pToLight);
+
+		if (distSqr < kEps)
+		{
+			// We are so close that we are at the same position
+			intensity += light.radiance;
+			continue;
+		}
+
+		invDistSqr = 1.0f / distSqr;
+		if (invDistSqr < kEps)
+		{
+			// We are so far away it doesn't matter
+			continue;
+		}
+
+		dist = sqrt(distSqr);
+		lightDir = pToLight / dist;
+		dotVal = dot(N, lightDir);
+
+		if (dotVal < kEps)
+		{
+			// The light doesn't matter
+			// TODO check if this is okay for glass
+			continue;
+		}
+
+
+		// Occlusion Tests (do we have to test back facin triangles?)
+		// Note this works only single threaded
+		lightRay.SetOrigin(light.position);
+		lightRay.SetDirection(lightDir * -1.0f);
+		if (TestDepthScene<true>(lightRay, instanceId, meshId, triId, dist))
+		{
+			// Occluded
+			continue;
+		}
+
+
+		// Note that we don't care about back facing directional lights. Glass doesn't care about diffuse
+		intensity += clamp(dotVal, 0.0f, 1.0f) * light.radiance * invDistSqr;
+	}
+
 	return intensity;
 }
 

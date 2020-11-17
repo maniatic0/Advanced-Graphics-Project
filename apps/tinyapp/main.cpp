@@ -58,7 +58,8 @@ void PrepareScene()
 	renderer->AddInstance(lightQuad4);
 
 	// Test 1 light
-	renderer->AddDirectionalLight(make_float3(0, 1, 0), make_float3(1, 1, 1));
+	renderer->AddDirectionalLight(make_float3(0, -1, 0), make_float3(0.2, 0.2, 0.2));
+	renderer->AddPointLight(make_float3(10, 0, 0), make_float3(0.6, 0.6, 0.6));
 }
 
 //  +-----------------------------------------------------------------------------+

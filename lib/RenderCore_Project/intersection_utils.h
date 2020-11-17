@@ -291,7 +291,7 @@ bool interceptRayMesh(const Ray& r, const Mesh& m, RayMeshInterceptInfo& hitInfo
 
 
 /// <summary>
-/// Test for Ray and a list of Meshes Interception
+/// Test for Ray and a Scene (list of meshes) Interception
 /// </summary>
 /// <param name="backCulling">If back faced triangles</param>
 /// <param name="r">Ray</param>
@@ -300,7 +300,51 @@ bool interceptRayMesh(const Ray& r, const Mesh& m, RayMeshInterceptInfo& hitInfo
 /// <returns>If there was intersection</returns>
 template <bool backCulling>
 [[nodiscard]]
-bool interceptRayMeshes(const Ray& r, const vector<Mesh>& meshes, RayMeshInterceptInfo& hitInfo);
+bool interceptRayScene(const Ray& r, const vector<Mesh>& meshes, RayMeshInterceptInfo& hitInfo);
+
+/// <summary>
+/// Test depth for Ray Triangle Interception
+/// </summary>
+/// <param name="backCulling">If back faced triangles</param>
+/// <param name="r">Ray</param>
+/// <param name="v0">Vertex 0</param>
+/// <param name="v1">Vertex 1</param>
+/// <param name="v2">Vertex 2</param>
+/// <param name="tD">Depth Squared to beat</param>
+/// <returns>If there was intersection and it is closer than the depth</returns>
+template <bool backCulling>
+[[nodiscard]]
+bool depthRayTriangle(const Ray& r, const float4& v0, const float4& v1, const float4& v2, const float tD);
+
+/// <summary>
+/// Test depth for Ray Mesh Interception
+/// </summary>
+/// <param name="backCulling">If back faced triangles</param>
+/// <param name="r">Ray</param>
+/// <param name="m">Mesh</param>
+/// <param name="meshId">Mesh Id</param>
+/// <param name="triId">Triangle Id</param>
+/// <param name="tD">Depth Squared to beat</param>
+/// <returns>If there was intersection and it is closer than the depth</returns>
+template <bool backCulling>
+[[nodiscard]]
+bool depthRayMesh(const Ray& r, const Mesh& m, const int meshId, const int triId, const float tD);
+
+
+/// <summary>
+/// Test for Ray and a Sccene (list of meshes) Interception
+/// </summary>
+/// <param name="backCulling">If back faced triangles</param>
+/// <param name="r">Ray</param>
+/// <param name="meshes">Meshes</param>
+/// /// <param name="meshId">Instance Id (TODO)</param>
+/// <param name="meshId">Mesh Id</param>
+/// <param name="triId">Triangle Id</param>
+/// <param name="tD">Depth to beat</param>
+/// <returns>If there was intersection and it is closer than the depth</returns>
+template <bool backCulling>
+[[nodiscard]]
+bool depthRayScene(const Ray& r, const vector<Mesh>& meshes, const int instId, const int meshId, const int triId, const float tD);
 
 }
 

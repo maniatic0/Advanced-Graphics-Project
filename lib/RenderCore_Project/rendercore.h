@@ -67,11 +67,23 @@ private:
 	/// </summary>
 	mutable RayMeshInterceptInfo hitInfo;
 
+	/// <summary>
+	/// Note this trick only works single threaded. We would need threadlocal stuff
+	/// </summary>
+	mutable Ray lightRay;
+
 	template <bool backCulling>
 	[[nodiscard]]
-	inline bool IntersectMeshes(const Ray& v, RayMeshInterceptInfo& hit) const
+	inline bool IntersectScene(const Ray& v, RayMeshInterceptInfo& hit) const
 	{
-		return interceptRayMeshes<backCulling>(v, meshes, hit);
+		return interceptRayScene<backCulling>(v, meshes, hit);
+	}
+
+	template <bool backCulling>
+	[[nodiscard]]
+	inline bool TestDepthScene(const Ray& v, const int instId, const int meshId, const int triId, const float tD) const
+	{
+		return depthRayScene<backCulling>(v, meshes, instId, meshId, triId, tD);
 	}
 
 	float3 Illuminate(const float3& p, const float3& N, int instanceId, int meshId, int triID) const;

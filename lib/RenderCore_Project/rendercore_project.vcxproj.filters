@@ -3,12 +3,12 @@
   <ItemGroup>
     <ClCompile Include="rendercore.cpp" />
     <ClCompile Include="core_api.cpp" />
-    <ClCompile Include="intersection_utils.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="rendercore.h" />
     <ClInclude Include="core_settings.h" />
     <ClInclude Include="intersection_utils.h" />
     <ClInclude Include="general_utils.h" />
+    <ClInclude Include="intersection_utils.impl.h" />
   </ItemGroup>
 </Project>
