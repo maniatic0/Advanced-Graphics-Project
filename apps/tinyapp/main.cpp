@@ -54,12 +54,12 @@ void PrepareScene()
 	int lightQuad3 = renderer->AddQuad(make_float3(1, 1, 0), make_float3(0, 0, -20), 10.0f, 10.0f, lightMat3);
 	renderer->AddInstance(lightQuad3);
 	int lightMat4 = renderer->AddMaterial(make_float3(0, 0, 1));
-	int lightQuad4 = renderer->AddQuad(make_float3(1, 1, 0), make_float3(0, -20, 0), 10.0f, 10.0f, lightMat4);
+	int lightQuad4 = renderer->AddQuad(make_float3(1, 1, 0), make_float3(-2, -20, 0), 100.0f, 100.0f, lightMat4);
 	renderer->AddInstance(lightQuad4);
 
 	// Test 1 light
 	renderer->AddDirectionalLight(make_float3(0, -1, 0), make_float3(0.2, 0.2, 0.2));
-	renderer->AddPointLight(make_float3(10, 0, 0), make_float3(0.6, 0.6, 0.6));
+	renderer->AddPointLight(make_float3(-20, -10, 0), make_float3(20 * 20, 20 * 20, 20 * 20));
 }
 
 //  +-----------------------------------------------------------------------------+

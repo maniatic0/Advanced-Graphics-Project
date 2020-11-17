@@ -158,7 +158,7 @@ void RenderCore::SetLights(const CoreLightTri* triLights, const int triLightCoun
 		scene.spotLights[i] = spotLights[i];
 	}
 	scene.pointLights.resize(pointLightCount);
-	for (int i = 0; i < spotLightCount; i++)
+	for (int i = 0; i < pointLightCount; i++)
 	{
 		scene.pointLights[i] = pointLights[i];
 	}
