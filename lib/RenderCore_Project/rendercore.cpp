@@ -139,13 +139,33 @@ void RenderCore::Shutdown()
 //  +-----------------------------------------------------------------------------+
 void RenderCore::SetMaterials(CoreMaterial* mat, const int materialCount)
 {
+	scene.matList.resize(materialCount);
 	// copy the supplied array of materials
 	for (int i = 0; i < materialCount; i++)
 	{
-		const CoreMaterial& matO = mat[i];
-		Material m;
-		m.color = matO.color.value;
-		scene.matList.push_back(m);
+		scene.matList[i] = mat[i];
+	}
+}
+
+void RenderCore::SetLights(const CoreLightTri* triLights, const int triLightCount,
+	const CorePointLight* pointLights, const int pointLightCount,
+	const CoreSpotLight* spotLights, const int spotLightCount,
+	const CoreDirectionalLight* directionalLights, const int directionalLightCount)
+{
+	scene.spotLights.resize(spotLightCount);
+	for (int i = 0; i < spotLightCount; i++)
+	{
+		scene.spotLights[i] = spotLights[i];
+	}
+	scene.pointLights.resize(pointLightCount);
+	for (int i = 0; i < spotLightCount; i++)
+	{
+		scene.pointLights[i] = pointLights[i];
+	}
+	scene.directionalLights.resize(directionalLightCount);
+	for (int i = 0; i < directionalLightCount; i++)
+	{
+		scene.directionalLights[i] = directionalLights[i];
 	}
 }
 
@@ -156,14 +176,36 @@ float4 RenderCore::Trace(const Ray& r) const
 	{
 		return make_float4(0);
 	}
+	const float3 I = make_float3(r.Evaluate(hitInfo.triIntercept.t));
 
 	// Just for testing
 	// float depth = 1.0f - clamp(hitInfo.triIntercept.t / 100.0f, 0.0f, 1.0f);
-	const CoreTri &triangle = meshes[hitInfo.meshId].triangles[hitInfo.triId];
-	const Material &material = scene.matList[triangle.material];
-
 	// return make_float4(depth, depth, depth, 1.0f);
-	return make_float4(material.color, 1.0f);
+
+
+	const CoreTri &triangle = meshes[hitInfo.meshId].triangles[hitInfo.triId];
+	const CoreMaterial &material = scene.matList[triangle.material];
+
+	// Note that this could be a texture map of normals
+	const float3& N = normalize(material.normals.value);
+
+	float diffuse, reflection, refraction;
+	getLightComponents(material, diffuse, reflection, refraction);
+
+	return  make_float4(diffuse * material.color.value * Illuminate(I, N, -1, hitInfo.meshId, hitInfo.triId), 1.0f) ;
+}
+
+
+float3 RenderCore::Illuminate(const float3 &p, const float3 &N, int instanceId, int meshId, int triID) const
+{
+	// TODO add point and spot lights
+	float3 intensity = make_float3(0);
+	for (int i = 0; i < scene.directionalLights.size(); i++)
+	{
+		// Note that we don't care about back facing directional lights. Glass doesn't care about diffuse
+		intensity += clamp(dot(N, scene.directionalLights[i].direction), 0.0f, 1.0f) * scene.directionalLights[i].radiance;
+	}
+	return intensity;
 }
 
 // EOF

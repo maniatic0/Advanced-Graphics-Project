@@ -16,7 +16,7 @@ bool interceptRayTriangle(
 	// Cool C++17 trick
 	if constexpr (backCulling)
 	{
-		if (backCulling && (det < kEps)) // Back culling triangles
+		if (det < kEps) // Back culling triangles
 		{
 			// No intersection
 			return false;
@@ -24,9 +24,7 @@ bool interceptRayTriangle(
 	}
 	else
 	{
-		if (
-			!backCulling && (fabs(det) < kEps) // Only cull parallel rays (No backculling)
-			)
+		if (fabs(det) < kEps) // Only cull parallel rays (No backculling)
 		{
 			// No intersection
 			return false;

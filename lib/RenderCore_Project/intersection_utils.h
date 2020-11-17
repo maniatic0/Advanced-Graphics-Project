@@ -39,7 +39,12 @@ public:
 	// constructor / destructor
 	Scene() = default;
 	// data members
-	vector<Material> matList;
+	vector<CoreMaterial> matList;
+
+	// Lights
+	vector<CorePointLight>			pointLights;
+	vector<CoreSpotLight>			spotLights;
+	vector<CoreDirectionalLight>	directionalLights;
 };
 
 //  +-----------------------------------------------------------------------------+
@@ -101,7 +106,7 @@ public:
 	}
 
 	/// <summary>
-	/// Evalute the ray for certain t
+	/// Evaluate the ray for certain t
 	/// </summary>
 	/// <param name="t">Parameter</param>
 	/// <returns>Position</returns>

@@ -42,6 +42,9 @@ void PrepareScene()
 	//car = renderer->AddInstance( renderer->AddMesh( "legocar.obj", "../_shareddata/", 10.0f ) );
 
 	int lightMat = renderer->AddMaterial(make_float3(1, 1, 1));
+	HostMaterial &lightMatHost = *renderer->GetMaterial(lightMat);
+	lightMatHost.reflection.value = 0.5f; // Metal
+	lightMatHost.pbrtMaterialType = MaterialType::PBRT_METAL;
 	int lightQuad = renderer->AddQuad( make_float3( 1, 1, 0 ), make_float3( 0, 0, 0 ), 10.0f, 10.0f, lightMat );
 	renderer->AddInstance( lightQuad );
 	int lightMat2 = renderer->AddMaterial(make_float3(1, 0, 0));
@@ -53,6 +56,9 @@ void PrepareScene()
 	int lightMat4 = renderer->AddMaterial(make_float3(0, 0, 1));
 	int lightQuad4 = renderer->AddQuad(make_float3(1, 1, 0), make_float3(0, -20, 0), 10.0f, 10.0f, lightMat4);
 	renderer->AddInstance(lightQuad4);
+
+	// Test 1 light
+	renderer->AddDirectionalLight(make_float3(0, 1, 0), make_float3(1, 1, 1));
 }
 
 //  +-----------------------------------------------------------------------------+

@@ -31,6 +31,10 @@ public:
 	void SetGeometry( const int meshIdx, const float4* vertexData, const int vertexCount, const int triangleCount, const CoreTri* triangles );
 	void Render( const ViewPyramid& view, const Convergence converge, bool async );
 	void SetMaterials(CoreMaterial* mat, const int materialCount);
+	void SetLights(const CoreLightTri* triLights, const int triLightCount,
+		const CorePointLight* pointLights, const int pointLightCount,
+		const CoreSpotLight* spotLights, const int spotLightCount,
+		const CoreDirectionalLight* directionalLights, const int directionalLightCount);
 
 	void WaitForRender() { /* this core does not support asynchronous rendering yet */ }
 	CoreStats GetCoreStats() const override;
@@ -40,12 +44,6 @@ public:
 	inline void SetProbePos( const int2 pos ) override {}
 	inline void Setting( const char* name, float value ) override {}
 	inline void SetTextures( const CoreTexDesc* tex, const int textureCount ) override {}
-	inline void SetLights( const CoreLightTri* triLights, const int triLightCount,
-		const CorePointLight* pointLights, const int pointLightCount,
-		const CoreSpotLight* spotLights, const int spotLightCount,
-		const CoreDirectionalLight* directionalLights, const int directionalLightCount ) override
-	{
-	}
 	inline void SetSkyData( const float3* pixels, const uint width, const uint height, const mat4& worldToLight ) override {}
 	inline void SetInstance( const int instanceIdx, const int modelIdx, const mat4& transform ) override {}
 	inline void FinalizeInstances() override {}
@@ -75,6 +73,8 @@ private:
 	{
 		return interceptRayMeshes<backCulling>(v, meshes, hit);
 	}
+
+	float3 Illuminate(const float3& p, const float3& N, int instanceId, int meshId, int triID) const;
 
 public:
 	CoreStats coreStats;							// rendering statistics
