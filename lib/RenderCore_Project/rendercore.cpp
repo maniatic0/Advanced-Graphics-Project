@@ -70,7 +70,6 @@ void RenderCore::Render( const ViewPyramid& view, const Convergence converge, bo
 	// render
 	//screen->Clear(); // TODO: un comment when we have achieved useful times
 	Ray ray;
-	ray.SetOrigin(view.pos);
 
 	float v, u;
 	float invHeight = 1.0f / (float)screen->height;
@@ -83,6 +82,8 @@ void RenderCore::Render( const ViewPyramid& view, const Convergence converge, bo
 	{
 		u = ((float)x + 0.5f) * invWidth;
 		float3 dir = normalize(view.p1 + u * (view.p2 - view.p1) + v * (view.p3 - view.p1) - view.pos);
+
+		ray.SetOrigin(view.pos);
 		ray.SetDirection(dir);
 
 		fscreen[x + base] = Trace(ray);
@@ -171,13 +172,19 @@ void RenderCore::SetLights(const CoreLightTri* triLights, const int triLightCoun
 	}
 }
 
-float4 RenderCore::Trace(const Ray& r) const
+float4 RenderCore::Trace(Ray& r, int currentDepth) const
 {
+	if (currentDepth > maximumDepth)
+	{
+		return make_float4(0);
+	}
+
 	// This works only single threaded
 	if (!IntersectScene<true>(r, hitInfo))
 	{
 		return make_float4(0);
 	}
+
 	const float3 I = make_float3(r.Evaluate(hitInfo.triIntercept.t));
 
 	// Just for testing
@@ -196,8 +203,22 @@ float4 RenderCore::Trace(const Ray& r) const
 	float diffuse, reflection, refraction;
 	getLightComponents(material, diffuse, reflection, refraction);
 
+	float3 color = make_float3(0);
+	if (diffuse > kEps)
+	{
+		color += diffuse * Illuminate(I, N, -1, hitInfo.meshId, hitInfo.triId);
+	}
+
+	if (reflection > kEps)
+	{
+		r.SetOrigin(I);
+		float3 D = make_float3(r.direction);
+		r.SetDirection(D - 2.f * (dot(D, N) * N));
+		color += make_float3(Trace(r, currentDepth + 1)) * reflection;
+	}
+
 	// Note that N should could be flipped if this is glass
-	return  make_float4(diffuse * material.color.value * Illuminate(I, N, -1, hitInfo.meshId, hitInfo.triId), 1.0f) ;
+	return make_float4(color * material.color.value);
 }
 
 

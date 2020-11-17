@@ -57,10 +57,11 @@ private:
 	int targetTextureID = 0;						// ID of the target OpenGL texture
 	vector<Mesh> meshes;							// mesh data storage
 	Scene scene;									// color and texture data storage 
+	int maximumDepth = 10;
 
 	uint yScanline;
 
-	float4 Trace(const Ray &r) const;
+	float4 Trace(Ray &r, int currentDepth = 0) const;
 
 	/// <summary>
 	/// Note this trick only works single threaded. We would need threadlocal stuff

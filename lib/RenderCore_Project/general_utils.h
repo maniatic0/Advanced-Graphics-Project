@@ -35,7 +35,7 @@ inline void getLightComponents(const CoreMaterial& mat, float &diffuse, float &r
 {
 	reflection = mat.reflection.value;
 	refraction = mat.refraction.value;
-	int maskIsNull = (reflection == 1e32 ? 1 : 0) | (refraction == 1e32 ? 2 : 0);
+	int maskIsNull = (reflection == 1e32f ? 1 : 0) | (refraction == 1e32f ? 2 : 0);
 	switch (maskIsNull)
 	{
 	case 0:
