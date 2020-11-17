@@ -220,7 +220,7 @@ float3 RenderCore::Illuminate(const float3 &p, const float3 &N, int instanceId, 
 	for (int i = 0; i < scene.pointLights.size(); i++)
 	{
 		const CorePointLight& light = scene.pointLights[i];
-		float3 pToLight = p - light.position;
+		float3 pToLight = light.position - p;
 
 		distSqr = sqrlength(pToLight);
 

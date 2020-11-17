@@ -59,7 +59,8 @@ void PrepareScene()
 
 	// Test 1 light
 	renderer->AddDirectionalLight(make_float3(0, -1, 0), make_float3(0.2, 0.2, 0.2));
-	renderer->AddPointLight(make_float3(-20, -10, 0), make_float3(20 * 20, 20 * 20, 20 * 20));
+	renderer->AddPointLight(make_float3(40, 40, 10), make_float3(30 * 30, 30 * 30, 30 * 30));
+	renderer->AddPointLight(make_float3(40, 40, -10), make_float3(30 * 30, 30 * 30, 30 * 30));
 }
 
 //  +-----------------------------------------------------------------------------+
