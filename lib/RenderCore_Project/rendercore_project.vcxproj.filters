@@ -10,5 +10,6 @@
     <ClInclude Include="intersection_utils.h" />
     <ClInclude Include="general_utils.h" />
     <ClInclude Include="intersection_utils.impl.h" />
+    <ClInclude Include="rendercore.impl.h" />
   </ItemGroup>
 </Project>
