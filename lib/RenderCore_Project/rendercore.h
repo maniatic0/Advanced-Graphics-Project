@@ -61,6 +61,7 @@ private:
 
 	uint yScanline;
 
+	template <bool backCulling>
 	float4 Trace(Ray &r, int currentDepth = 0) const;
 	float3 Refract(const float3* I, const float3* N, const float& ior) const;
 
@@ -88,6 +89,7 @@ private:
 		return depthRayScene<backCulling>(v, meshes, instId, meshId, triId, tD);
 	}
 
+	template <bool backCulling>
 	float3 Illuminate(const float3& p, const float3& N, int instanceId, int meshId, int triID) const;
 
 public:
@@ -95,5 +97,7 @@ public:
 };
 
 } // namespace lh2core
+
+#include "rendercore.impl.h"
 
 // EOF
