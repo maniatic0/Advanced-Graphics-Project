@@ -45,31 +45,39 @@ void PrepareScene()
 	HostMaterial &lightMatHost = *renderer->GetMaterial(lightMat);
 	lightMatHost.reflection.value = 0.5f; // Metal
 	lightMatHost.pbrtMaterialType = MaterialType::PBRT_METAL;
+
 	int lightQuad = renderer->AddQuad( make_float3( 1, 1, 0 ), make_float3( 0, 0.1, 0 ), 10.0f, 10.0f, lightMat );
 	renderer->AddInstance( lightQuad );
 	int lightQuad_2 = renderer->AddQuad(make_float3(-1, -1, 0), make_float3(0, 0, 0), 10.0f, 10.0f, lightMat);
 	renderer->AddInstance(lightQuad_2);
+
+
 	int lightMat2 = renderer->AddMaterial(make_float3(1, 0, 0));
+
 	int lightQuad2 = renderer->AddQuad(make_float3(1, 1, 0), make_float3(0, 0.1, 20), 10.0f, 10.0f, lightMat2);
 	renderer->AddInstance(lightQuad2);
 	int lightQuad2_2 = renderer->AddQuad(make_float3(-1, -1, 0), make_float3(0, 0, 20), 10.0f, 10.0f, lightMat2);
 	renderer->AddInstance(lightQuad2_2);
+
 	int lightMat3 = renderer->AddMaterial(make_float3(0, 1, 0));
+
 	int lightQuad3 = renderer->AddQuad(make_float3(1, 1, 0), make_float3(0, 0.1, -20), 10.0f, 10.0f, lightMat3);
 	renderer->AddInstance(lightQuad3);
 	int lightQuad3_2 = renderer->AddQuad(make_float3(-1, -1, 0), make_float3(0, 0, -20), 10.0f, 10.0f, lightMat3);
 	renderer->AddInstance(lightQuad3_2);
+
 	int lightMat4 = renderer->AddMaterial(make_float3(1, 1, 1));
 	HostMaterial& lightMatHost4 = *renderer->GetMaterial(lightMat4);
 	lightMatHost4.reflection.value = 0.5f; // Metal
 	lightMatHost4.pbrtMaterialType = MaterialType::PBRT_METAL;
+
 	int lightQuad4 = renderer->AddQuad(make_float3(1, 1, 0), make_float3(-2, -20, 0), 100.0f, 100.0f, lightMat4);
 	renderer->AddInstance(lightQuad4);
 
 	// Test 1 light
 	renderer->AddDirectionalLight(make_float3(0, -1, 0), make_float3(0.2, 0.2, 0.2));
-	renderer->AddPointLight(make_float3(-1, -10, 0), make_float3(10 * 10, 10 * 10, 10 * 10));
-	renderer->AddPointLight(make_float3(40, 40, -10), make_float3(30 * 30, 30 * 30, 30 * 30));
+	renderer->AddPointLight(make_float3(-5, -5, 0), make_float3(10 * 10, 10 * 10, 10 * 10));
+	//renderer->AddPointLight(make_float3(40, 40, -10), make_float3(30 * 30, 30 * 30, 30 * 30));
 	renderer->AddSpotLight(make_float3(40, 40, -10), normalize(make_float3(-1, -1, 0)), cos(10.0f * PI / 180.0f), cos(15.0f * PI / 180.0f), make_float3(40 * 40, 40 * 40, 40 * 40));
 }
 

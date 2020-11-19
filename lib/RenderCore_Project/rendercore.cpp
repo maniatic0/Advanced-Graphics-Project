@@ -176,7 +176,7 @@ float4 RenderCore::Trace(Ray& r, int currentDepth) const
 {
 	if (currentDepth > maximumDepth)
 	{
-		return make_float4(0);
+		return make_float4(1, 0, 1, 0);
 	}
 
 	// This works only single threaded
@@ -186,11 +186,6 @@ float4 RenderCore::Trace(Ray& r, int currentDepth) const
 	}
 
 	const float3 I = make_float3(r.Evaluate(hitInfo.triIntercept.t));
-
-	// Just for testing
-	// float depth = 1.0f - clamp(hitInfo.triIntercept.t / 100.0f, 0.0f, 1.0f);
-	// return make_float4(depth, depth, depth, 1.0f);
-
 
 	const CoreTri &triangle = meshes[hitInfo.meshId].triangles[hitInfo.triId];
 	const CoreMaterial &material = scene.matList[triangle.material];
@@ -230,7 +225,7 @@ float3 RenderCore::Illuminate(const float3 &p, const float3 &N, int instanceId, 
 	for (int i = 0; i < scene.directionalLights.size(); i++)
 	{
 		// Note that we don't care about back facing directional lights. Glass doesn't care about diffuse
-		intensity += clamp(dot(N, (-1) * scene.directionalLights[i].direction), 0.0f, 1.0f) * scene.directionalLights[i].radiance;
+		intensity += clamp(dot(N, (-1.0f) * scene.directionalLights[i].direction), 0.0f, 1.0f) * scene.directionalLights[i].radiance;
 	}
 
 	float3 pToLight;
@@ -292,7 +287,7 @@ float3 RenderCore::Illuminate(const float3 &p, const float3 &N, int instanceId, 
 	for (int i = 0; i < scene.spotLights.size(); i++)
 	{
 		const CoreSpotLight& light = scene.spotLights[i];
-		float3 pToLight = light.position - p;
+		pToLight = light.position - p;
 
 		distSqr = sqrlength(pToLight);
 
@@ -310,6 +305,7 @@ float3 RenderCore::Illuminate(const float3 &p, const float3 &N, int instanceId, 
 			continue;
 		}
 
+		// TODO Remember backfacing surfaces 
 		dist = sqrt(distSqr);
 		lightDir = pToLight / dist;
 		dotVal = dot(N, lightDir);
@@ -320,18 +316,15 @@ float3 RenderCore::Illuminate(const float3 &p, const float3 &N, int instanceId, 
 			continue;
 		}
 
-		lightToP = lightDir * -1.0f;
-		// TODO Remember backfacing lights 
+		lightToP = lightDir * -1.0f;		
 		float dotLCone = dot(light.direction, lightToP);
 		cosFalloff = clamp((dotLCone - light.cosOuter) / (light.cosInner - light.cosOuter), 0.0f, 1.0f);
-
 		if (cosFalloff < kEps)
 		{
 			// Not enough power
 			continue;
 		}
-
-
+		
 		// Occlusion Tests (do we have to test back facin triangles?)
 		// Note this works only single threaded
 		lightRay.SetOrigin(light.position);
@@ -341,7 +334,6 @@ float3 RenderCore::Illuminate(const float3 &p, const float3 &N, int instanceId, 
 			// Occluded
 			continue;
 		}
-
 
 		// Note that we don't care about back facing directional lights. Glass doesn't care about diffuse
 		intensity += clamp(dotVal, 0.0f, 1.0f) * light.radiance * invDistSqr * cosFalloff;

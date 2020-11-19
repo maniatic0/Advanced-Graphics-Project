@@ -56,6 +56,8 @@ inline void getLightComponents(const CoreMaterial& mat, float &diffuse, float &r
 		break;
 	}
 	diffuse = 1.0f - reflection - refraction;
+	assert(diffuse >= 0 && reflection >= 0 && refraction >= 0);
+	assert(diffuse <= 1 && reflection <= 1 && refraction <= 1);
 }
 
 }
