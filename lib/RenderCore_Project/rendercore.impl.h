@@ -181,10 +181,11 @@ namespace lh2core
 			color += diffuse * Illuminate<backCulling>(I, N, -1, hitInfo.meshId, hitInfo.triId);
 		}
 
+		float3 D = make_float3(r.direction);
+
 		if (reflection > kEps)
 		{
 			r.SetOrigin(I);
-			float3 D = make_float3(r.direction);
 			r.SetDirection(D - 2.f * (dot(D, N) * N));
 
 			color += make_float3(Trace<backCulling>(r, currentDepth + 1)) * reflection;
@@ -194,10 +195,10 @@ namespace lh2core
 		{
 			float ior = material.ior.value;
 			float3 T;
-			if (Refract(I, N, ior, n1, T))
+			if (Refract(D, N, ior, n1, T))
 			{
 				r.SetOrigin(I);
-				r.SetDirection(T);
+				r.SetDirection(normalize(T));
 				color += make_float3( Trace<!backCulling>(r, currentDepth + 1, ior) ) * refraction;
 			}
 		}

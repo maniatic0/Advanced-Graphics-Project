@@ -188,7 +188,7 @@ bool RenderCore::Refract(const float3 &I, const float3 &N, const float ior, floa
 	}
 	float eta = n1 / n2;
 	float k = 1 - eta * eta * (1 - cosi * cosi);
-	if (k > 0)
+	if (k < 0)
 	{
 		T = make_float3(0);
 		return false;

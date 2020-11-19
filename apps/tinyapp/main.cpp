@@ -74,11 +74,11 @@ void PrepareScene()
 	int lightQuad4 = renderer->AddQuad(make_float3(1, 1, 0), make_float3(-2, -20, 0), 100.0f, 100.0f, lightMat4);
 	renderer->AddInstance(lightQuad4);
 
-	int lightMat5 = renderer->AddMaterial(make_float3(1, 1, 1));
+	int lightMat5 = renderer->AddMaterial(make_float3(1, 0.1, 0.1));
 	HostMaterial& lightMatHost5 = *renderer->GetMaterial(lightMat5);
 	lightMatHost5.reflection.value = 0.0f; // Glass
-	lightMatHost5.refraction.value = 1.0f; // Glass
-	lightMatHost5.ior.value = 1.0f; // Glass
+	lightMatHost5.refraction.value = 0.9f; // Glass
+	lightMatHost5.ior.value = 1.5f; // Glass
 	lightMatHost5.pbrtMaterialType = MaterialType::PBRT_GLASS;
 
 	int lightQuad5 = renderer->AddQuad(make_float3(1, 1, 0), make_float3(0, 30, 0), 100.0f, 100.0f, lightMat5);
@@ -90,7 +90,7 @@ void PrepareScene()
 	renderer->AddDirectionalLight(make_float3(0, -1, 0), make_float3(0.2, 0.2, 0.2));
 	renderer->AddPointLight(make_float3(-5, -5, 0), make_float3(10 * 10, 10 * 10, 10 * 10));
 	//renderer->AddPointLight(make_float3(40, 40, -10), make_float3(30 * 30, 30 * 30, 30 * 30));
-	renderer->AddSpotLight(make_float3(40, 40, -10), normalize(make_float3(-1, -1, 0)), cos(10.0f * PI / 180.0f), cos(15.0f * PI / 180.0f), make_float3(40 * 40, 40 * 40, 40 * 40));
+	renderer->AddSpotLight(make_float3(0, 40, -10), normalize(make_float3(-1, -1, 0)), cos(10.0f * PI / 180.0f), cos(30.0f * PI / 180.0f), make_float3(50 * 50, 50 * 50, 50 * 50));
 }
 
 //  +-----------------------------------------------------------------------------+
