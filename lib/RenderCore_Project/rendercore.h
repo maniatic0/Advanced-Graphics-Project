@@ -62,6 +62,7 @@ private:
 	uint yScanline;
 
 	float4 Trace(Ray &r, int currentDepth = 0) const;
+	float3 Refract(const float3* I, const float3* N, const float& ior) const;
 
 	/// <summary>
 	/// Note this trick only works single threaded. We would need threadlocal stuff

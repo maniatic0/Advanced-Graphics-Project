@@ -216,6 +216,39 @@ float4 RenderCore::Trace(Ray& r, int currentDepth) const
 	return make_float4(color * material.color.value);
 }
 
+float3 refract(const float3 &I, const float3 &N, const float& ior)
+{
+	float cosi = clamp( dot(I, N), -1.0f, 1.0f);
+	float n1 = 1;
+	float n2 = ior;
+	float3 n = N;
+	float3 i = I;
+	if (cosi < 0)
+	{
+		cosi = -cosi;
+	}
+	else
+	{
+		std::swap(n1, n2);
+		n.x = -N.x;
+		n.y = -N.y;
+		n.z = -N.z;
+	}
+	float eta = n1 / n2;
+	float k = 1 - eta * eta * (1 - cosi * cosi);
+	if (k > 0)
+	{
+		return make_float3(0);
+	}
+	else
+	{
+		i.x *= eta;
+		i.y *= eta;
+		i.z *= eta;
+		return i + n * (eta * cosi - sqrtf(k));
+	}
+}
+
 
 float3 RenderCore::Illuminate(const float3 &p, const float3 &N, int instanceId, int meshId, int triId) const
 {
