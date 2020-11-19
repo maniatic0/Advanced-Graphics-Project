@@ -16,7 +16,7 @@ namespace lh2core
 			else
 			{
 				// We are inside glass, no back culling
-				intensity += clamp(fabs(dot(N, (-1.0f) * scene.directionalLights[i].direction), 0.0f, 1.0f)) * scene.directionalLights[i].radiance;
+				intensity += clamp(fabs(dot(N, -1.0f * scene.directionalLights[i].direction)), 0.0f, 1.0f) * scene.directionalLights[i].radiance;
 			}
 		}
 
@@ -149,7 +149,7 @@ namespace lh2core
 	}
 
 	template <bool backCulling>
-	float4 RenderCore::Trace(Ray& r, int currentDepth) const
+	float4 RenderCore::Trace(Ray& r, int currentDepth, float n1) const
 	{
 		if (currentDepth > maximumDepth)
 		{
@@ -186,8 +186,22 @@ namespace lh2core
 			r.SetOrigin(I);
 			float3 D = make_float3(r.direction);
 			r.SetDirection(D - 2.f * (dot(D, N) * N));
+
 			color += make_float3(Trace<backCulling>(r, currentDepth + 1)) * reflection;
 		}
+
+		if (refraction > kEps)
+		{
+			float ior = material.ior.value;
+			float3 T;
+			if (Refract(I, N, ior, n1, T))
+			{
+				r.SetOrigin(I);
+				r.SetDirection(T);
+				color += make_float3( Trace<!backCulling>(r, currentDepth + 1, ior) ) * refraction;
+			}
+		}
+
 
 		// Note that N should could be flipped if this is glass
 		return make_float4(color * material.color.value);

@@ -86,7 +86,7 @@ void RenderCore::Render( const ViewPyramid& view, const Convergence converge, bo
 		ray.SetOrigin(view.pos);
 		ray.SetDirection(dir);
 
-		fscreen[x + base] = Trace<true>(ray);
+		fscreen[x + base] = Trace<true>(ray, 0, 1.0f);
 		//fscreen[x + base] = make_float4(u, v, 0, 1);
 		//fscreen[x + base] = make_float4(0, 0, 0, 1);
 	}
@@ -172,13 +172,11 @@ void RenderCore::SetLights(const CoreLightTri* triLights, const int triLightCoun
 	}
 }
 
-float3 Refract(const float3 &I, const float3 &N, const float& ior)
+bool RenderCore::Refract(const float3 &I, const float3 &N, const float ior, float n1, float3 &T) const
 {
 	float cosi = clamp( dot(I, N), -1.0f, 1.0f);
-	float n1 = 1;
 	float n2 = ior;
-	float3 n = N;
-	float3 i = I;
+	float flipN = 1.0f;
 	if (cosi < 0)
 	{
 		cosi = -cosi;
@@ -186,22 +184,19 @@ float3 Refract(const float3 &I, const float3 &N, const float& ior)
 	else
 	{
 		std::swap(n1, n2);
-		n.x = -N.x;
-		n.y = -N.y;
-		n.z = -N.z;
+		flipN = -1.0f;
 	}
 	float eta = n1 / n2;
 	float k = 1 - eta * eta * (1 - cosi * cosi);
 	if (k > 0)
 	{
-		return make_float3(0);
+		T = make_float3(0);
+		return false;
 	}
 	else
 	{
-		i.x *= eta;
-		i.y *= eta;
-		i.z *= eta;
-		return i + n * (eta * cosi - sqrtf(k));
+		T = (I * eta) + (N * flipN) * (eta * cosi - sqrtf(k));
+		return true;
 	}
 }
 

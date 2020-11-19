@@ -74,6 +74,18 @@ void PrepareScene()
 	int lightQuad4 = renderer->AddQuad(make_float3(1, 1, 0), make_float3(-2, -20, 0), 100.0f, 100.0f, lightMat4);
 	renderer->AddInstance(lightQuad4);
 
+	int lightMat5 = renderer->AddMaterial(make_float3(1, 1, 1));
+	HostMaterial& lightMatHost5 = *renderer->GetMaterial(lightMat5);
+	lightMatHost5.reflection.value = 0.0f; // Glass
+	lightMatHost5.refraction.value = 1.0f; // Glass
+	lightMatHost5.ior.value = 1.0f; // Glass
+	lightMatHost5.pbrtMaterialType = MaterialType::PBRT_GLASS;
+
+	int lightQuad5 = renderer->AddQuad(make_float3(1, 1, 0), make_float3(0, 30, 0), 100.0f, 100.0f, lightMat5);
+	renderer->AddInstance(lightQuad5);
+	int lightQuad5_2 = renderer->AddQuad(make_float3(-1,- 1, 0), make_float3(0, 29.5f, 0), 100.0f, 100.0f, lightMat5);
+	renderer->AddInstance(lightQuad5_2);
+
 	// Test 1 light
 	renderer->AddDirectionalLight(make_float3(0, -1, 0), make_float3(0.2, 0.2, 0.2));
 	renderer->AddPointLight(make_float3(-5, -5, 0), make_float3(10 * 10, 10 * 10, 10 * 10));
