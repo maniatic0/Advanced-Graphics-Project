@@ -151,7 +151,7 @@ namespace lh2core
 	template <bool backCulling>
 	float4 RenderCore::Trace(Ray& r, const float3& intensity, int matId, int currentDepth) const
 	{
-		if (sqrlength(intensity) < kEps * kEps)
+		if (intensity.x  + intensity.y + intensity.z < kEps)
 		{
 			// No intensity left
 			return make_float4(0);
