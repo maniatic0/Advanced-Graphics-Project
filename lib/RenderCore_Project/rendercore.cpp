@@ -70,6 +70,7 @@ void RenderCore::Render( const ViewPyramid& view, const Convergence converge, bo
 	// render
 	//screen->Clear(); // TODO: un comment when we have achieved useful times
 	Ray ray;
+	float3 intensity = make_float3(1);
 
 	float v, u;
 	float invHeight = 1.0f / (float)screen->height;
@@ -86,7 +87,7 @@ void RenderCore::Render( const ViewPyramid& view, const Convergence converge, bo
 		ray.SetOrigin(view.pos);
 		ray.SetDirection(dir);
 
-		fscreen[x + base] = Trace<true>(ray, 0, 1.0f);
+		fscreen[x + base] = Trace<true>(ray, intensity, -1, 0);
 		//fscreen[x + base] = make_float4(u, v, 0, 1);
 		//fscreen[x + base] = make_float4(0, 0, 0, 1);
 	}
@@ -146,6 +147,11 @@ void RenderCore::SetMaterials(CoreMaterial* mat, const int materialCount)
 	{
 		scene.matList[i] = mat[i];
 	}
+
+	// Air
+	scene.air.ior.value = 1.0f;
+	scene.air.absorption.value = make_float3(0);
+	scene.air.pbrtMaterialType = MaterialType::PBRT_GLASS;
 }
 
 void RenderCore::SetLights(const CoreLightTri* triLights, const int triLightCount,

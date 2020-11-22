@@ -149,8 +149,14 @@ namespace lh2core
 	}
 
 	template <bool backCulling>
-	float4 RenderCore::Trace(Ray& r, int currentDepth, float n1) const
+	float4 RenderCore::Trace(Ray& r, const float3& intensity, int matId, int currentDepth) const
 	{
+		if (sqrlength(intensity) < kEps * kEps)
+		{
+			// No intensity left
+			return make_float4(0);
+		}
+
 		if (currentDepth > maximumDepth)
 		{
 			return make_float4(0);
@@ -162,7 +168,9 @@ namespace lh2core
 			return make_float4(0);
 		}
 
-		const float3 I = make_float3(r.Evaluate(hitInfo.triIntercept.t));
+		// New info
+		const float t = hitInfo.triIntercept.t;
+		const float3 I = make_float3(r.Evaluate(t));
 		const float3 D = make_float3(r.direction);
 
 		const CoreTri& triangle = meshes[hitInfo.meshId].triangles[hitInfo.triId];
@@ -174,6 +182,25 @@ namespace lh2core
 			* (hitInfo.triIntercept.backFacing ? -1.0f : 1.0f);
 
 		float3 color = make_float3(0);
+
+		// Prev material
+		float n1;
+		float3 absorption;
+		float3 intensityNew;
+		if (matId == -1)
+		{
+			n1 = scene.air.ior.value;
+			absorption = scene.air.absorption.value;
+		}
+		else
+		{
+			const CoreMaterial& glassMaterial = scene.matList[matId];
+			assert(glassMaterial.pbrtMaterialType == MaterialType::PBRT_GLASS);
+			n1 = glassMaterial.ior.value;
+			absorption = glassMaterial.absorption.value;
+		}
+
+		intensityNew = intensity * make_float3(exp(-absorption.x * t), exp(-absorption.y * t), exp(-absorption.z * t));
 
 
 		switch (material.pbrtMaterialType)
@@ -190,11 +217,7 @@ namespace lh2core
 				r.SetOrigin(I);
 				r.SetDirection(D - 2.f * (dot(D, N) * N));
 
-				color += make_float3(Trace<backCulling>(r, currentDepth + 1)) * reflection;
-			}
-			else
-			{
-				int i = reflection;
+				color += make_float3(Trace<backCulling>(r, intensityNew, matId, currentDepth + 1)) * reflection;
 			}
 
 			if (refraction > kEps)
@@ -204,16 +227,20 @@ namespace lh2core
 				{
 					r.SetOrigin(I);
 					r.SetDirection(normalize(T));
-					color += make_float3(Trace<!backCulling>(r, currentDepth + 1, ior)) * refraction;
+
+					if (matId != -1 && triangle.material == matId)
+					{
+						// From glass to air
+						color += make_float3(Trace<true>(r, intensityNew, -1, currentDepth + 1)) * refraction;
+					}
+					else
+					{
+						// Air to glass
+						assert(matId == -1);
+						color += make_float3(Trace<false>(r, intensityNew, triangle.material, currentDepth + 1)) * refraction;
+					}
+					
 				}
-				else
-				{
-					int i = refraction;
-				}
-			}
-			else
-			{
-				int i = refraction;
 			}
 
 		}
@@ -234,7 +261,7 @@ namespace lh2core
 				r.SetOrigin(I);
 				r.SetDirection(D - 2.f * (dot(D, N) * N));
 
-				color += make_float3(Trace<backCulling>(r, currentDepth + 1)) * reflection;
+				color += make_float3(Trace<backCulling>(r, intensityNew, matId, currentDepth + 1)) * reflection;
 			}
 
 			if (refraction > kEps)
@@ -245,18 +272,25 @@ namespace lh2core
 				{
 					r.SetOrigin(I);
 					r.SetDirection(normalize(T));
-					color += make_float3(Trace<!backCulling>(r, currentDepth + 1, ior)) * refraction;
+					if (matId != -1 && triangle.material == matId)
+					{
+						// From glass to air
+						color += make_float3(Trace<true>(r, intensityNew, -1, currentDepth + 1)) * refraction;
+					}
+					else
+					{
+						// Air to glass
+						assert(matId == -1);
+						color += make_float3(Trace<false>(r, intensityNew, triangle.material, currentDepth + 1)) * refraction;
+					}
 				}
 			}
 		}
 		break;
 		}
 
-
-
-
 		// Note that N should could be flipped if this is glass
-		return make_float4(color * material.color.value);
+		return make_float4(intensityNew * color * material.color.value);
 	}
 
 } // lh2core

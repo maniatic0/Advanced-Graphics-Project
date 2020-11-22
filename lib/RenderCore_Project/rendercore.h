@@ -62,7 +62,7 @@ private:
 	uint yScanline;
 
 	template <bool backCulling>
-	float4 Trace(Ray &r, int currentDepth = 0, float n1 = 1.0f) const;
+	float4 Trace(Ray &r, const float3 &intensity, int matId = -1, int currentDepth = 0) const;
 	static bool Refract(const float3 &I, const float3 &N, const float ior, float n1, float3 &T);
 	static float Fresnel(const float3& I, const float3& N, const float ior, float n1);
 

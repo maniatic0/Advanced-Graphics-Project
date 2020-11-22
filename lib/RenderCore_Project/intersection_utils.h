@@ -40,6 +40,7 @@ public:
 	Scene() = default;
 	// data members
 	vector<CoreMaterial> matList;
+	CoreMaterial air;
 
 	// Lights
 	vector<CorePointLight>			pointLights;
