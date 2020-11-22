@@ -43,9 +43,10 @@ void PrepareScene()
 
 	int lightMat = renderer->AddMaterial(make_float3(1, 1, 1));
 	HostMaterial &lightMatHost = *renderer->GetMaterial(lightMat);
-	lightMatHost.reflection.value = 0.5f; // Metal
-	lightMatHost.pbrtMaterialType = MaterialType::PBRT_METAL;
-
+	lightMatHost.reflection.value = 0.4f; // glass
+	lightMatHost.refraction.value = 0.5f; // glass
+	lightMatHost.ior.value = 1.5f; // glass
+	lightMatHost.pbrtMaterialType = MaterialType::PBRT_GLASS;
 	int lightQuad = renderer->AddQuad( make_float3( 1, 1, 0 ), make_float3( 0, 0.1, 0 ), 10.0f, 10.0f, lightMat );
 	renderer->AddInstance( lightQuad );
 	int lightQuad_2 = renderer->AddQuad(make_float3(-1, -1, 0), make_float3(0, 0, 0), 10.0f, 10.0f, lightMat);
@@ -53,44 +54,93 @@ void PrepareScene()
 
 
 	int lightMat2 = renderer->AddMaterial(make_float3(1, 0, 0));
-
+	HostMaterial& lightMat2Host = *renderer->GetMaterial(lightMat2);
+	lightMat2Host.reflection.value = 0.4f; // glass
+	lightMat2Host.refraction.value = 0.5f; // glass
+	lightMat2Host.ior.value = 1.5f; // glass
+	lightMat2Host.pbrtMaterialType = MaterialType::PBRT_GLASS;
 	int lightQuad2 = renderer->AddQuad(make_float3(1, 1, 0), make_float3(0, 0.1, 20), 10.0f, 10.0f, lightMat2);
 	renderer->AddInstance(lightQuad2);
 	int lightQuad2_2 = renderer->AddQuad(make_float3(-1, -1, 0), make_float3(0, 0, 20), 10.0f, 10.0f, lightMat2);
 	renderer->AddInstance(lightQuad2_2);
 
 	int lightMat3 = renderer->AddMaterial(make_float3(0, 1, 0));
-
+	HostMaterial& lightMat3Host = *renderer->GetMaterial(lightMat3);
+	lightMat3Host.reflection.value = 0.4f; // glass
+	lightMat3Host.refraction.value = 0.5f; // glass
+	lightMat3Host.ior.value = 1.5f; // glass
+	lightMat3Host.pbrtMaterialType = MaterialType::PBRT_GLASS;
 	int lightQuad3 = renderer->AddQuad(make_float3(1, 1, 0), make_float3(0, 0.1, -20), 10.0f, 10.0f, lightMat3);
 	renderer->AddInstance(lightQuad3);
 	int lightQuad3_2 = renderer->AddQuad(make_float3(-1, -1, 0), make_float3(0, 0, -20), 10.0f, 10.0f, lightMat3);
 	renderer->AddInstance(lightQuad3_2);
 
-	int lightMat4 = renderer->AddMaterial(make_float3(1, 1, 1));
-	HostMaterial& lightMatHost4 = *renderer->GetMaterial(lightMat4);
-	lightMatHost4.reflection.value = 0.5f; // Metal
-	lightMatHost4.pbrtMaterialType = MaterialType::PBRT_METAL;
-
-	int lightQuad4 = renderer->AddQuad(make_float3(1, 1, 0), make_float3(-2, -20, 0), 100.0f, 100.0f, lightMat4);
+	int lightMat4 = renderer->AddMaterial(make_float3(1, 0.1, 0.1));
+	HostMaterial& lightMat4Host = *renderer->GetMaterial(lightMat4);
+	lightMat4Host.reflection.value = 0.4f; // glass
+	lightMat4Host.refraction.value = 0.5f; // glass
+	lightMat4Host.ior.value = 1.5f; // glass
+	lightMat4Host.pbrtMaterialType = MaterialType::PBRT_GLASS;
+	int lightQuad4 = renderer->AddQuad(make_float3(1, 1, 0), make_float3(-5, -5.0, 5), 10.0f, 10.0f, lightMat4);
 	renderer->AddInstance(lightQuad4);
+	int lightQuad4_2 = renderer->AddQuad(make_float3(-1, -1, 0), make_float3(-5, -5.1, 5), 10.0f, 10.0f, lightMat4);
+	renderer->AddInstance(lightQuad4_2);
 
-	int lightMat5 = renderer->AddMaterial(make_float3(1, 0.1, 0.1));
+	int lightMat5 = renderer->AddMaterial(make_float3(1, 1, 1));
 	HostMaterial& lightMatHost5 = *renderer->GetMaterial(lightMat5);
-	lightMatHost5.reflection.value = 0.0f; // Glass
-	lightMatHost5.refraction.value = 0.9f; // Glass
-	lightMatHost5.ior.value = 1.5f; // Glass
-	lightMatHost5.pbrtMaterialType = MaterialType::PBRT_GLASS;
+	lightMatHost5.reflection.value = 0.5f; // Metal
+	lightMatHost5.pbrtMaterialType = MaterialType::PBRT_METAL;
 
-	int lightQuad5 = renderer->AddQuad(make_float3(1, 1, 0), make_float3(0, 30, 0), 100.0f, 100.0f, lightMat5);
+	int lightQuad5 = renderer->AddQuad(make_float3(1, 1, 0), make_float3(-2, -20, 0), 200.0f, 200.0f, lightMat5);
 	renderer->AddInstance(lightQuad5);
-	int lightQuad5_2 = renderer->AddQuad(make_float3(-1,- 1, 0), make_float3(0, 29.5f, 0), 100.0f, 100.0f, lightMat5);
-	renderer->AddInstance(lightQuad5_2);
 
-	// Test 1 light
-	renderer->AddDirectionalLight(make_float3(0, -1, 0), make_float3(0.2, 0.2, 0.2));
-	renderer->AddPointLight(make_float3(-5, -5, 0), make_float3(10 * 10, 10 * 10, 10 * 10));
-	//renderer->AddPointLight(make_float3(40, 40, -10), make_float3(30 * 30, 30 * 30, 30 * 30));
-	renderer->AddSpotLight(make_float3(0, 40, -10), normalize(make_float3(-1, -1, 0)), cos(10.0f * PI / 180.0f), cos(30.0f * PI / 180.0f), make_float3(50 * 50, 50 * 50, 50 * 50));
+	//int lightMat5 = renderer->AddMaterial(make_float3(1, 0.1, 0.1));
+	//HostMaterial& lightMatHost5 = *renderer->GetMaterial(lightMat5);
+	//lightMatHost5.reflection.value = 0.0f; // Glass
+	//lightMatHost5.refraction.value = 0.9f; // Glass
+	//lightMatHost5.ior.value = 1.5f; // Glass
+	//lightMatHost5.pbrtMaterialType = MaterialType::PBRT_GLASS;
+
+	//int lightQuad5 = renderer->AddQuad(make_float3(1, 1, 0), make_float3(0, 30, 0), 100.0f, 100.0f, lightMat5);
+	//renderer->AddInstance(lightQuad5);
+	//int lightQuad5_2 = renderer->AddQuad(make_float3(-1,- 1, 0), make_float3(0, 29.5f, 0), 100.0f, 100.0f, lightMat5);
+	//renderer->AddInstance(lightQuad5_2);
+
+	//// Test 1 light
+	//renderer->AddDirectionalLight(make_float3(0, -1, 0), make_float3(0.2, 0.2, 0.2));
+	//renderer->AddPointLight(make_float3(-5, -5, 0), make_float3(10 * 10, 10 * 10, 10 * 10));
+	////renderer->AddPointLight(make_float3(40, 40, -10), make_float3(30 * 30, 30 * 30, 30 * 30));
+	
+	renderer->AddSpotLight(make_float3(20, 40, 0), normalize(make_float3(-1, -1, 0)), cos(10.0f * PI / 180.0f), cos(70.0f * PI / 180.0f), make_float3(50 * 50, 50 * 50, 50 * 50));
+
+	int wallMat = renderer->AddMaterial(make_float3(0.2, 0.2, 0.7));
+
+	int wallQuad1 = renderer->AddQuad(make_float3(1, 0, 0), make_float3(-50, 0, 0), 300.0f, 300.0f, wallMat);
+	renderer->AddInstance(wallQuad1);
+	int wallQuad2 = renderer->AddQuad(make_float3(0, 0, 1), make_float3(0, 0, -40), 200.0f, 200.0f, wallMat);
+	renderer->AddInstance(wallQuad2);
+	int wallQuad3 = renderer->AddQuad(make_float3(0, 0, -1), make_float3(0, 0, 40), 200.0f, 200.0f, wallMat);
+	renderer->AddInstance(wallQuad3);
+
+	//int cubeMat = renderer->AddMaterial(make_float3(0.2, 0.7, 0.2));
+	//HostMaterial& cubeMatHost = *renderer->GetMaterial(cubeMat);
+	//cubeMatHost.reflection.value = 0.0f; // Glass
+	//cubeMatHost.refraction.value = 0.9f; // Glass
+	//cubeMatHost.ior.value = 1.5f; // Glass
+	//cubeMatHost.pbrtMaterialType = MaterialType::PBRT_GLASS;
+
+	//int cubeQuad1 = renderer->AddQuad(make_float3(1, 0, 0), make_float3(0, 0, 20), 10.0f, 10.0f, cubeMat);
+	//renderer->AddInstance(cubeQuad1);
+	//int cubeQuad2 = renderer->AddQuad(make_float3(0, 0, -1), make_float3(0, 0, 15), 10.0f, 10.0f, cubeMat);
+	//renderer->AddInstance(cubeQuad2);
+	//int cubeQuad3 = renderer->AddQuad(make_float3(0, 0, 1), make_float3(0, 0, 25), 10.0f, 10.0f, cubeMat);
+	//renderer->AddInstance(cubeQuad3);
+	//int cubeQuad4 = renderer->AddQuad(make_float3(1, 0, 0), make_float3(-10, 0, 20), 10.0f, 10.0f, cubeMat);
+	//renderer->AddInstance(cubeQuad4);
+	//int cubeQuad5 = renderer->AddQuad(make_float3(0, 1, 0), make_float3(0, 5, 20), 10.0f, 10.0f, cubeMat);
+	//renderer->AddInstance(cubeQuad5);
+	//int cubeQuad6 = renderer->AddQuad(make_float3(0, -1, 0), make_float3(0, -5, 20), 10.0f, 10.0f, cubeMat);
+	//renderer->AddInstance(cubeQuad6);
 }
 
 //  +-----------------------------------------------------------------------------+
@@ -127,7 +177,7 @@ int main()
 	renderer = RenderAPI::CreateRenderAPI("RenderCore_Project");		// Project
 	// renderer = RenderAPI::CreateRenderAPI( "RenderCore_Optix7filter" );			// OPTIX7 core, with filtering (static scenes only for now)
 	// renderer = RenderAPI::CreateRenderAPI( "RenderCore_Optix7" );			// OPTIX7 core, best for RTX devices
-	// renderer = RenderAPI::CreateRenderAPI( "RenderCore_OptixPrime_B" );		// OPTIX PRIME, best for pre-RTX CUDA devices
+	//renderer = RenderAPI::CreateRenderAPI( "RenderCore_OptixPrime_B" );		// OPTIX PRIME, best for pre-RTX CUDA devices
 	// renderer = RenderAPI::CreateRenderAPI( "RenderCore_SoftRasterizer" );	// RASTERIZER, your only option if not on NVidia
 	// renderer = RenderAPI::CreateRenderAPI( "RenderCore_Vulkan_RT" );			// Meir's Vulkan / RTX core
 	// renderer = RenderAPI::CreateRenderAPI( "RenderCore_OptixPrime_BDPT" );	// Peter's OptixPrime / BDPT core
