@@ -163,6 +163,7 @@ namespace lh2core
 		}
 
 		const float3 I = make_float3(r.Evaluate(hitInfo.triIntercept.t));
+		const float3 D = make_float3(r.direction);
 
 		const CoreTri& triangle = meshes[hitInfo.meshId].triangles[hitInfo.triId];
 		const CoreMaterial& material = scene.matList[triangle.material];
@@ -172,36 +173,86 @@ namespace lh2core
 			= normalize(triangle.vN0 * hitInfo.triIntercept.u + triangle.vN1 * hitInfo.triIntercept.v + triangle.vN2 * hitInfo.triIntercept.GetWCoord())
 			* (hitInfo.triIntercept.backFacing ? -1.0f : 1.0f);
 
-		float diffuse, reflection, refraction;
-		getLightComponents(material, diffuse, reflection, refraction);
-
 		float3 color = make_float3(0);
-		if (diffuse > kEps)
+
+
+		switch (material.pbrtMaterialType)
 		{
-			color += diffuse * Illuminate<backCulling>(I, N, -1, hitInfo.meshId, hitInfo.triId);
-		}
-
-		float3 D = make_float3(r.direction);
-
-		if (reflection > kEps)
+		case MaterialType::PBRT_GLASS:
 		{
-			r.SetOrigin(I);
-			r.SetDirection(D - 2.f * (dot(D, N) * N));
+			// Pure Glass
+			const float ior = material.ior.value;
+			const float reflection = Fresnel(D, N, ior, n1);
+			const float refraction = 1.0f - reflection;
 
-			color += make_float3(Trace<backCulling>(r, currentDepth + 1)) * reflection;
-		}
-
-		if (refraction > kEps)
-		{
-			float ior = material.ior.value;
-			float3 T;
-			if (Refract(D, N, ior, n1, T))
+			if (reflection > kEps)
 			{
 				r.SetOrigin(I);
-				r.SetDirection(normalize(T));
-				color += make_float3( Trace<!backCulling>(r, currentDepth + 1, ior) ) * refraction;
+				r.SetDirection(D - 2.f * (dot(D, N) * N));
+
+				color += make_float3(Trace<backCulling>(r, currentDepth + 1)) * reflection;
+			}
+			else
+			{
+				int i = reflection;
+			}
+
+			if (refraction > kEps)
+			{
+				float3 T;
+				if (Refract(D, N, ior, n1, T))
+				{
+					r.SetOrigin(I);
+					r.SetDirection(normalize(T));
+					color += make_float3(Trace<!backCulling>(r, currentDepth + 1, ior)) * refraction;
+				}
+				else
+				{
+					int i = refraction;
+				}
+			}
+			else
+			{
+				int i = refraction;
+			}
+
+		}
+		break;
+		default:
+		{
+			// Non-pure glass (these can be fake values)
+			float diffuse, reflection, refraction;
+			getLightComponents(material, diffuse, reflection, refraction);
+
+			if (diffuse > kEps)
+			{
+				color += diffuse * Illuminate<backCulling>(I, N, -1, hitInfo.meshId, hitInfo.triId);
+			}
+
+			if (reflection > kEps)
+			{
+				r.SetOrigin(I);
+				r.SetDirection(D - 2.f * (dot(D, N) * N));
+
+				color += make_float3(Trace<backCulling>(r, currentDepth + 1)) * reflection;
+			}
+
+			if (refraction > kEps)
+			{
+				const float ior = material.ior.value;
+				float3 T;
+				if (Refract(D, N, ior, n1, T))
+				{
+					r.SetOrigin(I);
+					r.SetDirection(normalize(T));
+					color += make_float3(Trace<!backCulling>(r, currentDepth + 1, ior)) * refraction;
+				}
 			}
 		}
+		break;
+		}
+
+
 
 
 		// Note that N should could be flipped if this is glass

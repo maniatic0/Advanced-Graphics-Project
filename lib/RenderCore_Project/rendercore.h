@@ -63,7 +63,8 @@ private:
 
 	template <bool backCulling>
 	float4 Trace(Ray &r, int currentDepth = 0, float n1 = 1.0f) const;
-	bool Refract(const float3 &I, const float3 &N, const float ior, float n1, float3 &T) const;
+	static bool Refract(const float3 &I, const float3 &N, const float ior, float n1, float3 &T);
+	static float Fresnel(const float3& I, const float3& N, const float ior, float n1);
 
 	/// <summary>
 	/// Note this trick only works single threaded. We would need threadlocal stuff
