@@ -71,18 +71,38 @@ void RenderCore::Render( const ViewPyramid& view, const Convergence converge, bo
 	//screen->Clear(); // TODO: un comment when we have achieved useful times
 	Ray ray;
 	float3 intensity = make_float3(1);
+	float3 dir;
 
 	float v, u;
 	float invHeight = 1.0f / (float)screen->height;
 	float invWidth = 1.0f / (float)screen->width;
+	float scrWidth = (float)screen->width;
+	float scrHeight = (float)screen->height;
+	float pixelOffset = 0.5f;
 	uint base, base2;
 
-	v = ((float)yScanline + 0.5f) * invHeight;
+
+	v = ((float)yScanline + pixelOffset) * invHeight;
 	base = yScanline * screen->width;
 	for (uint x = 0; x < screen->width; x++)
 	{
-		u = ((float)x + 0.5f) * invWidth;
-		float3 dir = normalize(view.p1 + u * (view.p2 - view.p1) + v * (view.p3 - view.p1) - view.pos);
+		if (view.distortion == 0)
+		{
+			u = ((float)x + pixelOffset) * invWidth;
+			dir = normalize(view.p1 + u * (view.p2 - view.p1) + v * (view.p3 - view.p1) - view.pos);
+		}
+		else
+		{
+			const float tx = x * invWidth - pixelOffset;
+			const float ty = yScanline * invHeight - pixelOffset;
+			const float rr = tx * tx + ty * ty;
+			const float rq = sqrtf(rr) * (1.0f + view.distortion * rr + view.distortion * rr * rr);
+			const float theta = atan2f(tx, ty);
+			const float bx = (sinf(theta) * rq + pixelOffset) * scrWidth;
+			const float by = (cosf(theta) * rq + pixelOffset) * scrHeight;
+			const float3 positionOnPixel = view.p1 + (bx + pixelOffset) * (view.p2 - view.p1) * invWidth + (by + pixelOffset) * (view.p3 - view.p1) * invHeight;
+			dir = normalize(positionOnPixel - view.pos);
+		}
 
 		ray.SetOrigin(view.pos);
 		ray.SetDirection(dir);
