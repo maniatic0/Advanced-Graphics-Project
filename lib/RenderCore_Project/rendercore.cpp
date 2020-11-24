@@ -221,9 +221,14 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 	uint color;
 	// HDR to 255 colors
 	base = yScanline * screen->width;
+	const float gammaCorrection = 1 / 2.2f;
 	for (uint x = 0; x < screen->width; x++)
 	{
 		base2 = x + base;
+		fscreen[base2].x = pow(fscreen[base2].x, gammaCorrection);
+		fscreen[base2].y = pow(fscreen[base2].y, gammaCorrection);
+		fscreen[base2].z = pow(fscreen[base2].z, gammaCorrection);
+
 		fscreen[base2] *= 255.0f;
 		fscreen[base2] = clamp(fscreen[base2], 0, 255);
 		// AABBGGRR
