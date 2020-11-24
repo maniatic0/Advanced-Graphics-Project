@@ -27,6 +27,8 @@ void RenderCore::Init()
 	aaLevel = 65;
 	assert(0 < aaLevel && aaLevel <= pixelOffsetsSize);
 	invAaLevel = 1.0f / (float)(aaLevel);
+
+	distortionType = DistortionType::None;
 }
 
 void RenderCore::Setting(const char* name, float value)
@@ -36,20 +38,24 @@ void RenderCore::Setting(const char* name, float value)
 		aaLevel = (int)clamp(value, 1.0f, (float)pixelOffsetsSize);
 		invAaLevel = 1.0f / (float)(aaLevel);
 	}
+	else if (!strcmp(name, "distortion_type"))
+	{
+		distortionType = (DistortionType)(int)clamp(value, 0.0f, (float)((int)DistortionType::Count - 1));
+	}
 }
 
 //  +-----------------------------------------------------------------------------+
 //  |  RenderCore::SetTarget                                                      |
 //  |  Set the OpenGL texture that serves as the render target.             LH2'19|
 //  +-----------------------------------------------------------------------------+
-void RenderCore::SetTarget( GLTexture* target, const uint )
+void RenderCore::SetTarget(GLTexture* target, const uint)
 {
 	// synchronize OpenGL viewport
 	targetTextureID = target->ID;
 	if (screen != 0 && target->width == screen->width && target->height == screen->height) return; // nothing changed
 	delete screen;
 	delete fscreen;
-	screen = new Bitmap( target->width, target->height );
+	screen = new Bitmap(target->width, target->height);
 	fscreen = new float4[static_cast<size_t>(target->width) * static_cast<size_t>(target->height)];
 	yScanline = 0;
 }
@@ -58,7 +64,7 @@ void RenderCore::SetTarget( GLTexture* target, const uint )
 //  |  RenderCore::SetGeometry                                                    |
 //  |  Set the geometry data for a model.                                   LH2'19|
 //  +-----------------------------------------------------------------------------+
-void RenderCore::SetGeometry( const int meshIdx, const float4* vertexData, const int vertexCount, const int triangleCount, const CoreTri* triangleData )
+void RenderCore::SetGeometry(const int meshIdx, const float4* vertexData, const int vertexCount, const int triangleCount, const CoreTri* triangleData)
 {
 	Mesh newMesh;
 	// copy the supplied vertices; we cannot assume that the render system does not modify
@@ -66,18 +72,18 @@ void RenderCore::SetGeometry( const int meshIdx, const float4* vertexData, const
 	newMesh.meshID = static_cast<int>(meshes.size());
 	newMesh.vertices = new float4[vertexCount];
 	newMesh.vcount = vertexCount;
-	memcpy( newMesh.vertices, vertexData, vertexCount * sizeof( float4 ) );
+	memcpy(newMesh.vertices, vertexData, vertexCount * sizeof(float4));
 	// copy the supplied 'fat triangles'
 	newMesh.triangles = new CoreTri[vertexCount / 3];
-	memcpy( newMesh.triangles, triangleData, (vertexCount / 3) * sizeof( CoreTri ) );
-	meshes.push_back( newMesh );
+	memcpy(newMesh.triangles, triangleData, (vertexCount / 3) * sizeof(CoreTri));
+	meshes.push_back(newMesh);
 }
 
 //  +-----------------------------------------------------------------------------+
 //  |  RenderCore::Render                                                         |
 //  |  Produce one image.                                                   LH2'19|
 //  +-----------------------------------------------------------------------------+
-void RenderCore::Render( const ViewPyramid& view, const Convergence converge, bool async )
+void RenderCore::Render(const ViewPyramid& view, const Convergence converge, bool async)
 {
 	// render
 	//screen->Clear(); // TODO: un comment when we have achieved useful times
@@ -93,41 +99,110 @@ void RenderCore::Render( const ViewPyramid& view, const Convergence converge, bo
 	float pixelOffsetU = 0.5f;
 	float pixelOffsetV = 0.5f;
 	uint aaOffset = 0;
-	
+
 	uint base, base2;
 
 	base = yScanline * screen->width;
 	for (uint x = 0; x < screen->width; x++)
-	{		
+	{
 		// AA
 		fscreen[x + base] = make_float4(0);
-		for (uint i = 0; i < aaLevel; i++)
+		for (int i = 0; i < aaLevel; i++)
 		{
 			// AA offsets
 			aaOffset = i * 2;
 			pixelOffsetU = pixelOffSets[aaOffset + 0];
 			pixelOffsetV = pixelOffSets[aaOffset + 1];
 
+			u = 0;
+			v = 0;
 
 			// Distortion Effects
-			if (view.distortion == 0)
+			switch (distortionType)
+			{
+			case DistortionType::None:
 			{
 				v = ((float)yScanline + 0.5f + pixelOffsetU) * invHeight;
 				u = ((float)x + 0.5f + pixelOffsetV) * invWidth;
 			}
-			else
+			break;
+			case DistortionType::Barrel:
 			{
-				// Barrel Distortion centered at 0.5, 0.5
-				const float tx = (x + pixelOffsetU) * invWidth - 0.5f;
-				const float ty = (yScanline + pixelOffsetV) * invHeight - 0.5f;
-				const float rr = tx * tx + ty * ty;
-				const float rq = sqrtf(rr) * (1.0f + view.distortion * rr + view.distortion * rr * rr);
-				const float theta = atan2f(tx, ty);
-				const float bx = (sinf(theta) * rq + 0.5f) * scrWidth;
-				const float by = (cosf(theta) * rq + 0.5f) * scrHeight;
-				u = (bx + 0.5f) * invWidth;
-				v = (by + 0.5f) * invHeight;
+
+				v = ((float)yScanline + 0.5f + pixelOffsetU) * invHeight;
+				u = ((float)x + 0.5f + pixelOffsetV) * invWidth;
+
+				// From https://www.geeks3d.com/20140213/glsl-shader-library-fish-eye-and-dome-and-barrel-distortion-post-processing-filters/2/
+				float us = 2.0f * u - 1.0f;
+				float vs = 2.0f * v - 1.0f;
+				const float d = us * us + vs * vs;
+				if (d < 1.0)
+				{
+					// Only apply near the center (0.5, 0.5)
+					const float theta = atan2f(vs, us);
+					const float radius = pow(sqrtf(d), view.distortion);
+					us = radius * cos(theta);
+					vs = radius * sin(theta);
+					u = 0.5f * (us + 1.0f);
+					v = 0.5f * (vs + 1.0f);
+				}
 			}
+			break;
+			case DistortionType::FishEye:
+			{
+				v = ((float)yScanline + 0.5f + pixelOffsetU) * invHeight;
+				u = ((float)x + 0.5f + pixelOffsetV) * invWidth;
+
+				// From https://www.geeks3d.com/20140213/glsl-shader-library-fish-eye-and-dome-and-barrel-distortion-post-processing-filters/
+				const float aperture = 180.0f * view.distortion;
+				const float apertureHalf = 0.5f * aperture * (PI / 180.0);
+				const float maxFactor = sin(apertureHalf);
+
+
+				float us = 2.0f * u - 1.0f;
+				float vs = 2.0f * v - 1.0f;
+				const float d = sqrtf(us * us + vs * vs);
+				if (d < (2.0f - maxFactor))
+				{
+					const float d2 = d * maxFactor;
+					const float z = sqrtf(1.0f - d * d);
+					const float r = atan2(d2, z) / PI;
+					const float phi = atan2(vs, us);
+
+					u = r * cos(phi) + 0.5f;
+					v = r * sin(phi) + 0.5f;
+				}
+			}
+			break;
+			case DistortionType::BarrelSpecial:
+			{
+				if (view.distortion == 0)
+				{
+					v = ((float)yScanline + 0.5f + pixelOffsetU) * invHeight;
+					u = ((float)x + 0.5f + pixelOffsetV) * invWidth;
+				}
+				else
+				{
+					// Barrel Distortion centered at 0.5, 0.5
+					const float tx = (x + pixelOffsetU) * invWidth - 0.5f;
+					const float ty = (yScanline + pixelOffsetV) * invHeight - 0.5f;
+					const float rr = tx * tx + ty * ty;
+					const float rq = sqrtf(rr) * (1.0f + view.distortion * rr + view.distortion * rr * rr);
+					const float theta = atan2f(tx, ty);
+					const float bx = (sinf(theta) * rq + 0.5f) * scrWidth;
+					const float by = (cosf(theta) * rq + 0.5f) * scrHeight;
+					u = (bx + 0.5f) * invWidth;
+					v = (by + 0.5f) * invHeight;
+				}
+			}
+			break;
+			case DistortionType::Count:
+			default:
+				assert(false); // What are you doing here
+				break;
+			}
+
+
 
 			dir = normalize(view.p1 + u * (view.p2 - view.p1) + v * (view.p3 - view.p1) - view.pos);
 
@@ -163,8 +238,8 @@ void RenderCore::Render( const ViewPyramid& view, const Convergence converge, bo
 	yScanline = (yScanline + 1) % screen->height;
 
 	// copy pixel buffer to OpenGL render target texture
-	glBindTexture( GL_TEXTURE_2D, targetTextureID );
-	glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, screen->width, screen->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, screen->pixels );
+	glBindTexture(GL_TEXTURE_2D, targetTextureID);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, screen->width, screen->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, screen->pixels);
 }
 
 //  +-----------------------------------------------------------------------------+
@@ -229,10 +304,10 @@ void RenderCore::SetLights(const CoreLightTri* triLights, const int triLightCoun
 	}
 }
 
-bool RenderCore::Refract(const float3 &I, const float3 &N, const float ior, float n1, float3 &T)
+bool RenderCore::Refract(const float3& I, const float3& N, const float ior, float n1, float3& T)
 {
 	// Based on https://www.scratchapixel.com/lessons/3d-basic-rendering/introduction-to-shading/reflection-refraction-fresnel
-	float cosi = clamp( dot(I, N), -1.0f, 1.0f);
+	float cosi = clamp(dot(I, N), -1.0f, 1.0f);
 	float n2 = ior;
 	float flipN = 1.0f;
 	if (cosi < 0)

@@ -147,11 +147,12 @@ void PrepareScene()
 	renderer->AddInstance(boxScene);
 	renderer->AddPointLight(make_float3(0, 20, 0), 50 * make_float3(10, 10, 10));
 
+	/*
 	HostMaterial& cubeMatHost = *renderer->GetMaterial(2);
 	cubeMatHost.ior.value = 1.5f; // Glass
 	cubeMatHost.absorption.value = make_float3(0.f);
-	cubeMatHost.pbrtMaterialType = MaterialType::PBRT_GLASS;
-
+	cubeMatHost.pbrtMaterialType = MaterialType::PBRT_GLASS;*/
+	
 	int lightMat = renderer->AddMaterial(make_float3(1, 1, 1));
 	HostMaterial &lightMatHost = *renderer->GetMaterial(lightMat);
 	lightMatHost.ior.value = 1.5f; // glass

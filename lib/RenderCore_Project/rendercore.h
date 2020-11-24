@@ -93,6 +93,16 @@ private:
 	template <bool backCulling>
 	float3 Illuminate(const float3& p, const float3& N, int instanceId, int meshId, int triID) const;
 
+	enum class DistortionType : int {
+		None = 0,
+		Barrel,
+		BarrelSpecial,
+		FishEye,
+		Count
+	};
+
+	DistortionType distortionType;
+
 	/// <summary>
 	/// Anti Aliasing Level
 	/// </summary>
