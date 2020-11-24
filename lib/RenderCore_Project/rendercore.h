@@ -35,6 +35,7 @@ public:
 		const CorePointLight* pointLights, const int pointLightCount,
 		const CoreSpotLight* spotLights, const int spotLightCount,
 		const CoreDirectionalLight* directionalLights, const int directionalLightCount);
+	void Setting(const char* name, float value);
 
 	void WaitForRender() { /* this core does not support asynchronous rendering yet */ }
 	CoreStats GetCoreStats() const override;
@@ -42,7 +43,6 @@ public:
 
 	// unimplemented for the minimal core
 	inline void SetProbePos( const int2 pos ) override {}
-	inline void Setting( const char* name, float value ) override {}
 	inline void SetTextures( const CoreTexDesc* tex, const int textureCount ) override {}
 	inline void SetSkyData( const float3* pixels, const uint width, const uint height, const mat4& worldToLight ) override {}
 	inline void SetInstance( const int instanceIdx, const int modelIdx, const mat4& transform ) override {}
@@ -92,6 +92,26 @@ private:
 
 	template <bool backCulling>
 	float3 Illuminate(const float3& p, const float3& N, int instanceId, int meshId, int triID) const;
+
+	/// <summary>
+	/// Anti Aliasing Level
+	/// </summary>
+	int aaLevel;
+
+	/// <summary>
+	/// Inverse of Anti Aliasing Level
+	/// </summary>
+	float invAaLevel;
+
+	/// <summary>
+	/// Number of Pixel Offsets for anti-aliasing
+	/// </summary>
+	static constexpr int pixelOffsetsSize = 65;
+
+	/// <summary>
+	/// Pixel Offsets, the first one is always the center
+	/// </summary>
+	static float pixelOffSets[pixelOffsetsSize * 2];
 
 public:
 	CoreStats coreStats;							// rendering statistics

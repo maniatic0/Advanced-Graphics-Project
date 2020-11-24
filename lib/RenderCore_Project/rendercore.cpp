@@ -24,6 +24,18 @@ using namespace lh2core;
 void RenderCore::Init()
 {
 	// initialize
+	aaLevel = 65;
+	assert(0 < aaLevel && aaLevel <= pixelOffsetsSize);
+	invAaLevel = 1.0f / (float)(aaLevel);
+}
+
+void RenderCore::Setting(const char* name, float value)
+{
+	if (!strcmp(name, "aa_level"))
+	{
+		aaLevel = (int)clamp(value, 1.0f, (float)pixelOffsetsSize);
+		invAaLevel = 1.0f / (float)(aaLevel);
+	}
 }
 
 //  +-----------------------------------------------------------------------------+
@@ -74,40 +86,59 @@ void RenderCore::Render( const ViewPyramid& view, const Convergence converge, bo
 	float3 dir;
 
 	float v, u;
-	float invHeight = 1.0f / (float)screen->height;
-	float invWidth = 1.0f / (float)screen->width;
 	float scrWidth = (float)screen->width;
 	float scrHeight = (float)screen->height;
-	float pixelOffset = 0.5f;
+	float invHeight = 1.0f / scrHeight;
+	float invWidth = 1.0f / scrWidth;
+	float pixelOffsetU = 0.5f;
+	float pixelOffsetV = 0.5f;
+	uint aaOffset = 0;
+	
 	uint base, base2;
 
-
-	v = ((float)yScanline + pixelOffset) * invHeight;
 	base = yScanline * screen->width;
 	for (uint x = 0; x < screen->width; x++)
-	{
-		if (view.distortion == 0)
+	{		
+		// AA
+		fscreen[x + base] = make_float4(0);
+		for (uint i = 0; i < aaLevel; i++)
 		{
-			u = ((float)x + pixelOffset) * invWidth;
+			// AA offsets
+			aaOffset = i * 2;
+			pixelOffsetU = pixelOffSets[aaOffset + 0];
+			pixelOffsetV = pixelOffSets[aaOffset + 1];
+
+
+			// Distortion Effects
+			if (view.distortion == 0)
+			{
+				v = ((float)yScanline + 0.5f + pixelOffsetU) * invHeight;
+				u = ((float)x + 0.5f + pixelOffsetV) * invWidth;
+			}
+			else
+			{
+				// Barrel Distortion centered at 0.5, 0.5
+				const float tx = (x + pixelOffsetU) * invWidth - 0.5f;
+				const float ty = (yScanline + pixelOffsetV) * invHeight - 0.5f;
+				const float rr = tx * tx + ty * ty;
+				const float rq = sqrtf(rr) * (1.0f + view.distortion * rr + view.distortion * rr * rr);
+				const float theta = atan2f(tx, ty);
+				const float bx = (sinf(theta) * rq + 0.5f) * scrWidth;
+				const float by = (cosf(theta) * rq + 0.5f) * scrHeight;
+				u = (bx + 0.5f) * invWidth;
+				v = (by + 0.5f) * invHeight;
+			}
+
 			dir = normalize(view.p1 + u * (view.p2 - view.p1) + v * (view.p3 - view.p1) - view.pos);
-		}
-		else
-		{
-			const float tx = x * invWidth - pixelOffset;
-			const float ty = yScanline * invHeight - pixelOffset;
-			const float rr = tx * tx + ty * ty;
-			const float rq = sqrtf(rr) * (1.0f + view.distortion * rr + view.distortion * rr * rr);
-			const float theta = atan2f(tx, ty);
-			const float bx = (sinf(theta) * rq + pixelOffset) * scrWidth;
-			const float by = (cosf(theta) * rq + pixelOffset) * scrHeight;
-			const float3 positionOnPixel = view.p1 + (bx + pixelOffset) * (view.p2 - view.p1) * invWidth + (by + pixelOffset) * (view.p3 - view.p1) * invHeight;
-			dir = normalize(positionOnPixel - view.pos);
-		}
 
-		ray.SetOrigin(view.pos);
-		ray.SetDirection(dir);
+			ray.SetOrigin(view.pos);
+			ray.SetDirection(dir);
 
-		fscreen[x + base] = Trace<true>(ray, intensity, -1, 0);
+			fscreen[x + base] += Trace<true>(ray, intensity, -1, 0);
+		}
+		fscreen[x + base] *= invAaLevel;
+
+		// UV test
 		//fscreen[x + base] = make_float4(u, v, 0, 1);
 		//fscreen[x + base] = make_float4(0, 0, 0, 1);
 	}
@@ -250,5 +281,76 @@ float RenderCore::Fresnel(const float3& I, const float3& N, const float ior, flo
 	// As a consequence of the conservation of energy, transmittance is given by:
 	// kt = 1 - kr;
 }
+
+
+
+float RenderCore::pixelOffSets[RenderCore::pixelOffsetsSize * 2] =
+{
+   0,		   0
+,  0.0000000, -0.16666667
+, -0.2500000,  0.16666667
+,  0.2500000, -0.38888889
+, -0.3750000, -0.05555556
+,  0.1250000,  0.27777778
+, -0.1250000, -0.27777778
+,  0.3750000,  0.05555556
+, -0.4375000,  0.38888889
+,  0.0625000, -0.46296296
+, -0.1875000, -0.12962963
+,  0.3125000,  0.20370370
+, -0.3125000, -0.35185185
+,  0.1875000, -0.01851852
+, -0.0625000,  0.31481481
+,  0.4375000, -0.24074074
+, -0.4687500,  0.09259259
+,  0.0312500,  0.42592593
+, -0.2187500, -0.42592593
+,  0.2812500, -0.09259259
+, -0.3437500,  0.24074074
+,  0.1562500, -0.31481481
+, -0.0937500,  0.01851852
+,  0.4062500,  0.35185185
+, -0.4062500, -0.20370370
+,  0.0937500,  0.12962963
+, -0.1562500,  0.46296296
+,  0.3437500, -0.48765432
+, -0.2812500, -0.15432099
+,  0.2187500,  0.17901235
+, -0.0312500, -0.37654321
+,  0.4687500, -0.04320988
+, -0.4843750,  0.29012346
+,  0.0156250, -0.26543210
+, -0.2343750,  0.06790123
+,  0.2656250,  0.40123457
+, -0.3593750, -0.45061728
+,  0.1406250, -0.11728395
+, -0.1093750,  0.21604938
+,  0.3906250, -0.33950617
+, -0.4218750, -0.00617284
+,  0.0781250,  0.32716049
+, -0.1718750, -0.22839506
+,  0.3281250,  0.10493827
+, -0.2968750,  0.43827160
+,  0.2031250, -0.41358025
+, -0.0468750, -0.08024691
+,  0.4531250,  0.25308642
+, -0.4531250, -0.30246914
+,  0.0468750,  0.03086420
+, -0.2031250,  0.36419753
+,  0.2968750, -0.19135802
+, -0.3281250,  0.14197531
+,  0.1718750,  0.47530864
+, -0.0781250, -0.47530864
+,  0.4218750, -0.14197531
+, -0.3906250,  0.19135802
+,  0.1093750, -0.36419753
+, -0.1406250, -0.03086420
+,  0.3593750,  0.30246914
+, -0.2656250, -0.25308642
+,  0.2343750,  0.08024691
+, -0.0156250,  0.41358025
+,  0.4843750, -0.43827160
+, -0.4921875, -0.10493827
+};
 
 // EOF
