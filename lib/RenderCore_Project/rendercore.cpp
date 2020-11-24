@@ -141,8 +141,8 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 					// Only apply near the center (0.5, 0.5)
 					const float theta = atan2f(vs, us);
 					const float radius = pow(sqrtf(d), view.distortion);
-					us = radius * cos(theta);
-					vs = radius * sin(theta);
+					us = radius * cosf(theta);
+					vs = radius * sinf(theta);
 					u = 0.5f * (us + 1.0f);
 					v = 0.5f * (vs + 1.0f);
 				}
@@ -169,8 +169,8 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 					const float r = atan2(d2, z) / PI;
 					const float phi = atan2(vs, us);
 
-					u = r * cos(phi) + 0.5f;
-					v = r * sin(phi) + 0.5f;
+					u = r * cosf(phi) + 0.5f;
+					v = r * sinf(phi) + 0.5f;
 				}
 			}
 			break;
