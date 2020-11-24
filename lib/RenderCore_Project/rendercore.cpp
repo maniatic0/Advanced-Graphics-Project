@@ -38,6 +38,10 @@ void RenderCore::Init()
 	useChromaticAberration = false;
 	aberrationUOffset = make_float3(0);
 	aberrationVOffset = make_float3(0);
+
+	useVignetting = false;
+	sigma = 500;
+	kernel = nullptr;
 }
 
 void RenderCore::Setting(const char* name, float value)
@@ -61,11 +65,15 @@ void RenderCore::Setting(const char* name, float value)
 	}
 	else if (!strcmp(name, "sigma"))
 	{
-		sigma = (float)value;
+		sigma = value;
+		if (kernel != nullptr)
+		{
+			CreateGaussianKernel(screen->width, screen->height);
+		}
 	}
 	else if (!strcmp(name, "chromatic_aberration_enabled"))
 	{
-		useChromaticAberration = value > 0;
+		useChromaticAberration = (bool)value;
 	}
 	else if (!strcmp(name, "chromatic_u_offset_r"))
 	{
@@ -104,20 +112,14 @@ void RenderCore::SetTarget(GLTexture* target, const uint)
 	if (screen != 0 && target->width == screen->width && target->height == screen->height) return; // nothing changed
 	delete screen;
 	delete fscreen;
+	delete kernel;
 	screen = new Bitmap(target->width, target->height);
 	fscreen = new float4[static_cast<size_t>(target->width) * static_cast<size_t>(target->height)];
 	yScanline = 0;
 
 	// dynamically allocate kernel
-	if (useVignetting == true)
-	{
-		kernel = new float* [target->width];
-		for (int i = 0; i < target->width; i++)
-		{
-			kernel[i] = new float[target->height];
-		}
-		CreateGaussianKernel(target->width, target->height);
-	}
+	kernel = new float[static_cast<size_t>(target->width) * static_cast<size_t>(target->height)];
+	CreateGaussianKernel(target->width, target->height);
 }
 
 //  +-----------------------------------------------------------------------------+
@@ -291,10 +293,12 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 		fscreen[base2].y = pow(fscreen[base2].y, gammaCorrection);
 		fscreen[base2].z = pow(fscreen[base2].z, gammaCorrection);
 
-		if (useVignetting == true)
-			fscreen[base2] *= kernel[x][yScanline];
-
 		tempColor = fscreen[base2];
+		if (useVignetting)
+		{
+			tempColor *= kernel[base2];
+		}
+
 		tempColor *= 255.0f;
 		tempColor = clamp(tempColor, 0, 255);
 		// AABBGGRR
@@ -341,6 +345,10 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 					tempColor.y = textureFetch<true>(fscreen, screen->width, screen->height, uG, vG).y;
 					tempColor.z = textureFetch<true>(fscreen, screen->width, screen->height, uB, vB).z;
 
+					if (useVignetting)
+					{
+						tempColor *= kernel[base2];
+					}
 					tempColor *= 255.0f;
 					tempColor = clamp(tempColor, 0, 255);
 					// AABBGGRR
@@ -381,17 +389,10 @@ CoreStats RenderCore::GetCoreStats() const
 //  +-----------------------------------------------------------------------------+
 void RenderCore::Shutdown()
 {
+	if (screen == nullptr) return; // Nothing to release
 	delete screen;
 	delete fscreen;
-
-	if (useVignetting == true)
-	{
-		for (int i = 0; i < sizeof(kernel); i++)
-		{
-			delete kernel[i];
-		}
-		delete kernel;
-	}
+	delete kernel;
 }
 
 //  +-----------------------------------------------------------------------------+
@@ -474,8 +475,9 @@ float RenderCore::Fresnel(const float3& I, const float3& N, const float ior, flo
 	if (cosi > 0) { std::swap(etai, etat); }
 	// Compute sini using Snell's law
 	float sint = etai / etat * sqrtf(fmax(0.f, 1 - cosi * cosi));
-	// Total internal reflection
+
 	if (sint >= 1 + kEps) {
+		// Total internal reflection
 		return 1;
 	}
 	else {
@@ -492,25 +494,39 @@ float RenderCore::Fresnel(const float3& I, const float3& N, const float ior, flo
 
 void RenderCore::CreateGaussianKernel(uint width, uint height)
 {
-	float meani = (width - 1) / 2,
-		meanj = (height - 1) / 2,
-		maxValue = 0;
+	float meani = ((float)width - 1.0f) / 2.0f;
+	float meanj = ((float)height - 1.0f) / 2.0f;
+	float maxValue = 0;
 
 	// generating kernel 
 	float sigmaxy = 2 * sigma * sigma;
-	for (int i = 0; i < width; i++)
-		for (int j = 0; j < height; j++)
+
+	int base;
+	for (int j = 0; j < height; j++)
+	{
+		base = j * width;
+		for (int i = 0; i < width; i++)
 		{
 			float value = exp(-((j - meanj) * (j - meanj) + (i - meani) * (i - meani)) / (sigmaxy));
-			kernel[i][j] = value;
+			kernel[i + base] = value;
 			if (value > maxValue)
+			{
 				maxValue = value;
+			}
 		}
+	}
+
 
 	// normalizing the kernel 
-	for (int i = 0; i < width; i++)
-		for (int j = 0; j < height; j++)
-			kernel[i][j] /= maxValue;
+	for (int j = 0; j < height; j++)
+	{
+		base = j * width;
+		for (int i = 0; i < width; i++)
+		{
+			kernel[i + base] /= maxValue;
+		}
+	}
+
 }
 
 float RenderCore::pixelOffSets[RenderCore::pixelOffsetsSize * 2] =

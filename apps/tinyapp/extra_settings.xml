@@ -2,6 +2,6 @@
     <aa_level>5</aa_level>
     <distortion_type>0</distortion_type>
     <vignetting_enabled>1</vignetting_enabled>
-    <sigma>500</sigma>
+    <sigma>300</sigma>
     <chromatic_aberration_enabled>0</chromatic_aberration_enabled>
 </settings>

@@ -59,7 +59,7 @@ private:
 	Scene scene;									// color and texture data storage 
 	int maximumDepth = 10;
 
-	float** kernel;
+	float* kernel;
 	bool useVignetting;
 	float sigma;
 
