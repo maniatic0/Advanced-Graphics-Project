@@ -156,6 +156,28 @@ void RenderAPI::Setting( const char* name, const float value )
 	renderer->Setting( name, value );
 }
 
+void RenderAPI::DeserializeExtraSettings(const char* filename)
+{
+	XMLDocument doc;
+	XMLError result = doc.LoadFile(filename);
+	if (result != XML_SUCCESS) return;
+	XMLNode* root = doc.FirstChild();
+	if (root == nullptr) return;
+	XMLElement* element = root->FirstChildElement();
+	if (!element) return;
+	do {
+		Setting(element->Name(), element->FloatText());
+	} while ((element = element->NextSiblingElement()) != nullptr);
+
+	/*
+	const XMLAttribute* attr = element->FirstAttribute();
+	if (!attr) return;
+	do {
+		Setting(attr->Name(), attr->FloatValue());
+	} while ((attr = attr->Next()) != nullptr);
+	*/
+}
+
 int RenderAPI::GetTriangleNode( const int coreInstId, const int coreTriId )
 {
 	return renderer->GetTriangleNode( coreInstId, coreTriId );

@@ -54,6 +54,7 @@ public:
 	void Render( Convergence converge, bool async = false );
 	void WaitForRender();
 	Camera* GetCamera();
+	void DeserializeExtraSettings(const char* filename);
 	RenderSettings* GetSettings();
 	void Setting( const char* name, const float value );
 	int GetTriangleNode( const int coreInstId, const int coreTriId );

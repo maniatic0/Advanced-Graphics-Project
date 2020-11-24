@@ -205,6 +205,7 @@ int main()
 	// renderer = RenderAPI::CreateRenderAPI( "RenderCore_Vulkan_RT" );			// Meir's Vulkan / RTX core
 	// renderer = RenderAPI::CreateRenderAPI( "RenderCore_OptixPrime_BDPT" );	// Peter's OptixPrime / BDPT core
 
+	renderer->DeserializeExtraSettings("extra_settings.xml");
 	renderer->DeserializeCamera( "camera.xml" );
 	// initialize scene
 	PrepareScene();
