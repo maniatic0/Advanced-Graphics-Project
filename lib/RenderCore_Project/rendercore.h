@@ -128,6 +128,16 @@ private:
 	/// </summary>
 	float gamma;
 
+	/// <summary>
+	/// Is the first scan loop completed?
+	/// </summary>
+	bool firstScanLoopComplete;
+
+	/// <summary>
+	/// If it is time to update the whole screen
+	/// </summary>
+	bool updateCompleteScreen;
+
 public:
 	CoreStats coreStats;							// rendering statistics
 };
