@@ -494,14 +494,12 @@ void RenderCore::CreateGaussianKernel(uint width, uint height)
 {
 	float meani = (width - 1) / 2,
 		meanj = (height - 1) / 2,
-		maxValue = 0,
-		temp = 0;
+		maxValue = 0;
 
 	// generating kernel 
-	int sigmaxy = 2 * sigma * sigma;
-
-	for (unsigned i = 0; i < width; i++)
-		for (unsigned j = 0; j < height; j++)
+	float sigmaxy = 2 * sigma * sigma;
+	for (int i = 0; i < width; i++)
+		for (int j = 0; j < height; j++)
 		{
 			float value = exp(-((j - meanj) * (j - meanj) + (i - meani) * (i - meani)) / (sigmaxy));
 			kernel[i][j] = value;
@@ -513,7 +511,6 @@ void RenderCore::CreateGaussianKernel(uint width, uint height)
 	for (int i = 0; i < width; i++)
 		for (int j = 0; j < height; j++)
 			kernel[i][j] /= maxValue;
-
 }
 
 float RenderCore::pixelOffSets[RenderCore::pixelOffsetsSize * 2] =
