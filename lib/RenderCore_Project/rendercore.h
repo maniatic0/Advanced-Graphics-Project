@@ -123,6 +123,11 @@ private:
 	/// </summary>
 	static float pixelOffSets[pixelOffsetsSize * 2];
 
+	/// <summary>
+	/// For Gamma Correction
+	/// </summary>
+	float gamma;
+
 public:
 	CoreStats coreStats;							// rendering statistics
 };

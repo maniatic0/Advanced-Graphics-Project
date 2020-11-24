@@ -29,11 +29,17 @@ void RenderCore::Init()
 	invAaLevel = 1.0f / (float)(aaLevel);
 
 	distortionType = DistortionType::None;
+
+	gamma = 2.2f;
 }
 
 void RenderCore::Setting(const char* name, float value)
 {
-	if (!strcmp(name, "aa_level"))
+	if (!strcmp(name, "gamma"))
+	{
+		gamma = value;
+	}
+	else if (!strcmp(name, "aa_level"))
 	{
 		aaLevel = (int)clamp(value, 1.0f, (float)pixelOffsetsSize);
 		invAaLevel = 1.0f / (float)(aaLevel);
@@ -154,7 +160,7 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 				u = ((float)x + 0.5f + pixelOffsetV) * invWidth;
 
 				// From https://www.geeks3d.com/20140213/glsl-shader-library-fish-eye-and-dome-and-barrel-distortion-post-processing-filters/
-				const float aperture = 180.0f * view.distortion;
+				const float aperture = 180.0f * view.aperture;
 				const float apertureHalf = 0.5f * aperture * (PI / 180.0f);
 				const float maxFactor = sin(apertureHalf);
 
@@ -221,7 +227,7 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 	uint color;
 	// HDR to 255 colors
 	base = yScanline * screen->width;
-	const float gammaCorrection = 1 / 2.2f;
+	const float gammaCorrection = 1.0f / gamma;
 	for (uint x = 0; x < screen->width; x++)
 	{
 		base2 = x + base;
