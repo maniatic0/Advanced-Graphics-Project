@@ -155,14 +155,14 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 
 				// From https://www.geeks3d.com/20140213/glsl-shader-library-fish-eye-and-dome-and-barrel-distortion-post-processing-filters/
 				const float aperture = 180.0f * view.distortion;
-				const float apertureHalf = 0.5f * aperture * (PI / 180.0);
+				const float apertureHalf = 0.5f * aperture * (PI / 180.0f);
 				const float maxFactor = sin(apertureHalf);
 
 
 				float us = 2.0f * u - 1.0f;
 				float vs = 2.0f * v - 1.0f;
 				const float d = sqrtf(us * us + vs * vs);
-				if (d < (2.0f - maxFactor))
+				if (d < 1)
 				{
 					const float d2 = d * maxFactor;
 					const float z = sqrtf(1.0f - d * d);
