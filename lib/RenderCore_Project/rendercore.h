@@ -129,6 +129,21 @@ private:
 	float gamma;
 
 	/// <summary>
+	/// If we are using chromatic aberration
+	/// </summary>
+	bool useChromaticAberration;
+
+	/// <summary>
+	/// Chromatic Aberration U Offset
+	/// </summary>
+	float3 aberrationUOffset;
+
+	/// <summary>
+	/// Chromatic Aberration Y Offset
+	/// </summary>
+	float3 aberrationVOffset;
+
+	/// <summary>
 	/// Is the first scan loop completed?
 	/// </summary>
 	bool firstScanLoopComplete;

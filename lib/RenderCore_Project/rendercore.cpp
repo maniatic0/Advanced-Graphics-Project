@@ -34,6 +34,10 @@ void RenderCore::Init()
 
 	firstScanLoopComplete = false;
 	updateCompleteScreen = false;
+
+	useChromaticAberration = false;
+	aberrationUOffset = make_float3(0);
+	aberrationVOffset = make_float3(0);
 }
 
 void RenderCore::Setting(const char* name, float value)
@@ -50,6 +54,34 @@ void RenderCore::Setting(const char* name, float value)
 	else if (!strcmp(name, "distortion_type"))
 	{
 		distortionType = (DistortionType)(int)clamp(value, 0.0f, (float)((int)DistortionType::Count - 1));
+	}
+	else if (!strcmp(name, "chromatic_aberration_enabled"))
+	{
+		useChromaticAberration = value > 0;
+	}
+	else if (!strcmp(name, "chromatic_u_offset_r"))
+	{
+		aberrationUOffset.x = value;
+	}
+	else if (!strcmp(name, "chromatic_u_offset_g"))
+	{
+		aberrationUOffset.y = value;
+	}
+	else if (!strcmp(name, "chromatic_u_offset_b"))
+	{
+		aberrationUOffset.z = value;
+	}
+	else if (!strcmp(name, "chromatic_v_offset_r"))
+	{
+		aberrationVOffset.x = value;
+	}
+	else if (!strcmp(name, "chromatic_v_offset_g"))
+	{
+		aberrationVOffset.y = value;
+	}
+	else if (!strcmp(name, "chromatic_v_offset_b"))
+	{
+		aberrationVOffset.z = value;
 	}
 }
 
@@ -264,37 +296,43 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 		firstScanLoopComplete = true;
 		yScanline = 0;
 
-		for (uint y = 0; y < screen->height; y++)
+		if (useChromaticAberration)
 		{
-			base = y * screen->width;
-			int rBase = clamp((int)y + 6, 0, (int)screen->height - 1) * screen->width;
-			int gBase = clamp((int)y - 6, 0, (int)screen->height - 1) * screen->width;
-			int bBase = clamp((int)y + 3, 0, (int)screen->height - 1) * screen->width;
-			for (uint x = 0; x < screen->width; x++)
+			for (uint y = 0; y < screen->height; y++)
 			{
-				base2 = x + base;
+				base = y * screen->width;
+				const float v = y * invHeight;
+				const float vR = v + aberrationVOffset.x;
+				const float vG = v + aberrationVOffset.y;
+				const float vB = v + aberrationVOffset.z;
+				for (uint x = 0; x < screen->width; x++)
+				{
+					base2 = x + base;
 
-				int rBase2 = clamp((int)x - 3, 0, (int)screen->width - 1) + rBase;
-				int gBase2 = clamp((int)x + 6, 0, (int)screen->width - 1) + gBase;
-				int bBase2 = clamp((int)x - 6, 0, (int)screen->width - 1) + bBase;
+					const float u = x * invWidth;
+					const float uR = u + aberrationUOffset.x;
+					const float uG = u + aberrationUOffset.y;
+					const float uB = u + aberrationUOffset.z;
 
-				tempColor.w = fscreen[base2].w;
-				tempColor.x = fscreen[rBase2].x;
-				tempColor.y = fscreen[gBase2].y;
-				tempColor.z = fscreen[bBase2].z;
+					tempColor.w = fscreen[base2].w;
+					tempColor.x = textureFetch<true>(fscreen, screen->width, screen->height, uR, vR).x;
+					tempColor.y = textureFetch<true>(fscreen, screen->width, screen->height, uG, vG).y;
+					tempColor.z = textureFetch<true>(fscreen, screen->width, screen->height, uB, vB).z;
 
-				tempColor *= 255.0f;
-				tempColor = clamp(tempColor, 0, 255);
-				// AABBGGRR
-				color =
-					((((uint)tempColor.w) << 24) & 0xFF000000)
-					| ((((uint)tempColor.z) << 16) & 0xFF0000)
-					| ((((uint)tempColor.y) << 8) & 0xFF00)
-					| (((uint)tempColor.x) & 0xFF);
+					tempColor *= 255.0f;
+					tempColor = clamp(tempColor, 0, 255);
+					// AABBGGRR
+					color =
+						((((uint)tempColor.w) << 24) & 0xFF000000)
+						| ((((uint)tempColor.z) << 16) & 0xFF0000)
+						| ((((uint)tempColor.y) << 8) & 0xFF00)
+						| (((uint)tempColor.x) & 0xFF);
 
-				screen->Plot(x, y, color);
+					screen->Plot(x, y, color);
+				}
 			}
 		}
+
 	}
 
 	if (!firstScanLoopComplete || updateCompleteScreen)

@@ -1,4 +1,5 @@
 <settings>
     <aa_level>5</aa_level>
     <distortion_type>1</distortion_type>
+    <chromatic_aberration_enabled>0</chromatic_aberration_enabled>
 </settings>
