@@ -1,5 +1,6 @@
 <settings>
-    <aa_level>65</aa_level>
+    <aa_level>5</aa_level>
     <distortion_type>0</distortion_type>
-    <sigma>4</sigma>
+    <vignetting>1</vignetting>
+    <sigma>500</sigma>
 </settings>

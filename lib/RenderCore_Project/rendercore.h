@@ -59,6 +59,7 @@ private:
 	Scene scene;									// color and texture data storage 
 	int maximumDepth = 10;
 	float** kernel;
+	bool vignetting;
 	float sigma;
 
 	uint yScanline;
@@ -67,7 +68,7 @@ private:
 	float4 Trace(Ray &r, const float3 &intensity, int matId = -1, int currentDepth = 0) const;
 	static bool Refract(const float3 &I, const float3 &N, const float ior, float n1, float3 &T);
 	static float Fresnel(const float3& I, const float3& N, const float ior, float n1);
-	void RenderCore::CreateGaussianKernel();
+	void RenderCore::CreateGaussianKernel(uint width, uint height);
 
 	/// <summary>
 	/// Note this trick only works single threaded. We would need threadlocal stuff
@@ -125,6 +126,21 @@ private:
 	/// Pixel Offsets, the first one is always the center
 	/// </summary>
 	static float pixelOffSets[pixelOffsetsSize * 2];
+
+	/// <summary>
+	/// For Gamma Correction
+	/// </summary>
+	float gamma;
+
+	/// <summary>
+	/// Is the first scan loop completed?
+	/// </summary>
+	bool firstScanLoopComplete;
+
+	/// <summary>
+	/// If it is time to update the whole screen
+	/// </summary>
+	bool updateCompleteScreen;
 
 public:
 	CoreStats coreStats;							// rendering statistics

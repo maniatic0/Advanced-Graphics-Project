@@ -29,11 +29,20 @@ void RenderCore::Init()
 	invAaLevel = 1.0f / (float)(aaLevel);
 
 	distortionType = DistortionType::None;
+
+	gamma = 2.2f;
+
+	firstScanLoopComplete = false;
+	updateCompleteScreen = false;
 }
 
 void RenderCore::Setting(const char* name, float value)
 {
-	if (!strcmp(name, "aa_level"))
+	if (!strcmp(name, "gamma"))
+	{
+		gamma = value;
+	}
+	else if (!strcmp(name, "aa_level"))
 	{
 		aaLevel = (int)clamp(value, 1.0f, (float)pixelOffsetsSize);
 		invAaLevel = 1.0f / (float)(aaLevel);
@@ -41,6 +50,10 @@ void RenderCore::Setting(const char* name, float value)
 	else if (!strcmp(name, "distortion_type"))
 	{
 		distortionType = (DistortionType)(int)clamp(value, 0.0f, (float)((int)DistortionType::Count - 1));
+	}
+	else if (!strcmp(name, "vignetting"))
+	{
+		vignetting = (bool)value;
 	}
 	else if (!strcmp(name, "sigma"))
 	{
@@ -64,12 +77,15 @@ void RenderCore::SetTarget(GLTexture* target, const uint)
 	yScanline = 0;
 
 	// dynamically allocate kernel
-	kernel = new float* [target->width];
-	for (int i = 0; i < target->width; i++)
+	if (vignetting == true)
 	{
-		kernel[i] = new float[target->height];
+		kernel = new float* [target->width];
+		for (int i = 0; i < target->width; i++)
+		{
+			kernel[i] = new float[target->height];
+		}
+		CreateGaussianKernel(target->width, target->height);
 	}
-	CreateGaussianKernel();
 }
 
 //  +-----------------------------------------------------------------------------+
@@ -166,15 +182,15 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 				u = ((float)x + 0.5f + pixelOffsetV) * invWidth;
 
 				// From https://www.geeks3d.com/20140213/glsl-shader-library-fish-eye-and-dome-and-barrel-distortion-post-processing-filters/
-				const float aperture = 180.0f * view.distortion;
-				const float apertureHalf = 0.5f * aperture * (PI / 180.0);
+				const float aperture = 180.0f * view.aperture;
+				const float apertureHalf = 0.5f * aperture * (PI / 180.0f);
 				const float maxFactor = sin(apertureHalf);
 
 
 				float us = 2.0f * u - 1.0f;
 				float vs = 2.0f * v - 1.0f;
 				const float d = sqrtf(us * us + vs * vs);
-				if (d < (2.0f - maxFactor))
+				if (d < 1)
 				{
 					const float d2 = d * maxFactor;
 					const float z = sqrtf(1.0f - d * d);
@@ -231,32 +247,85 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 	}
 
 	uint color;
+	float4 tempColor;
 	// HDR to 255 colors
 	base = yScanline * screen->width;
-	const float gammaCorrection = 1 / 2.2f;
+	const float gammaCorrection = 1.0f / gamma;
 	for (uint x = 0; x < screen->width; x++)
 	{
 		base2 = x + base;
+
 		fscreen[base2].x = pow(fscreen[base2].x, gammaCorrection);
 		fscreen[base2].y = pow(fscreen[base2].y, gammaCorrection);
 		fscreen[base2].z = pow(fscreen[base2].z, gammaCorrection);
 
-		fscreen[base2] *= 255.0f;
-		fscreen[base2] = clamp(fscreen[base2], 0, 255);
+		if (vignetting == true)
+			fscreen[base2] *= kernel[x][yScanline];
+
+		tempColor = fscreen[base2];
+		tempColor *= 255.0f;
+		tempColor = clamp(tempColor, 0, 255);
 		// AABBGGRR
 		color =
-			((((uint)fscreen[base2].w) << 24) & 0xFF000000)
-			| ((((uint)fscreen[base2].z) << 16) & 0xFF0000)
-			| ((((uint)fscreen[base2].y) << 8) & 0xFF00)
-			| (((uint)fscreen[base2].x) & 0xFF);
+			((((uint)tempColor.w) << 24) & 0xFF000000)
+			| ((((uint)tempColor.z) << 16) & 0xFF0000)
+			| ((((uint)tempColor.y) << 8) & 0xFF00)
+			| (((uint)tempColor.x) & 0xFF);
 		screen->Plot(x, yScanline, color);
 	}
 
-	yScanline = (yScanline + 1) % screen->height;
+	++yScanline;
 
-	// copy pixel buffer to OpenGL render target texture
-	glBindTexture(GL_TEXTURE_2D, targetTextureID);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, screen->width, screen->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, screen->pixels);
+	if (yScanline < screen->height)
+	{
+		updateCompleteScreen = false;
+	}
+	else
+	{
+		updateCompleteScreen = true;
+		firstScanLoopComplete = true;
+		yScanline = 0;
+
+		for (uint y = 0; y < screen->height; y++)
+		{
+			base = y * screen->width;
+			int rBase = clamp((int)y + 6, 0, (int)screen->height - 1) * screen->width;
+			int gBase = clamp((int)y - 6, 0, (int)screen->height - 1) * screen->width;
+			int bBase = clamp((int)y + 3, 0, (int)screen->height - 1) * screen->width;
+			for (uint x = 0; x < screen->width; x++)
+			{
+				base2 = x + base;
+
+				int rBase2 = clamp((int)x - 3, 0, (int)screen->width - 1) + rBase;
+				int gBase2 = clamp((int)x + 6, 0, (int)screen->width - 1) + gBase;
+				int bBase2 = clamp((int)x - 6, 0, (int)screen->width - 1) + bBase;
+
+				tempColor.w = fscreen[base2].w;
+				tempColor.x = fscreen[rBase2].x;
+				tempColor.y = fscreen[gBase2].y;
+				tempColor.z = fscreen[bBase2].z;
+
+				tempColor *= 255.0f;
+				tempColor = clamp(tempColor, 0, 255);
+				// AABBGGRR
+				color =
+					((((uint)tempColor.w) << 24) & 0xFF000000)
+					| ((((uint)tempColor.z) << 16) & 0xFF0000)
+					| ((((uint)tempColor.y) << 8) & 0xFF00)
+					| (((uint)tempColor.x) & 0xFF);
+
+				screen->Plot(x, y, color);
+			}
+		}
+	}
+
+	if (!firstScanLoopComplete || updateCompleteScreen)
+	{
+		// copy pixel buffer to OpenGL render target texture
+		glBindTexture(GL_TEXTURE_2D, targetTextureID);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, screen->width, screen->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, screen->pixels);
+	}
+
 }
 
 //  +-----------------------------------------------------------------------------+
@@ -276,6 +345,15 @@ void RenderCore::Shutdown()
 {
 	delete screen;
 	delete fscreen;
+
+	if (vignetting == true)
+	{
+		for (int i = 0; i < sizeof(kernel); i++)
+		{
+			delete kernel[i];
+		}
+		delete kernel;
+	}
 }
 
 //  +-----------------------------------------------------------------------------+
@@ -374,31 +452,31 @@ float RenderCore::Fresnel(const float3& I, const float3& N, const float ior, flo
 	// kt = 1 - kr;
 }
 
-void RenderCore::CreateGaussianKernel()
+void RenderCore::CreateGaussianKernel(uint width, uint height)
 {
-	// intialising standard deviation to 1.0 
-	double sigma = 1.0;
-	double r, s = 2.0 * sigma * sigma;
+	float meani = (width - 1) / 2,
+		meanj = (height - 1) / 2,
+		maxValue = 0,
+		temp = 0;
 
-	// sum is for normalization 
-	double sum = 0.0;
+	// generating kernel 
+	int sigmaxy = 2 * sigma * sigma;
 
-	// generating 5x5 kernel 
-	for (int x = -2; x <= 2; x++) {
-		for (int y = -2; y <= 2; y++) {
-			r = sqrt(x * x + y * y);
-			kernel[x + 2][y + 2] = (exp(-(r * r) / s)) / (PI * s);
-			sum += kernel[x + 2][y + 2];
+	for (unsigned i = 0; i < width; i++)
+		for (unsigned j = 0; j < height; j++)
+		{
+			float value = exp(-((j - meanj) * (j - meanj) + (i - meani) * (i - meani)) / (sigmaxy));
+			kernel[i][j] = value;
+			if (value > maxValue)
+				maxValue = value;
 		}
-	}
 
-	// normalising the Kernel 
-	for (int i = 0; i < 5; ++i)
-		for (int j = 0; j < 5; ++j)
-			kernel[i][j] /= sum;
+	// normalizing the kernel 
+	for (int i = 0; i < width; i++)
+		for (int j = 0; j < height; j++)
+			kernel[i][j] /= maxValue;
+
 }
-
-
 
 float RenderCore::pixelOffSets[RenderCore::pixelOffsetsSize * 2] =
 {

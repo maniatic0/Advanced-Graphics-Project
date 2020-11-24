@@ -215,6 +215,7 @@ void RenderSystem::Render( const ViewPyramid& view, Convergence converge, bool a
 {
 	// forward to core; core may ignore or accept a setting
 	core->Setting( "epsilon", settings.geometryEpsilon );
+	core->Setting( "gamma" , scene->camera->gamma);
 	core->Setting( "clampValue", scene->camera->clampValue );
 	core->Setting( "clampDirect", settings.filterDirectClamp );
 	core->Setting( "clampIndirect", settings.filterIndirectClamp );
