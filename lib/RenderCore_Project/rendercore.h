@@ -58,6 +58,8 @@ private:
 	vector<Mesh> meshes;							// mesh data storage
 	Scene scene;									// color and texture data storage 
 	int maximumDepth = 10;
+	float** kernel;
+	float sigma;
 
 	uint yScanline;
 
@@ -65,6 +67,7 @@ private:
 	float4 Trace(Ray &r, const float3 &intensity, int matId = -1, int currentDepth = 0) const;
 	static bool Refract(const float3 &I, const float3 &N, const float ior, float n1, float3 &T);
 	static float Fresnel(const float3& I, const float3& N, const float ior, float n1);
+	void RenderCore::CreateGaussianKernel();
 
 	/// <summary>
 	/// Note this trick only works single threaded. We would need threadlocal stuff

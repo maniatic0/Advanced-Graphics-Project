@@ -42,6 +42,10 @@ void RenderCore::Setting(const char* name, float value)
 	{
 		distortionType = (DistortionType)(int)clamp(value, 0.0f, (float)((int)DistortionType::Count - 1));
 	}
+	else if (!strcmp(name, "sigma"))
+	{
+		sigma = (float)value;
+	}
 }
 
 //  +-----------------------------------------------------------------------------+
@@ -58,6 +62,14 @@ void RenderCore::SetTarget(GLTexture* target, const uint)
 	screen = new Bitmap(target->width, target->height);
 	fscreen = new float4[static_cast<size_t>(target->width) * static_cast<size_t>(target->height)];
 	yScanline = 0;
+
+	// dynamically allocate kernel
+	kernel = new float* [target->width];
+	for (int i = 0; i < target->width; i++)
+	{
+		kernel[i] = new float[target->height];
+	}
+	CreateGaussianKernel();
 }
 
 //  +-----------------------------------------------------------------------------+
@@ -360,6 +372,30 @@ float RenderCore::Fresnel(const float3& I, const float3& N, const float ior, flo
 	}
 	// As a consequence of the conservation of energy, transmittance is given by:
 	// kt = 1 - kr;
+}
+
+void RenderCore::CreateGaussianKernel()
+{
+	// intialising standard deviation to 1.0 
+	double sigma = 1.0;
+	double r, s = 2.0 * sigma * sigma;
+
+	// sum is for normalization 
+	double sum = 0.0;
+
+	// generating 5x5 kernel 
+	for (int x = -2; x <= 2; x++) {
+		for (int y = -2; y <= 2; y++) {
+			r = sqrt(x * x + y * y);
+			kernel[x + 2][y + 2] = (exp(-(r * r) / s)) / (PI * s);
+			sum += kernel[x + 2][y + 2];
+		}
+	}
+
+	// normalising the Kernel 
+	for (int i = 0; i < 5; ++i)
+		for (int j = 0; j < 5; ++j)
+			kernel[i][j] /= sum;
 }
 
 
