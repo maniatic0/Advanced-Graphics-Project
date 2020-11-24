@@ -58,8 +58,9 @@ private:
 	vector<Mesh> meshes;							// mesh data storage
 	Scene scene;									// color and texture data storage 
 	int maximumDepth = 10;
+
 	float** kernel;
-	bool vignetting;
+	bool useVignetting;
 	float sigma;
 
 	uint yScanline;
@@ -131,6 +132,21 @@ private:
 	/// For Gamma Correction
 	/// </summary>
 	float gamma;
+
+	/// <summary>
+	/// If we are using chromatic aberration
+	/// </summary>
+	bool useChromaticAberration;
+
+	/// <summary>
+	/// Chromatic Aberration U Offset
+	/// </summary>
+	float3 aberrationUOffset;
+
+	/// <summary>
+	/// Chromatic Aberration Y Offset
+	/// </summary>
+	float3 aberrationVOffset;
 
 	/// <summary>
 	/// Is the first scan loop completed?
