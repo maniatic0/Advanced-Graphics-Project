@@ -32,16 +32,16 @@ namespace lh2core
 	/// <returns></returns>
 	inline float4 cross(float4 a, float4 b) { return make_float4(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x, 0); }
 
-	template <typename T>
+
 	inline float4 bilinearInterpolation(
-		const T tx,
-		const T ty,
+		const float tx,
+		const float ty,
 		const float4& c00,
 		const float4& c10,
 		const float4& c01,
 		const float4& c11)
 	{
-
+		// From https://www.scratchapixel.com/lessons/mathematics-physics-for-computer-graphics/interpolation/bilinear-filtering
 		return (1.0f - tx) * (1.0f - ty) * c00 +
 			tx * (1.0f - ty) * c10 +
 			(1.0f - tx) * ty * c01 +
@@ -84,7 +84,7 @@ namespace lh2core
 			vHi = (vLo + 1) % height;
 		}
 
-		return bilinearInterpolation<float>((float)tu, (float)tv, texels[uLo + vLo * width], texels[uLo + vHi * width], texels[uHi + vLo * width], texels[uHi + vHi * width]);
+		return bilinearInterpolation(tu, tv, texels[uLo + vLo * width], texels[uLo + vHi * width], texels[uHi + vLo * width], texels[uHi + vHi * width]);
 	}
 
 
