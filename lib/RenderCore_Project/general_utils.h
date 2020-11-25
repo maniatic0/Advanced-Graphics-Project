@@ -56,8 +56,8 @@ namespace lh2core
 	template<bool useClamp>
 	inline float4 textureFetch(const uchar4* texels, const int width, const int height, const float u, const float v)
 	{
-		float su = u * width;
-		float sv = v * height;
+		float su = u * (float)(width - 1);
+		float sv = v * (float)(height - 1);
 
 		float tu, tv;
 
@@ -95,8 +95,8 @@ namespace lh2core
 	template<bool useClamp>
 	inline float4 textureFetch(const float4* texels, const int width, const int height, const float u, const float v)
 	{
-		float su = u * width;
-		float sv = v * height;
+		float su = u * (float)(width - 1);
+		float sv = v * (float)(height - 1);
 
 		float tu, tv;
 

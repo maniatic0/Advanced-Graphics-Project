@@ -154,6 +154,7 @@ void PrepareScene()
 	cubeMatHost.pbrtMaterialType = MaterialType::PBRT_GLASS;*/
 	
 	int texId = renderer->AddTexture("../_shareddata/textures/LEGOSHLD.tga", 0);
+	//int texId = renderer->AddTexture("../_shareddata/textures/checker.png", 0);
 
 	int lightMat = renderer->AddMaterial(make_float3(1, 1, 1));
 	HostMaterial &lightMatHost = *renderer->GetMaterial(lightMat);
@@ -204,7 +205,7 @@ int main()
 	renderer = RenderAPI::CreateRenderAPI("RenderCore_Project");		// Project
 	// renderer = RenderAPI::CreateRenderAPI( "RenderCore_Optix7filter" );			// OPTIX7 core, with filtering (static scenes only for now)
 	// renderer = RenderAPI::CreateRenderAPI( "RenderCore_Optix7" );			// OPTIX7 core, best for RTX devices
-	//renderer = RenderAPI::CreateRenderAPI( "RenderCore_OptixPrime_B" );		// OPTIX PRIME, best for pre-RTX CUDA devices
+	// renderer = RenderAPI::CreateRenderAPI( "RenderCore_OptixPrime_B" );		// OPTIX PRIME, best for pre-RTX CUDA devices
 	// renderer = RenderAPI::CreateRenderAPI( "RenderCore_SoftRasterizer" );	// RASTERIZER, your only option if not on NVidia
 	// renderer = RenderAPI::CreateRenderAPI( "RenderCore_Vulkan_RT" );			// Meir's Vulkan / RTX core
 	// renderer = RenderAPI::CreateRenderAPI( "RenderCore_OptixPrime_BDPT" );	// Peter's OptixPrime / BDPT core
