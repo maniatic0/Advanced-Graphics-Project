@@ -1,7 +1,7 @@
 <settings>
-    <aa_level>1</aa_level>
+    <aa_level>5</aa_level>
     <distortion_type>0</distortion_type>
-    <vignetting_enabled>1</vignetting_enabled>
+    <vignetting_enabled>0</vignetting_enabled>
     <sigma>300</sigma>
     <chromatic_aberration_enabled>0</chromatic_aberration_enabled>
     <chromatic_radial_k_r>-0.005</chromatic_radial_k_r>

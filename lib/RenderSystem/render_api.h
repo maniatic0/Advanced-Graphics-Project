@@ -40,6 +40,7 @@ public:
 	int AddMesh( const char* file, const float scale = 1.0f, const bool flatShaded = false );
 	int AddScene( const char* file, const char* dir, const mat4& transform = mat4::Identity() );
 	int AddScene( const char* file, const mat4& transform = mat4::Identity() );
+	int AddTexture(const char* file, const uint modFlags=0);
 	int AddMesh( const int triCount );
 	void AddTriToMesh( const int meshId, const float3& v0, const float3& v1, const float3& v2, const int matId );
 	int AddQuad( const float3 N, const float3 pos, const float width, const float height, const int material, const int meshID = -1 );

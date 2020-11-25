@@ -32,6 +32,11 @@ namespace lh2core
 	/// <returns></returns>
 	inline float4 cross(float4 a, float4 b) { return make_float4(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x, 0); }
 
+	inline float4 uchar4ToFloat4(const uchar4 v)
+	{
+		constexpr float invVal = 1.0f / 255.0f;
+		return make_float4((float)v.x * invVal, (float)v.y * invVal, (float)v.z * invVal, (float)v.w * invVal);
+	}
 
 	inline float4 bilinearInterpolation(
 		const float tx,
@@ -46,6 +51,45 @@ namespace lh2core
 			tx * (1.0f - ty) * c10 +
 			(1.0f - tx) * ty * c01 +
 			tx * ty * c11;
+	}
+
+	template<bool useClamp>
+	inline float4 textureFetch(const uchar4* texels, const int width, const int height, const float u, const float v)
+	{
+		float su = u * width;
+		float sv = v * height;
+
+		float tu, tv;
+
+		float bu, bv;
+
+		bu = (int)su;
+		bv = (int)sv;
+
+
+		tu = su - bu;
+		tv = sv - bv;
+
+		int uLo, uHi, vLo, vHi;
+
+		if constexpr (useClamp)
+		{
+			uLo = clamp((int)bu, 0, width - 1);
+			uHi = clamp(uLo + 1, 0, width - 1);
+
+			vLo = clamp((int)bv, 0, height - 1);
+			vHi = clamp(vLo + 1, 0, height - 1);
+		}
+		else
+		{
+			uLo = (int)fmod(bu, (float)(width - 1));
+			uHi = (uLo + 1) % width;
+
+			vLo = (int)fmod(bv, (float)(height - 1));
+			vHi = (vLo + 1) % height;
+		}
+
+		return bilinearInterpolation(tu, tv, uchar4ToFloat4(texels[uLo + vLo * width]), uchar4ToFloat4(texels[uLo + vHi * width]), uchar4ToFloat4(texels[uHi + vLo * width]), uchar4ToFloat4(texels[uHi + vHi * width]));
 	}
 
 	template<bool useClamp>

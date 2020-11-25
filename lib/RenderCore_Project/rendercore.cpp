@@ -161,9 +161,25 @@ void RenderCore::SetTextures(const CoreTexDesc* tex, const int textureCount)
 	for (int i = 0; i < textureCount; i++)
 	{
 		scene.texList[i] = tex[i];
-		assert(tex[i].storage == ARGB128);
-		scene.texList[i].fdata = new float4[scene.texList[i].pixelCount];
-		memcpy(scene.texList[i].fdata, tex[i].fdata, tex[i].pixelCount * sizeof(float4));
+		switch (tex[i].storage)
+		{
+		case ARGB128:
+		{
+			scene.texList[i].fdata = new float4[scene.texList[i].pixelCount];
+			memcpy(scene.texList[i].fdata, tex[i].fdata, tex[i].pixelCount * sizeof(float4));
+		}
+			break;
+		case ARGB32:
+		{
+			scene.texList[i].idata = new uchar4[scene.texList[i].pixelCount];
+			memcpy(scene.texList[i].idata, tex[i].idata, tex[i].pixelCount * sizeof(uchar4));
+		}
+		break;
+		default:
+			assert(false);
+			break;
+		}
+		
 	}
 }
 
@@ -561,10 +577,10 @@ void RenderCore::CreateGaussianKernel(uint width, uint height)
 	float sigmaxy = 2 * sigma * sigma;
 
 	int base;
-	for (int j = 0; j < height; j++)
+	for (int j = 0; j < (int)height; j++)
 	{
 		base = j * width;
-		for (int i = 0; i < width; i++)
+		for (int i = 0; i < (int)width; i++)
 		{
 			float value = exp(-((j - meanj) * (j - meanj) + (i - meani) * (i - meani)) / (sigmaxy));
 			kernel[i + base] = value;
@@ -577,10 +593,10 @@ void RenderCore::CreateGaussianKernel(uint width, uint height)
 
 
 	// normalizing the kernel 
-	for (int j = 0; j < height; j++)
+	for (int j = 0; j < (int)height; j++)
 	{
 		base = j * width;
-		for (int i = 0; i < width; i++)
+		for (int i = 0; i < (int)width; i++)
 		{
 			kernel[i + base] /= maxValue;
 		}
@@ -613,7 +629,18 @@ float4 RenderCore::LoadMaterialFloat4(const CoreMaterial::Vec3Value& val, const 
 
 	const CoreTexDesc& tex = scene.texList[val.textureID];
 
-	return textureFetch<false>(tex.fdata, tex.width, tex.height, newUV.x, newUV.y);
+	switch (tex.storage)
+	{
+	case ARGB32:
+		return textureFetch<false>(tex.idata, tex.width, tex.height, newUV.x, newUV.y);
+	case ARGB128:
+		return textureFetch<false>(tex.fdata, tex.width, tex.height, newUV.x, newUV.y);
+	default:
+		break;	
+	}
+
+	assert(false);
+	return make_float4(0);
 }
 
 

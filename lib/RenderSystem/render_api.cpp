@@ -86,6 +86,11 @@ int RenderAPI::AddScene( const char* file, const mat4& transform )
 	return renderer->scene->AddScene( file, transform );
 }
 
+int RenderAPI::AddTexture(const char* file, const uint modFlags)
+{
+	return renderer->scene->CreateTexture(file, modFlags);
+}
+
 int RenderAPI::AddQuad( const float3 N, const float3 pos, const float width, const float height, const int material, const int meshID )
 {
 	return renderer->scene->AddQuad( N, pos, width, height, material, meshID );

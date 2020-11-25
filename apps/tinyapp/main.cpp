@@ -153,13 +153,14 @@ void PrepareScene()
 	cubeMatHost.absorption.value = make_float3(0.f);
 	cubeMatHost.pbrtMaterialType = MaterialType::PBRT_GLASS;*/
 	
-	//int texId = renderer->GetScene()->CreateTexture("../_shareddata/textures/test2.png", 0);
+	int texId = renderer->AddTexture("../_shareddata/textures/LEGOSHLD.tga", 0);
 
 	int lightMat = renderer->AddMaterial(make_float3(1, 1, 1));
 	HostMaterial &lightMatHost = *renderer->GetMaterial(lightMat);
-	lightMatHost.ior.value = 1.5f; // glass
-	lightMatHost.absorption.value = make_float3(0.05f);
-	lightMatHost.pbrtMaterialType = MaterialType::PBRT_GLASS;
+	lightMatHost.color.textureID = texId;
+	//lightMatHost.ior.value = 1.5f; // glass
+	//lightMatHost.absorption.value = make_float3(0.05f);
+	//lightMatHost.pbrtMaterialType = MaterialType::PBRT_GLASS;
 	int lightQuad = renderer->AddQuad( make_float3( 1, -1, 0 ), make_float3( 0, 10.1, 0 ), 10.0f, 10.0f, lightMat );
 	renderer->AddInstance( lightQuad );
 	int lightQuad_2 = renderer->AddQuad(make_float3(-1, 1, 0), make_float3(0, 10, 0), 10.0f, 10.0f, lightMat);

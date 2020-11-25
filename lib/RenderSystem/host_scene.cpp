@@ -421,8 +421,15 @@ int HostScene::AddQuad( float3 N, const float3 pos, const float width, const flo
 	tri2.vN0 = tri2.vN1 = tri2.vN2 = N;
 	tri1.Nx = N.x, tri1.Ny = N.y, tri1.Nz = N.z;
 	tri2.Nx = N.x, tri2.Ny = N.y, tri2.Nz = N.z;
-	tri1.u0 = tri1.u1 = tri1.u2 = tri1.v0 = tri1.v1 = tri1.v2 = 0;
-	tri2.u0 = tri2.u1 = tri2.u2 = tri2.v0 = tri2.v1 = tri2.v2 = 0;
+
+	tri1.u0 = 0; tri1.v0 = 0;
+	tri1.u1 = 1; tri1.v1 = 1;
+	tri1.u2 = 0; tri1.v2 = 1;
+
+	tri2.u0 = 0; tri2.v0 = 0;
+	tri2.u1 = 0; tri2.v1 = 1;
+	tri2.u2 = 1; tri2.v2 = 0;
+
 	tri1.vertex0 = make_float3( newMesh->vertices[vertBase + 0] );
 	tri1.vertex1 = make_float3( newMesh->vertices[vertBase + 1] );
 	tri1.vertex2 = make_float3( newMesh->vertices[vertBase + 2] );
