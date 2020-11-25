@@ -4,8 +4,8 @@
     <brightness>0</brightness>
     <contrast>0</contrast>
     <gamma>2.2</gamma>
-    <aperture>9.9999997e-05</aperture>
-    <distortion>2.5</distortion>
+    <aperture>0.89999998</aperture>
+    <distortion>0.89999998</distortion>
     <focalDistance>5</focalDistance>
     <clampValue>10</clampValue>
     <tonemapper>4</tonemapper>

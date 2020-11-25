@@ -18,18 +18,6 @@ public:
 };
 
 // -----------------------------------------------------------
-// Material class
-// basic material properties
-// -----------------------------------------------------------
-class Material {
-public:
-	// constructor / destructor
-	Material() = default;
-	// data members
-	float3 color;
-};
-
-// -----------------------------------------------------------
 // Scene class
 // owner of the scene graph;
 // owner of the material and texture list
@@ -41,6 +29,8 @@ public:
 	// data members
 	vector<CoreMaterial> matList;
 	CoreMaterial air;
+
+	vector<CoreTexDesc> texList;
 
 	// Lights
 	vector<CorePointLight>			pointLights;

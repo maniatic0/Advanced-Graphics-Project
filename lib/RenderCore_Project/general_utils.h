@@ -3,6 +3,8 @@
 namespace lh2core
 {
 
+	constexpr float kSqrt2 = 1.41421356237f;
+
 	/// <summary>
 	/// Approximately the same
 	/// </summary>

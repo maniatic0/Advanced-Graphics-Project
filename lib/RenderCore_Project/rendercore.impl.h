@@ -176,6 +176,11 @@ namespace lh2core
 		const CoreTri& triangle = meshes[hitInfo.meshId].triangles[hitInfo.triId];
 		const CoreMaterial& material = scene.matList[triangle.material];
 
+		const float2 uv = 
+			make_float2(triangle.u0, triangle.v0) * hitInfo.triIntercept.u 
+			+ make_float2(triangle.u1, triangle.v1) * hitInfo.triIntercept.v 
+			+ make_float2(triangle.u2, triangle.v2) * hitInfo.triIntercept.GetWCoord();
+
 		// Note that this could be a texture map of normals in material
 		const float3& N
 			= normalize(triangle.vN0 * hitInfo.triIntercept.u + triangle.vN1 * hitInfo.triIntercept.v + triangle.vN2 * hitInfo.triIntercept.GetWCoord())
@@ -290,7 +295,7 @@ namespace lh2core
 		}
 
 		// Note that N should could be flipped if this is glass
-		return make_float4(intensityNew * color * material.color.value);
+		return make_float4(intensityNew * color, 1.0f) * LoadMaterialFloat4(material.color, uv);
 	}
 
 } // lh2core

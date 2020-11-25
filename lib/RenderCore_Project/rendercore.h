@@ -35,6 +35,7 @@ public:
 		const CorePointLight* pointLights, const int pointLightCount,
 		const CoreSpotLight* spotLights, const int spotLightCount,
 		const CoreDirectionalLight* directionalLights, const int directionalLightCount);
+	void SetTextures(const CoreTexDesc* tex, const int textureCount);
 	void Setting(const char* name, float value);
 
 	void WaitForRender() { /* this core does not support asynchronous rendering yet */ }
@@ -43,7 +44,6 @@ public:
 
 	// unimplemented for the minimal core
 	inline void SetProbePos( const int2 pos ) override {}
-	inline void SetTextures( const CoreTexDesc* tex, const int textureCount ) override {}
 	inline void SetSkyData( const float3* pixels, const uint width, const uint height, const mat4& worldToLight ) override {}
 	inline void SetInstance( const int instanceIdx, const int modelIdx, const mat4& transform ) override {}
 	inline void FinalizeInstances() override {}
@@ -70,6 +70,7 @@ private:
 	static bool Refract(const float3 &I, const float3 &N, const float ior, float n1, float3 &T);
 	static float Fresnel(const float3& I, const float3& N, const float ior, float n1);
 	void RenderCore::CreateGaussianKernel(uint width, uint height);
+	float4 LoadMaterialFloat4(const CoreMaterial::Vec3Value& val, const float2 &uv) const;
 
 	/// <summary>
 	/// Note this trick only works single threaded. We would need threadlocal stuff
@@ -139,12 +140,17 @@ private:
 	bool useChromaticAberration;
 
 	/// <summary>
-	/// Chromatic Aberration U Offset
+	/// Chromatic Aberration Radial Constant
+	/// </summary>
+	float3 aberrationRadialK;
+
+	/// <summary>
+	/// Chromatic Aberration U Focal Point Offset
 	/// </summary>
 	float3 aberrationUOffset;
 
 	/// <summary>
-	/// Chromatic Aberration Y Offset
+	/// Chromatic Aberration Y Focal Point Offset
 	/// </summary>
 	float3 aberrationVOffset;
 

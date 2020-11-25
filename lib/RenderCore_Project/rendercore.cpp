@@ -38,6 +38,7 @@ void RenderCore::Init()
 	useChromaticAberration = false;
 	aberrationUOffset = make_float3(0);
 	aberrationVOffset = make_float3(0);
+	aberrationRadialK = make_float3(0);
 
 	useVignetting = false;
 	sigma = 500;
@@ -99,6 +100,18 @@ void RenderCore::Setting(const char* name, float value)
 	{
 		aberrationVOffset.z = value;
 	}
+	else if (!strcmp(name, "chromatic_radial_k_r"))
+	{
+		aberrationRadialK.x = value;
+	}
+	else if (!strcmp(name, "chromatic_radial_k_g"))
+	{
+		aberrationRadialK.y = value;
+	}
+	else if (!strcmp(name, "chromatic_radial_k_b"))
+	{
+		aberrationRadialK.z = value;
+	}
 }
 
 //  +-----------------------------------------------------------------------------+
@@ -139,6 +152,19 @@ void RenderCore::SetGeometry(const int meshIdx, const float4* vertexData, const 
 	newMesh.triangles = new CoreTri[vertexCount / 3];
 	memcpy(newMesh.triangles, triangleData, (vertexCount / 3) * sizeof(CoreTri));
 	meshes.push_back(newMesh);
+}
+
+void RenderCore::SetTextures(const CoreTexDesc* tex, const int textureCount)
+{
+	scene.texList.resize(textureCount);
+	// copy the supplied array of materials
+	for (int i = 0; i < textureCount; i++)
+	{
+		scene.texList[i] = tex[i];
+		assert(tex[i].storage == ARGB128);
+		scene.texList[i].fdata = new float4[scene.texList[i].pixelCount];
+		memcpy(scene.texList[i].fdata, tex[i].fdata, tex[i].pixelCount * sizeof(float4));
+	}
 }
 
 //  +-----------------------------------------------------------------------------+
@@ -224,7 +250,7 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 				float us = 2.0f * u - 1.0f;
 				float vs = 2.0f * v - 1.0f;
 				const float d = sqrtf(us * us + vs * vs);
-				if (d < 1)
+				if (d < 1.0f)
 				{
 					const float d2 = d * maxFactor;
 					const float z = sqrtf(1.0f - d * d);
@@ -328,22 +354,38 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 			{
 				base = y * screen->width;
 				const float v = y * invHeight;
-				const float vR = v + aberrationVOffset.x;
-				const float vG = v + aberrationVOffset.y;
-				const float vB = v + aberrationVOffset.z;
+
+				const float cvR = v - aberrationVOffset.x - 0.5f;
+				const float cvG = v - aberrationVOffset.y - 0.5f;
+				const float cvB = v - aberrationVOffset.z - 0.5f;
+
 				for (uint x = 0; x < screen->width; x++)
 				{
 					base2 = x + base;
 
 					const float u = x * invWidth;
-					const float uR = u + aberrationUOffset.x;
-					const float uG = u + aberrationUOffset.y;
-					const float uB = u + aberrationUOffset.z;
 
-					tempColor.w = fscreen[base2].w;
+
+					const float cuR = u - aberrationUOffset.x - 0.5f;
+					const float cuG = u - aberrationUOffset.y - 0.5f;
+					const float cuB = u - aberrationUOffset.z - 0.5f;
+					
+					const float rR = aberrationRadialK.x / (sqrtf(cuR * cuR + cvR * cvR) + 0.00000001f); // Avoid divs by 0
+					const float rG = aberrationRadialK.y / (sqrtf(cuG * cuG + cvG * cvG) + 0.00000001f);
+					const float rB = aberrationRadialK.z / (sqrtf(cuB * cuB + cvB * cvB) + 0.00000001f);
+
+					const float uR = cuR * (1.0f + rR) + aberrationUOffset.x + 0.5f;
+					const float uG = cuG * (1.0f + rG) + aberrationUOffset.y + 0.5f;
+					const float uB = cuB * (1.0f + rB) + aberrationUOffset.z + 0.5f;
+
+					const float vR = cvR * (1.0f + rR) + aberrationVOffset.x + 0.5f;
+					const float vG = cvG * (1.0f + rG) + aberrationVOffset.y + 0.5f;
+					const float vB = cvB * (1.0f + rB) + aberrationVOffset.z + 0.5f;
+
 					tempColor.x = textureFetch<true>(fscreen, screen->width, screen->height, uR, vR).x;
 					tempColor.y = textureFetch<true>(fscreen, screen->width, screen->height, uG, vG).y;
 					tempColor.z = textureFetch<true>(fscreen, screen->width, screen->height, uB, vB).z;
+					tempColor.w = fscreen[base2].w;
 
 					if (useVignetting)
 					{
@@ -389,6 +431,23 @@ CoreStats RenderCore::GetCoreStats() const
 //  +-----------------------------------------------------------------------------+
 void RenderCore::Shutdown()
 {
+	for (size_t i = 0; i < meshes.size(); i++)
+	{
+		if (meshes[i].vertices != nullptr)
+		{
+			delete meshes[i].vertices;
+			delete meshes[i].triangles;
+		}
+	}
+
+	for (size_t i = 0; i < scene.texList.size(); i++)
+	{
+		if (scene.texList[i].fdata != nullptr)
+		{
+			delete scene.texList[i].fdata;
+		}
+	}
+
 	if (screen == nullptr) return; // Nothing to release
 	delete screen;
 	delete fscreen;
@@ -528,6 +587,35 @@ void RenderCore::CreateGaussianKernel(uint width, uint height)
 	}
 
 }
+
+float4 RenderCore::LoadMaterialFloat4(const CoreMaterial::Vec3Value& val, const float2& uv) const
+{
+	if (val.textureID == -1)
+	{
+		// Just one value
+		assert(val.value.x != 1e-32);
+		return make_float4(val.value, 1.0f);
+	}
+
+	float2 newUV = uv;
+
+	if (val.uvscale.x != 1e-32)
+	{
+		assert(val.uvscale.y != 1e-32);
+		newUV *= val.uvscale;
+	}
+
+	if (val.uvoffset.x != 1e-32)
+	{
+		assert(val.uvoffset.y != 1e-32);
+		newUV += val.uvoffset;
+	}
+
+	const CoreTexDesc& tex = scene.texList[val.textureID];
+
+	return textureFetch<false>(tex.fdata, tex.width, tex.height, newUV.x, newUV.y);
+}
+
 
 float RenderCore::pixelOffSets[RenderCore::pixelOffsetsSize * 2] =
 {

@@ -153,6 +153,8 @@ void PrepareScene()
 	cubeMatHost.absorption.value = make_float3(0.f);
 	cubeMatHost.pbrtMaterialType = MaterialType::PBRT_GLASS;*/
 	
+	int texId = renderer->GetScene()->CreateTexture("../_shareddata/textures/test2.png", 0);
+
 	int lightMat = renderer->AddMaterial(make_float3(1, 1, 1));
 	HostMaterial &lightMatHost = *renderer->GetMaterial(lightMat);
 	lightMatHost.ior.value = 1.5f; // glass
