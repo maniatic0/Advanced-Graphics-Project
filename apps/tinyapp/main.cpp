@@ -152,6 +152,11 @@ void PrepareScene()
 	cubeMatHost.ior.value = 1.5f; // Glass
 	cubeMatHost.absorption.value = make_float3(0.f);
 	cubeMatHost.pbrtMaterialType = MaterialType::PBRT_GLASS;*/
+
+	/*
+	HostMaterial& cubeMatHost = *renderer->GetMaterial(0);
+	cubeMatHost.reflection = 1.0f;
+	*/
 	
 	int texId = renderer->AddTexture("../_shareddata/textures/LEGOSHLD.tga", 0);
 	//int texId = renderer->AddTexture("../_shareddata/textures/checker.png", 0);
