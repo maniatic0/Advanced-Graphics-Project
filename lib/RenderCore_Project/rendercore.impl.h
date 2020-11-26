@@ -220,7 +220,7 @@ namespace lh2core
 			if (reflection > kEps)
 			{
 				r.SetOrigin(I);
-				r.SetDirection(D - 2.f * (dot(D, N) * N));
+				r.SetDirection(reflect(D, N));
 
 				color += make_float3(Trace<backCulling>(r, intensityNew, matId, currentDepth + 1)) * reflection;
 			}
@@ -264,7 +264,7 @@ namespace lh2core
 			if (reflection > kEps)
 			{
 				r.SetOrigin(I);
-				r.SetDirection(D - 2.f * (dot(D, N) * N));
+				r.SetDirection(reflect(D, N));
 
 				color += make_float3(Trace<backCulling>(r, intensityNew, matId, currentDepth + 1)) * reflection;
 			}

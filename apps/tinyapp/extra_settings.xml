@@ -1,5 +1,5 @@
 <settings>
-    <aa_level>15</aa_level>
+    <aa_level>1</aa_level>
     <distortion_type>0</distortion_type>
     <vignetting_enabled>0</vignetting_enabled>
     <sigma>300</sigma>
