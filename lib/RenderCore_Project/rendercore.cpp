@@ -615,6 +615,11 @@ float4 RenderCore::LoadMaterialFloat4(const CoreMaterial::Vec3Value& val, const 
 
 	float2 newUV = uv;
 
+	if (val.scale != 1e-32)
+	{
+		newUV *= val.scale;
+	}
+
 	if (val.uvscale.x != 1e-32)
 	{
 		assert(val.uvscale.y != 1e-32);
