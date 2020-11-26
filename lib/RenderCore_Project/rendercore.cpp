@@ -366,35 +366,50 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 			for (uint y = 0; y < screen->height; y++)
 			{
 				base = y * screen->width;
-				const float v = y * invHeight;
-
-				const float cvR = v + aberrationVOffset.x - 0.5f;
-				const float cvG = v + aberrationVOffset.y - 0.5f;
-				const float cvB = v + aberrationVOffset.z - 0.5f;
+				const float pv = ((float)y + 0.5f) * invHeight;
 
 				for (uint x = 0; x < screen->width; x++)
 				{
 					base2 = x + base;
 
-					const float u = x * invWidth;
+					const float pu = ((float)x + 0.5f) * invWidth;
 
-					const float cuR = u + aberrationUOffset.x - 0.5f;
-					const float cuG = u + aberrationUOffset.y - 0.5f;
-					const float cuB = u + aberrationUOffset.z - 0.5f;
+					// AA Aberration
+					tempColor = make_float4(0);
+					for (int i = 0; i < aaLevel; i++)
+					{
+						// AA offsets
+						aaOffset = i * 2;
+						pixelOffsetU = pixelOffSets[aaOffset + 0];
+						pixelOffsetV = pixelOffSets[aaOffset + 1];
 
-					const float uR = u + aberrationRadialK.x * cuR * 0.0075f;
-					const float uG = u + aberrationRadialK.y * cuG * 0.0075f;
-					const float uB = u + aberrationRadialK.z * cuB * 0.0075f;
+						const float u = pu + pixelOffsetU * invWidth;
+						const float v = pv + pixelOffsetV * invHeight;
 
-					const float vR = v + aberrationRadialK.x * cvR * 0.0075f;
-					const float vG = v + aberrationRadialK.y * cvG * 0.0075f;
-					const float vB = v + aberrationRadialK.z * cvB * 0.0075f;
+						const float cvR = v + aberrationVOffset.x - 0.5f;
+						const float cvG = v + aberrationVOffset.y - 0.5f;
+						const float cvB = v + aberrationVOffset.z - 0.5f;
 
-					tempColor = fscreen[base2];
+						const float cuR = u + aberrationUOffset.x - 0.5f;
+						const float cuG = u + aberrationUOffset.y - 0.5f;
+						const float cuB = u + aberrationUOffset.z - 0.5f;
 
-					tempColor.x = textureFetch<true>(fscreen, screen->width, screen->height, uR, vR).x;
-					tempColor.y = textureFetch<true>(fscreen, screen->width, screen->height, uG, vG).y;
-					tempColor.z = textureFetch<true>(fscreen, screen->width, screen->height, uB, vB).z;
+						const float uR = u + aberrationRadialK.x * cuR * chromaticAberrationScale;
+						const float uG = u + aberrationRadialK.y * cuG * chromaticAberrationScale;
+						const float uB = u + aberrationRadialK.z * cuB * chromaticAberrationScale;
+
+						const float vR = v + aberrationRadialK.x * cvR * chromaticAberrationScale;
+						const float vG = v + aberrationRadialK.y * cvG * chromaticAberrationScale;
+						const float vB = v + aberrationRadialK.z * cvB * chromaticAberrationScale;
+
+						tempColor.w += textureFetch<true>(fscreen, screen->width, screen->height, u, v).w;
+						tempColor.x += textureFetch<true>(fscreen, screen->width, screen->height, uR, vR).x;
+						tempColor.y += textureFetch<true>(fscreen, screen->width, screen->height, uG, vG).y;
+						tempColor.z += textureFetch<true>(fscreen, screen->width, screen->height, uB, vB).z;
+
+					}
+
+					tempColor *= invAaLevel;
 
 					tempColor.x = pow(tempColor.x, gammaCorrection);
 					tempColor.y = pow(tempColor.y, gammaCorrection);
