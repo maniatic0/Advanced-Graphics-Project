@@ -24,7 +24,7 @@ using namespace lh2core;
 void RenderCore::Init()
 {
 	// initialize
-	aaLevel = 65;
+	aaLevel = 1;
 	assert(0 < aaLevel && aaLevel <= pixelOffsetsSize);
 	invAaLevel = 1.0f / (float)(aaLevel);
 
@@ -39,6 +39,7 @@ void RenderCore::Init()
 	aberrationUOffset = make_float3(0);
 	aberrationVOffset = make_float3(0);
 	aberrationRadialK = make_float3(0);
+	chromaticAberrationScale = 0.0075f;
 
 	useVignetting = false;
 	sigma = 500;
@@ -75,6 +76,10 @@ void RenderCore::Setting(const char* name, float value)
 	else if (!strcmp(name, "chromatic_aberration_enabled"))
 	{
 		useChromaticAberration = (bool)value;
+	}
+	else if (!strcmp(name, "chromatic_aberration_scale"))
+	{
+		chromaticAberrationScale = value;
 	}
 	else if (!strcmp(name, "chromatic_u_offset_r"))
 	{
@@ -322,7 +327,6 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 		//fscreen[x + base] = make_float4(0, 0, 0, 1);
 	}
 
-	uint color;
 	float4 tempColor;
 	// HDR to 255 colors
 	base = yScanline * screen->width;
@@ -331,25 +335,17 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 	{
 		base2 = x + base;
 
-		fscreen[base2].x = pow(fscreen[base2].x, gammaCorrection);
-		fscreen[base2].y = pow(fscreen[base2].y, gammaCorrection);
-		fscreen[base2].z = pow(fscreen[base2].z, gammaCorrection);
-
 		tempColor = fscreen[base2];
+		tempColor.x = pow(tempColor.x, gammaCorrection);
+		tempColor.y = pow(tempColor.y, gammaCorrection);
+		tempColor.z = pow(tempColor.z, gammaCorrection);
+		
 		if (useVignetting)
 		{
 			tempColor *= kernel[base2];
 		}
 
-		tempColor *= 255.0f;
-		tempColor = clamp(tempColor, 0, 255);
-		// AABBGGRR
-		color =
-			((((uint)tempColor.w) << 24) & 0xFF000000)
-			| ((((uint)tempColor.z) << 16) & 0xFF0000)
-			| ((((uint)tempColor.y) << 8) & 0xFF00)
-			| (((uint)tempColor.x) & 0xFF);
-		screen->Plot(x, yScanline, color);
+		screen->Plot(x, yScanline, float4ToUint(tempColor));
 	}
 
 	++yScanline;
@@ -366,14 +362,15 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 
 		if (useChromaticAberration)
 		{
+			// Chromatic aberration modified from https://www.shadertoy.com/view/wl2SDt
 			for (uint y = 0; y < screen->height; y++)
 			{
 				base = y * screen->width;
 				const float v = y * invHeight;
 
-				const float cvR = v - aberrationVOffset.x - 0.5f;
-				const float cvG = v - aberrationVOffset.y - 0.5f;
-				const float cvB = v - aberrationVOffset.z - 0.5f;
+				const float cvR = v + aberrationVOffset.x - 0.5f;
+				const float cvG = v + aberrationVOffset.y - 0.5f;
+				const float cvB = v + aberrationVOffset.z - 0.5f;
 
 				for (uint x = 0; x < screen->width; x++)
 				{
@@ -381,42 +378,34 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 
 					const float u = x * invWidth;
 
+					const float cuR = u + aberrationUOffset.x - 0.5f;
+					const float cuG = u + aberrationUOffset.y - 0.5f;
+					const float cuB = u + aberrationUOffset.z - 0.5f;
 
-					const float cuR = u - aberrationUOffset.x - 0.5f;
-					const float cuG = u - aberrationUOffset.y - 0.5f;
-					const float cuB = u - aberrationUOffset.z - 0.5f;
-					
-					const float rR = aberrationRadialK.x / (sqrtf(cuR * cuR + cvR * cvR) + 0.00000001f); // Avoid divs by 0
-					const float rG = aberrationRadialK.y / (sqrtf(cuG * cuG + cvG * cvG) + 0.00000001f);
-					const float rB = aberrationRadialK.z / (sqrtf(cuB * cuB + cvB * cvB) + 0.00000001f);
+					const float uR = u + aberrationRadialK.x * cuR * 0.0075f;
+					const float uG = u + aberrationRadialK.y * cuG * 0.0075f;
+					const float uB = u + aberrationRadialK.z * cuB * 0.0075f;
 
-					const float uR = cuR * (1.0f + rR) + aberrationUOffset.x + 0.5f;
-					const float uG = cuG * (1.0f + rG) + aberrationUOffset.y + 0.5f;
-					const float uB = cuB * (1.0f + rB) + aberrationUOffset.z + 0.5f;
+					const float vR = v + aberrationRadialK.x * cvR * 0.0075f;
+					const float vG = v + aberrationRadialK.y * cvG * 0.0075f;
+					const float vB = v + aberrationRadialK.z * cvB * 0.0075f;
 
-					const float vR = cvR * (1.0f + rR) + aberrationVOffset.x + 0.5f;
-					const float vG = cvG * (1.0f + rG) + aberrationVOffset.y + 0.5f;
-					const float vB = cvB * (1.0f + rB) + aberrationVOffset.z + 0.5f;
+					tempColor = fscreen[base2];
 
 					tempColor.x = textureFetch<true>(fscreen, screen->width, screen->height, uR, vR).x;
 					tempColor.y = textureFetch<true>(fscreen, screen->width, screen->height, uG, vG).y;
 					tempColor.z = textureFetch<true>(fscreen, screen->width, screen->height, uB, vB).z;
-					tempColor.w = fscreen[base2].w;
+
+					tempColor.x = pow(tempColor.x, gammaCorrection);
+					tempColor.y = pow(tempColor.y, gammaCorrection);
+					tempColor.z = pow(tempColor.z, gammaCorrection);
 
 					if (useVignetting)
 					{
 						tempColor *= kernel[base2];
 					}
-					tempColor *= 255.0f;
-					tempColor = clamp(tempColor, 0, 255);
-					// AABBGGRR
-					color =
-						((((uint)tempColor.w) << 24) & 0xFF000000)
-						| ((((uint)tempColor.z) << 16) & 0xFF0000)
-						| ((((uint)tempColor.y) << 8) & 0xFF00)
-						| (((uint)tempColor.x) & 0xFF);
 
-					screen->Plot(x, y, color);
+					screen->Plot(x, y, float4ToUint(tempColor));
 				}
 			}
 		}

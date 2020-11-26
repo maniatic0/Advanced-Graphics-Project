@@ -159,7 +159,8 @@ void PrepareScene()
 	int lightMat = renderer->AddMaterial(make_float3(1, 1, 1));
 	HostMaterial &lightMatHost = *renderer->GetMaterial(lightMat);
 	lightMatHost.color.textureID = texId;
-	lightMatHost.color.uvscale = make_float2(2.0f);
+	//lightMatHost.color.scale = 2.0f;
+	//lightMatHost.color.uvscale = make_float2(2.0f);
 	//lightMatHost.ior.value = 1.5f; // glass
 	//lightMatHost.absorption.value = make_float3(0.05f);
 	//lightMatHost.pbrtMaterialType = MaterialType::PBRT_GLASS;

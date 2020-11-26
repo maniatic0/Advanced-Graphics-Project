@@ -135,6 +135,11 @@ private:
 	float gamma;
 
 	/// <summary>
+	/// Chromatic Aberration Scaling Constant
+	/// </summary>
+	float chromaticAberrationScale;
+
+	/// <summary>
 	/// If we are using chromatic aberration
 	/// </summary>
 	bool useChromaticAberration;

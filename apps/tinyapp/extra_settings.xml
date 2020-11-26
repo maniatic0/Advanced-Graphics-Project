@@ -1,16 +1,16 @@
 <settings>
-    <aa_level>5</aa_level>
+    <aa_level>15</aa_level>
     <distortion_type>0</distortion_type>
-    <vignetting_enabled>0</vignetting_enabled>
+    <vignetting_enabled>1</vignetting_enabled>
     <sigma>300</sigma>
-    <chromatic_aberration_enabled>1/chromatic_aberration_enabled>
-    <chromatic_radial_k_r>-0.005</chromatic_radial_k_r>
+    <chromatic_aberration_enabled>1</chromatic_aberration_enabled>
+    <chromatic_radial_k_r>-0.5</chromatic_radial_k_r>
     <chromatic_v_offset_r>0</chromatic_v_offset_r>
     <chromatic_u_offset_r>0</chromatic_u_offset_r>
-    <chromatic_radial_k_b>-0.003</chromatic_radial_k_b>
+    <chromatic_radial_k_b>0.8</chromatic_radial_k_b>
     <chromatic_v_offset_b>0</chromatic_v_offset_b>
     <chromatic_u_offset_b>0</chromatic_u_offset_b>
-    <chromatic_radial_k_g>-0.006</chromatic_radial_k_g>
+    <chromatic_radial_k_g>0</chromatic_radial_k_g>
     <chromatic_v_offset_g>0</chromatic_v_offset_g>
     <chromatic_u_offset_g>0</chromatic_u_offset_g>
 </settings>

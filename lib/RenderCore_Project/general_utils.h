@@ -38,6 +38,19 @@ namespace lh2core
 		return make_float4((float)v.x * invVal, (float)v.y * invVal, (float)v.z * invVal, (float)v.w * invVal);
 	}
 
+	inline uint float4ToUint(const float4& color)
+	{
+		float4 tempColor = color;
+		tempColor *= 255.0f;
+		tempColor = clamp(tempColor, 0, 255);
+		// AABBGGRR
+		return
+			((((uint)tempColor.w) << 24) & 0xFF000000)
+			| ((((uint)tempColor.z) << 16) & 0xFF0000)
+			| ((((uint)tempColor.y) << 8) & 0xFF00)
+			| (((uint)tempColor.x) & 0xFF);
+	}
+
 	inline float4 bilinearInterpolation(
 		const float tx,
 		const float ty,
