@@ -294,8 +294,150 @@ namespace lh2core
 		break;
 		}
 
-		// Note that N should could be flipped if this is glass
 		return make_float4(intensityNew * color, 1.0f) * LoadMaterialFloat4(material.color, uv);
 	}
 
+
+	template <bool backCulling>
+	float4 Sample(Ray& r, const float3& intensity, int matId = -1, int currentDepth = 0)
+	{
+		if (intensity.x + intensity.y + intensity.z < kEps)
+		{
+			// No intensity left
+			return make_float4(0);
+		}
+
+		if (currentDepth > maximumDepth)
+		{
+			return make_float4(0);
+		}
+
+		// This works only single threaded
+		if (!IntersectScene<backCulling>(r, hitInfo))
+		{
+			return make_float4(0);
+		}
+
+		// New info
+		const float t = hitInfo.triIntercept.t;
+		const float3 I = make_float3(r.Evaluate(t));
+		const float3 D = make_float3(r.direction);
+
+		const CoreTri& triangle = meshes[hitInfo.meshId].triangles[hitInfo.triId];
+		const CoreMaterial& material = scene.matList[triangle.material];
+
+		// Prev material
+		float n1;
+		float3 absorption;
+		float3 intensityNew;
+		if (matId == -1)
+		{
+			n1 = scene.air.ior.value;
+			absorption = scene.air.absorption.value;
+		}
+		else
+		{
+			const CoreMaterial& glassMaterial = scene.matList[matId];
+			assert(glassMaterial.pbrtMaterialType == MaterialType::PBRT_GLASS);
+			n1 = glassMaterial.ior.value;
+			absorption = glassMaterial.absorption.value;
+		}
+
+		intensityNew = intensity * make_float3(exp(-absorption.x * t), exp(-absorption.y * t), exp(-absorption.z * t));
+
+		if (triangle.ltriIdx != -1)
+		{
+			// Area light
+			const CoreLightTri& light = scene.areaLight[triangle.ltriIdx];
+			return make_float4(intensityNew * light.radiance, 1.0f) * LoadMaterialFloat4(material.color, uv);
+		}
+
+		switch (material.pbrtMaterialType)
+		{
+		case MaterialType::PBRT_GLASS:
+		{
+			// Pure Glass
+			const float ior = material.ior.value;
+			const float reflection = Fresnel(D, N, ior, n1);
+			const float refraction = 1.0f - reflection;
+
+			if (reflection > kEps)
+			{
+				r.SetOrigin(I);
+				r.SetDirection(reflect(D, N));
+
+				color += make_float3(Trace<backCulling>(r, intensityNew, matId, currentDepth + 1)) * reflection;
+			}
+
+			if (refraction > kEps)
+			{
+				float3 T;
+				if (Refract(D, N, ior, n1, T))
+				{
+					r.SetOrigin(I);
+					r.SetDirection(normalize(T));
+
+					if (matId != -1 && triangle.material == matId)
+					{
+						// From glass to air
+						color += make_float3(Trace<true>(r, intensityNew, -1, currentDepth + 1)) * refraction;
+					}
+					else
+					{
+						// Air to glass
+						assert(matId == -1);
+						color += make_float3(Trace<false>(r, intensityNew, triangle.material, currentDepth + 1)) * refraction;
+					}
+
+				}
+			}
+
+		}
+		break;
+		default:
+		{
+			// Non-pure glass (these can be fake values)
+			float diffuse, reflection, refraction;
+			getLightComponents(material, diffuse, reflection, refraction);
+
+			if (diffuse > kEps)
+			{
+				color += diffuse * Illuminate<backCulling>(I, N, -1, hitInfo.meshId, hitInfo.triId);
+			}
+
+			if (reflection > kEps)
+			{
+				r.SetOrigin(I);
+				r.SetDirection(reflect(D, N));
+
+				color += make_float3(Trace<backCulling>(r, intensityNew, matId, currentDepth + 1)) * reflection;
+			}
+
+			if (refraction > kEps)
+			{
+				const float ior = material.ior.value;
+				float3 T;
+				if (Refract(D, N, ior, n1, T))
+				{
+					r.SetOrigin(I);
+					r.SetDirection(normalize(T));
+					if (matId != -1 && triangle.material == matId)
+					{
+						// From glass to air
+						color += make_float3(Trace<true>(r, intensityNew, -1, currentDepth + 1)) * refraction;
+					}
+					else
+					{
+						// Air to glass
+						assert(matId == -1);
+						color += make_float3(Trace<false>(r, intensityNew, triangle.material, currentDepth + 1)) * refraction;
+					}
+				}
+			}
+		}
+		break;
+		}
+
+		return make_float4(intensityNew * color, 1.0f) * LoadMaterialFloat4(material.color, uv);
+	}
 } // lh2core

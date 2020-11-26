@@ -36,7 +36,6 @@ public:
 	vector<CorePointLight>			pointLights;
 	vector<CoreSpotLight>			spotLights;
 	vector<CoreDirectionalLight>	directionalLights;
-
 	vector<CoreLightTri>	areaLights;
 
 };
