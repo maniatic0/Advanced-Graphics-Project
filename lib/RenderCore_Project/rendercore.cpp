@@ -44,6 +44,9 @@ void RenderCore::Init()
 	useVignetting = false;
 	sigma = 500;
 	kernel = nullptr;
+
+
+	renderType = RenderType::Whitted;
 }
 
 void RenderCore::Setting(const char* name, float value)
@@ -52,6 +55,10 @@ void RenderCore::Setting(const char* name, float value)
 	{
 		gamma = value;
 	}
+	else if (!strcmp(name, "render_type"))
+	{
+		renderType = (RenderType)clamp((int)value, 0, (int)RenderType::Count - 1);
+	}
 	else if (!strcmp(name, "aa_level"))
 	{
 		aaLevel = (int)clamp(value, 1.0f, (float)pixelOffsetsSize);
@@ -59,7 +66,7 @@ void RenderCore::Setting(const char* name, float value)
 	}
 	else if (!strcmp(name, "distortion_type"))
 	{
-		distortionType = (DistortionType)(int)clamp(value, 0.0f, (float)((int)DistortionType::Count - 1));
+		distortionType = (DistortionType)clamp((int)value, 0, (int)DistortionType::Count - 1);
 	}
 	else if (!strcmp(name, "vignetting_enabled"))
 	{
@@ -318,7 +325,17 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 			ray.SetOrigin(view.pos);
 			ray.SetDirection(dir);
 
-			fscreen[x + base] += Trace<true>(ray, intensity, -1, 0);
+			switch (renderType)
+			{
+			case RenderCore::RenderType::Whitted:
+				fscreen[x + base] += Trace<true>(ray, intensity, -1, 0);
+				break;
+			case RenderCore::RenderType::PathTracer:
+				break;
+			default:
+				assert(false); // What are you doing here
+				break;
+			}
 		}
 		fscreen[x + base] *= invAaLevel;
 
@@ -498,6 +515,12 @@ void RenderCore::SetLights(const CoreLightTri* triLights, const int triLightCoun
 	const CoreSpotLight* spotLights, const int spotLightCount,
 	const CoreDirectionalLight* directionalLights, const int directionalLightCount)
 {
+	scene.areaLights.resize(triLightCount);
+	for (int i = 0; i < triLightCount; i++)
+	{
+		scene.areaLights[i] = triLights[i];
+	}
+
 	scene.spotLights.resize(spotLightCount);
 	for (int i = 0; i < spotLightCount; i++)
 	{
