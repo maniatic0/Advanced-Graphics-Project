@@ -298,4 +298,43 @@ namespace lh2core
 		return make_float4(intensityNew * color, 1.0f) * LoadMaterialFloat4(material.color, uv);
 	}
 
+	float4 RenderCore::DiffuseReflection(const float3& N, CoreTri& triangle)
+	{
+		// Generate a random direction on a hemisphere
+		float3 randomDir;
+		float angle1 = 2 * PI * GetRandomFloat(0, 1);
+		float angle2 = acos(1 - 2 * GetRandomFloat(0, 1));
+		randomDir.x = sin(angle1) * sin(angle2);
+		randomDir.y = cos(angle1) * sin(angle2);
+		randomDir.z = abs(cos(angle2));
+		float4 dir = make_float4(normalize(randomDir));
+
+		// Convert the random direction to world space
+		mat4 TBN = CreateTBNMatrix(triangle.T, triangle.B, N);
+		return TBN * dir;
+	}
+
+	float RenderCore::GetRandomFloat(float a, float b) {
+		float random = ((float)rand()) / (float)RAND_MAX;
+		float diff = b - a;
+		float r = random * diff;
+		return a + r;
+	}
+
+	mat4 RenderCore::CreateTBNMatrix(const float3& T, const float3& B, const float3& N)
+	{
+		mat4 TBN;
+		for (int i = 0; i < 16; i++) TBN.cell[i] = 0;
+		TBN[0] = T.x;
+		TBN[1] = T.y;
+		TBN[2] = T.z;
+		TBN[4] = B.x;
+		TBN[5] = B.y;
+		TBN[6] = B.z;
+		TBN[8] = N.x;
+		TBN[9] = N.y;
+		TBN[10] = N.z;
+		return TBN;
+	}
+
 } // lh2core

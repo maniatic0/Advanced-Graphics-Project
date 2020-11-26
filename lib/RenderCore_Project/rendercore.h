@@ -71,6 +71,9 @@ private:
 	static float Fresnel(const float3& I, const float3& N, const float ior, float n1);
 	void RenderCore::CreateGaussianKernel(uint width, uint height);
 	float4 LoadMaterialFloat4(const CoreMaterial::Vec3Value& val, const float2 &uv) const;
+	float4 DiffuseReflection(const float3& N, CoreTri& triangle);
+	float GetRandomFloat(float a, float b);
+	mat4 CreateTBNMatrix(const float3& T, const float3& B, const float3& N);
 
 	/// <summary>
 	/// Note this trick only works single threaded. We would need threadlocal stuff
