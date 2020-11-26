@@ -54,8 +54,28 @@ namespace lh2core
 	}
 
 	template<bool useClamp>
-	inline float4 textureFetch(const uchar4* texels, const int width, const int height, const float u, const float v)
+	inline float4 textureFetch(const uchar4* texels, const int width, const int height, float u, float v)
 	{
+		if constexpr (useClamp)
+		{
+			u = clamp(u, 0.0f, 1.0f);
+			v = clamp(v, 0.0f, 1.0f);
+		}
+		else
+		{
+			u = fmodf(u, 1.0f);
+			if (u < 0.0f)
+			{
+				u += 1.0f;
+			}
+
+			v = fmodf(v, 1.0f);
+			if (v < 0.0f)
+			{
+				v += 1.0f;
+			}
+		}
+
 		float su = u * (float)(width - 1);
 		float sv = v * (float)(height - 1);
 
@@ -82,10 +102,10 @@ namespace lh2core
 		}
 		else
 		{
-			uLo = (int)fmod(bu, (float)(width - 1));
+			uLo = (int)fmodf(bu, (float)(width - 1));
 			uHi = (uLo + 1) % width;
 
-			vLo = (int)fmod(bv, (float)(height - 1));
+			vLo = (int)fmodf(bv, (float)(height - 1));
 			vHi = (vLo + 1) % height;
 		}
 
@@ -93,8 +113,28 @@ namespace lh2core
 	}
 
 	template<bool useClamp>
-	inline float4 textureFetch(const float4* texels, const int width, const int height, const float u, const float v)
+	inline float4 textureFetch(const float4* texels, const int width, const int height, float u, float v)
 	{
+		if constexpr (useClamp)
+		{
+			u = clamp(u, 0.0f, 1.0f);
+			v = clamp(v, 0.0f, 1.0f);
+		}
+		else
+		{
+			u = fmodf(u, 1.0f);
+			if (u < 0.0f)
+			{
+				u += 1.0f;
+			}
+
+			v = fmodf(v, 1.0f);
+			if (v < 0.0f)
+			{
+				v += 1.0f;
+			}
+		}
+
 		float su = u * (float)(width - 1);
 		float sv = v * (float)(height - 1);
 

@@ -422,9 +422,9 @@ int HostScene::AddQuad( float3 N, const float3 pos, const float width, const flo
 	tri1.Nx = N.x, tri1.Ny = N.y, tri1.Nz = N.z;
 	tri2.Nx = N.x, tri2.Ny = N.y, tri2.Nz = N.z;
 
-	tri1.u0 = 0; tri1.v0 = 0;
-	tri1.u1 = 1; tri1.v1 = 1;
-	tri1.u2 = 0; tri1.v2 = 1;
+	tri1.u0 = 1; tri1.v0 = 0;
+	tri1.u1 = 0; tri1.v1 = 1;
+	tri1.u2 = 1; tri1.v2 = 1;
 
 	tri2.u0 = 0; tri2.v0 = 0;
 	tri2.u1 = 0; tri2.v1 = 1;
