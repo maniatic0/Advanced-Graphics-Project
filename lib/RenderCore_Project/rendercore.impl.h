@@ -151,7 +151,7 @@ namespace lh2core
 	template <bool backCulling>
 	float4 RenderCore::Trace(Ray& r, const float3& intensity, int matId, int currentDepth) const
 	{
-		if (intensity.x  + intensity.y + intensity.z < kEps)
+		if (intensity.x + intensity.y + intensity.z < kEps)
 		{
 			// No intensity left
 			return make_float4(0);
@@ -176,9 +176,9 @@ namespace lh2core
 		const CoreTri& triangle = meshes[hitInfo.meshId].triangles[hitInfo.triId];
 		const CoreMaterial& material = scene.matList[triangle.material];
 
-		const float2 uv = 
-			make_float2(triangle.u0, triangle.v0) * hitInfo.triIntercept.u 
-			+ make_float2(triangle.u1, triangle.v1) * hitInfo.triIntercept.v 
+		const float2 uv =
+			make_float2(triangle.u0, triangle.v0) * hitInfo.triIntercept.u
+			+ make_float2(triangle.u1, triangle.v1) * hitInfo.triIntercept.v
 			+ make_float2(triangle.u2, triangle.v2) * hitInfo.triIntercept.GetWCoord();
 
 		// Note that this could be a texture map of normals in material
@@ -244,7 +244,7 @@ namespace lh2core
 						assert(matId == -1);
 						color += make_float3(Trace<false>(r, intensityNew, triangle.material, currentDepth + 1)) * refraction;
 					}
-					
+
 				}
 			}
 
@@ -297,9 +297,8 @@ namespace lh2core
 		return make_float4(intensityNew * color, 1.0f) * LoadMaterialFloat4(material.color, uv);
 	}
 
-
 	template <bool backCulling>
-	float4 Sample(Ray& r, const float3& intensity, int matId = -1, int currentDepth = 0)
+	float4 RenderCore::Sample(Ray& r, const float3& intensity, int matId, int currentDepth) const
 	{
 		if (intensity.x + intensity.y + intensity.z < kEps)
 		{
@@ -326,6 +325,15 @@ namespace lh2core
 		const CoreTri& triangle = meshes[hitInfo.meshId].triangles[hitInfo.triId];
 		const CoreMaterial& material = scene.matList[triangle.material];
 
+		const float2 uv =
+			make_float2(triangle.u0, triangle.v0) * hitInfo.triIntercept.u
+			+ make_float2(triangle.u1, triangle.v1) * hitInfo.triIntercept.v
+			+ make_float2(triangle.u2, triangle.v2) * hitInfo.triIntercept.GetWCoord();
+
+		const float3& N
+			= normalize(triangle.vN0 * hitInfo.triIntercept.u + triangle.vN1 * hitInfo.triIntercept.v + triangle.vN2 * hitInfo.triIntercept.GetWCoord())
+			* (hitInfo.triIntercept.backFacing ? -1.0f : 1.0f);
+
 		// Prev material
 		float n1;
 		float3 absorption;
@@ -348,7 +356,7 @@ namespace lh2core
 		if (triangle.ltriIdx != -1)
 		{
 			// Area light
-			const CoreLightTri& light = scene.areaLight[triangle.ltriIdx];
+			const CoreLightTri& light = scene.areaLights[triangle.ltriIdx];
 			return make_float4(intensityNew * light.radiance, 1.0f) * LoadMaterialFloat4(material.color, uv);
 		}
 
@@ -361,16 +369,20 @@ namespace lh2core
 			const float reflection = Fresnel(D, N, ior, n1);
 			const float refraction = 1.0f - reflection;
 
-			if (reflection > kEps)
-			{
-				r.SetOrigin(I);
-				r.SetDirection(reflect(D, N));
+			const float path = GetRandomFloat(0.0f, 1.0f);
 
-				color += make_float3(Trace<backCulling>(r, intensityNew, matId, currentDepth + 1)) * reflection;
-			}
+			const float p0 = refraction <= reflection ? refraction : reflection;
+			const MaterialType t0 = refraction <= reflection ? MaterialType::PBRT_GLASS : MaterialType::PBRT_MIRROR;
+			const float p1 = refraction <= reflection ? reflection : refraction;
+			const MaterialType t1 = refraction <= reflection ? MaterialType::PBRT_MIRROR : MaterialType::PBRT_GLASS;
 
-			if (refraction > kEps)
+			const MaterialType selectedType = path < p0 ? t0 : t1;
+
+			switch (selectedType)
 			{
+			case MaterialType::PBRT_GLASS:
+			{
+				// Refraction ray
 				float3 T;
 				if (Refract(D, N, ior, n1, T))
 				{
@@ -380,18 +392,53 @@ namespace lh2core
 					if (matId != -1 && triangle.material == matId)
 					{
 						// From glass to air
-						color += make_float3(Trace<true>(r, intensityNew, -1, currentDepth + 1)) * refraction;
+						return make_float4(intensityNew, 1.0f) * LoadMaterialFloat4(material.color, uv) * Sample<true>(r, intensityNew, -1, currentDepth + 1);
 					}
 					else
 					{
 						// Air to glass
 						assert(matId == -1);
-						color += make_float3(Trace<false>(r, intensityNew, triangle.material, currentDepth + 1)) * refraction;
+						return make_float4(intensityNew, 1.0f) * LoadMaterialFloat4(material.color, uv) * Sample<false>(r, intensityNew, triangle.material, currentDepth + 1);
 					}
-
+				}
+				else
+				{
+					assert(false); // What
+					return make_float4(0);
 				}
 			}
-
+			break;
+			case MaterialType::PBRT_MIRROR:
+			{
+				// Reflection Ray
+				r.SetOrigin(I);
+				r.SetDirection(reflect(D, N));
+				return make_float4(intensityNew, 1.0f) * LoadMaterialFloat4(material.color, uv) * Sample<backCulling>(r, intensityNew, matId, currentDepth + 1);
+			}
+			break;
+			default:
+				assert(false);
+				break;
+			}
+			assert(false);
+		}
+		break;
+		case MaterialType::PBRT_MIRROR:
+		{
+			// Pure Mirror
+			r.SetOrigin(I);
+			r.SetDirection(reflect(D, N));
+			return make_float4(intensityNew, 1.0f) * LoadMaterialFloat4(material.color, uv) * Sample<backCulling>(r, intensityNew, matId, currentDepth + 1);
+		}
+		break;
+		case MaterialType::PBRT_MATTE:
+		{
+			const float3 R = DiffuseReflection(N, triangle);
+			r.SetOrigin(I);
+			r.SetDirection(R);
+			return
+				make_float4(intensityNew, 1.0f) * 2.0f * LoadMaterialFloat4(material.color, uv)
+				* dot(N, R) * Sample<backCulling>(r, intensityNew, matId, currentDepth + 1); // We omit PI because it is cancelled
 		}
 		break;
 		default:
@@ -400,44 +447,111 @@ namespace lh2core
 			float diffuse, reflection, refraction;
 			getLightComponents(material, diffuse, reflection, refraction);
 
-			if (diffuse > kEps)
+			const float path = GetRandomFloat(0.0f, 1.0f);
+
+			float p0 = diffuse;
+			MaterialType t0 = MaterialType::PBRT_MATTE;
+
+			float p1 = reflection;
+			MaterialType t1 = MaterialType::PBRT_MIRROR;
+
+			float p2 = refraction;
+			MaterialType t2 = MaterialType::PBRT_GLASS;
+
+			// Sorting
+			if (p0 > p1)
 			{
-				color += diffuse * Illuminate<backCulling>(I, N, -1, hitInfo.meshId, hitInfo.triId);
+				std::swap(p0, p1);
+				std::swap(t0, t1);
 			}
 
-			if (reflection > kEps)
+			if (p0 > p2)
 			{
+				std::swap(p0, p2);
+				std::swap(t0, t2);
+			}
+
+			//Now the smallest element is the 1st one. Just check the 2nd and 3rd
+
+			if (p1 > p2)
+			{
+				std::swap(p1, p2);
+				std::swap(t1, t2);
+			}
+
+			MaterialType selectedType;
+
+			if (path < p0)
+			{
+				selectedType = t0;
+			}
+			else if (path < p1)
+			{
+				selectedType = t1;
+			}
+			else
+			{
+				selectedType = t2;
+			}
+
+			switch (selectedType)
+			{
+			case MaterialType::PBRT_MATTE:
+			{
+				const float3 R = DiffuseReflection(N, triangle);
 				r.SetOrigin(I);
-				r.SetDirection(reflect(D, N));
-
-				color += make_float3(Trace<backCulling>(r, intensityNew, matId, currentDepth + 1)) * reflection;
+				r.SetDirection(R);
+				return
+					make_float4(intensityNew, 1.0f) * 2.0f * LoadMaterialFloat4(material.color, uv)
+					* dot(N, R) * Sample<backCulling>(r, intensityNew, matId, currentDepth + 1); // We omit PI because it is cancelled
 			}
-
-			if (refraction > kEps)
+			break;
+			case MaterialType::PBRT_GLASS:
 			{
+				// Refraction ray
 				const float ior = material.ior.value;
 				float3 T;
 				if (Refract(D, N, ior, n1, T))
 				{
 					r.SetOrigin(I);
 					r.SetDirection(normalize(T));
+
 					if (matId != -1 && triangle.material == matId)
 					{
 						// From glass to air
-						color += make_float3(Trace<true>(r, intensityNew, -1, currentDepth + 1)) * refraction;
+						return make_float4(intensityNew, 1.0f) * LoadMaterialFloat4(material.color, uv) * Sample<true>(r, intensityNew, -1, currentDepth + 1);
 					}
 					else
 					{
 						// Air to glass
 						assert(matId == -1);
-						color += make_float3(Trace<false>(r, intensityNew, triangle.material, currentDepth + 1)) * refraction;
+						return make_float4(intensityNew, 1.0f) * LoadMaterialFloat4(material.color, uv) * Sample<false>(r, intensityNew, triangle.material, currentDepth + 1);
 					}
 				}
+				else
+				{
+					// Below TIR
+					return make_float4(0);
+				}
 			}
+			break;
+			case MaterialType::PBRT_MIRROR:
+			{
+				// Reflection Ray
+				r.SetOrigin(I);
+				r.SetDirection(reflect(D, N));
+				return make_float4(intensityNew, 1.0f) * LoadMaterialFloat4(material.color, uv) * Sample<backCulling>(r, intensityNew, matId, currentDepth + 1);
+			}
+			break;
+			default:
+				assert(false);
+				break;
+			}
+			assert(false);
 		}
 		break;
 		}
-
-		return make_float4(intensityNew * color, 1.0f) * LoadMaterialFloat4(material.color, uv);
+		assert(false);
+		return make_float4(0);
 	}
 } // lh2core

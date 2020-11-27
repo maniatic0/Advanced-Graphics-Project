@@ -81,6 +81,7 @@ private:
 	static float Fresnel(const float3& I, const float3& N, const float ior, float n1);
 	void RenderCore::CreateGaussianKernel(uint width, uint height);
 	float4 LoadMaterialFloat4(const CoreMaterial::Vec3Value& val, const float2 &uv) const;
+	float3 DiffuseReflection(const float3& N, const CoreTri& triangle) const;
 
 	/// <summary>
 	/// Note this trick only works single threaded. We would need threadlocal stuff

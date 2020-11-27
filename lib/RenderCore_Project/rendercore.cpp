@@ -331,6 +331,7 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 				fscreen[x + base] += Trace<true>(ray, intensity, -1, 0);
 				break;
 			case RenderCore::RenderType::PathTracer:
+				fscreen[x + base] += Sample<true>(ray, intensity, -1, 0);
 				break;
 			default:
 				assert(false); // What are you doing here
@@ -673,6 +674,22 @@ float4 RenderCore::LoadMaterialFloat4(const CoreMaterial::Vec3Value& val, const 
 
 	assert(false);
 	return make_float4(0);
+}
+
+float3 RenderCore::DiffuseReflection(const float3& N, const CoreTri& triangle) const
+{
+	// Generate a random direction on a hemisphere
+	float3 randomDir;
+	float angle1 = 2 * PI * GetRandomFloat(0, 1);
+	float angle2 = acos(1 - 2 * GetRandomFloat(0, 1));
+	randomDir.x = sin(angle1) * sin(angle2);
+	randomDir.y = cos(angle1) * sin(angle2);
+	randomDir.z = abs(cos(angle2));
+	randomDir = normalize(randomDir);
+
+	// Convert the random direction to world space
+	mat4 TBN = CreateTBNMatrix(triangle.T, triangle.B, N);
+	return normalize(TBN.TransformVector(randomDir));
 }
 
 

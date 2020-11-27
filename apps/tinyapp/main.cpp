@@ -176,6 +176,9 @@ void PrepareScene()
 
 	//renderer->AddPointLight(make_float3(0, 0, 0), 50 * make_float3(10, 10, 10));
 
+	int lightMat2 = renderer->AddMaterial(make_float3(30, 30, 30));
+	int lightQuad2 = renderer->AddQuad(make_float3(-1, 1, 0), make_float3(0, 12, 12), 10.0f, 10.0f, lightMat2);
+	renderer->AddInstance(lightQuad2);
 }
 
 //  +-----------------------------------------------------------------------------+

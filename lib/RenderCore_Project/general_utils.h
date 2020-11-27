@@ -214,6 +214,27 @@ namespace lh2core
 		assert(diffuse <= 1 && reflection <= 1 && refraction <= 1);
 	}
 
+	inline mat4 CreateTBNMatrix(const float3& T, const float3& B, const float3& N)
+	{
+		mat4 TBN;
+		TBN[0] = T.x;
+		TBN[1] = T.y;
+		TBN[2] = T.z;
 
+		TBN[4] = B.x;
+		TBN[5] = B.y;
+		TBN[6] = B.z;
 
+		TBN[8] = N.x;
+		TBN[9] = N.y;
+		TBN[10] = N.z;
+		return TBN;
+	}
+
+	inline float GetRandomFloat(float a, float b) {
+		float random = ((float)rand()) / (float)RAND_MAX;
+		float diff = b - a;
+		float r = random * diff;
+		return a + r;
+	}
 }
