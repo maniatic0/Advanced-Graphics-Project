@@ -397,7 +397,7 @@ int HostScene::AddQuad( float3 N, const float3 pos, const float width, const flo
 	HostMesh* newMesh = meshID > -1 ? meshPool[meshID] : new HostMesh();
 	N = normalize( N ); // let's not assume the normal is normalized.
 #if 1
-	const float3 tmp = N.x > 0.9f ? make_float3( 0, 1, 0 ) : make_float3( 1, 0, 0 );
+	const float3 tmp = fabs(N.x) > 0.9f ? make_float3( 0, 1, 0 ) : make_float3( 1, 0, 0 );
 	const float3 T = 0.5f * width * normalize( cross( N, tmp ) );
 	const float3 B = 0.5f * height * normalize( cross( normalize( T ), N ) );
 #else
