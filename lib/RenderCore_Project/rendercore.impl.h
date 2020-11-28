@@ -434,11 +434,20 @@ namespace lh2core
 		case MaterialType::PBRT_MATTE:
 		{
 			const float3 R = DiffuseReflection(N, triangle);
+			const float cosR = dot(N, R);
+			assert(cosR >= -10.0f * kEps);
 			r.SetOrigin(I);
 			r.SetDirection(R);
+
+			if (cosR < kEps)
+			{
+				// No light from here
+				return make_float4(0);
+			}
+
 			return
 				make_float4(intensityNew, 1.0f) * 2.0f * LoadMaterialFloat4(material.color, uv)
-				* dot(N, R) * Sample<backCulling>(r, intensityNew, matId, currentDepth + 1); // We omit PI because it is cancelled
+				* cosR * Sample<backCulling>(r, intensityNew, matId, currentDepth + 1); // We omit PI because it is cancelled
 		}
 		break;
 		default:
@@ -499,11 +508,20 @@ namespace lh2core
 			case MaterialType::PBRT_MATTE:
 			{
 				const float3 R = DiffuseReflection(N, triangle);
+				const float cosR = dot(N, R);
+				assert(cosR >= - 10.0f * kEps);
 				r.SetOrigin(I);
 				r.SetDirection(R);
+
+				if (cosR < kEps)
+				{
+					// No light from here
+					return make_float4(0);
+				}
+
 				return
 					make_float4(intensityNew, 1.0f) * 2.0f * LoadMaterialFloat4(material.color, uv)
-					* dot(N, R) * Sample<backCulling>(r, intensityNew, matId, currentDepth + 1); // We omit PI because it is cancelled
+					* cosR * Sample<backCulling>(r, intensityNew, matId, currentDepth + 1); // We omit PI because it is cancelled
 			}
 			break;
 			case MaterialType::PBRT_GLASS:

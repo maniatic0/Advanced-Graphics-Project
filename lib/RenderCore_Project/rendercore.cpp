@@ -47,6 +47,9 @@ void RenderCore::Init()
 
 
 	renderType = RenderType::Whitted;
+
+	historyMix = 0.8f;
+	offsetIter = 0;
 }
 
 void RenderCore::Setting(const char* name, float value)
@@ -58,6 +61,10 @@ void RenderCore::Setting(const char* name, float value)
 	else if (!strcmp(name, "render_type"))
 	{
 		renderType = (RenderType)clamp((int)value, 0, (int)RenderType::Count - 1);
+	}
+	else if (!strcmp(name, "aa_mix"))
+	{
+		historyMix = clamp(value, 0.0f, 1.0f);
 	}
 	else if (!strcmp(name, "aa_level"))
 	{
@@ -138,8 +145,14 @@ void RenderCore::SetTarget(GLTexture* target, const uint)
 	delete screen;
 	delete fscreen;
 	delete kernel;
+	delete accumulationBuffer;
 	screen = new Bitmap(target->width, target->height);
 	fscreen = new float4[static_cast<size_t>(target->width) * static_cast<size_t>(target->height)];
+	accumulationBuffer = new float4[static_cast<size_t>(target->width) * static_cast<size_t>(target->height)];
+	for (size_t i = 0; i < static_cast<size_t>(target->width) * static_cast<size_t>(target->height); i++)
+	{
+		accumulationBuffer[i] = make_float4(0);
+	}
 	yScanline = 0;
 
 	// dynamically allocate kernel
@@ -208,10 +221,10 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 	float3 dir;
 
 	float v, u;
-	float scrWidth = (float)screen->width;
-	float scrHeight = (float)screen->height;
-	float invHeight = 1.0f / scrHeight;
-	float invWidth = 1.0f / scrWidth;
+	const float scrWidth = (float)screen->width;
+	const float scrHeight = (float)screen->height;
+	const float invHeight = 1.0f / scrHeight;
+	const float invWidth = 1.0f / scrWidth;
 	float pixelOffsetU = 0.5f;
 	float pixelOffsetV = 0.5f;
 	uint aaOffset = 0;
@@ -221,12 +234,13 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 	base = yScanline * screen->width;
 	for (uint x = 0; x < screen->width; x++)
 	{
+		base2 = x + base;
 		// AA
-		fscreen[x + base] = make_float4(0);
-		for (int i = 0; i < aaLevel; i++)
+		fscreen[base2] = make_float4(0);
+		for (size_t i = 0; i < aaLevel; i++)
 		{
 			// AA offsets
-			aaOffset = i * 2;
+			aaOffset = ((i + offsetIter) % pixelOffsetsSize) * 2;
 			pixelOffsetU = pixelOffSets[aaOffset + 0];
 			pixelOffsetV = pixelOffSets[aaOffset + 1];
 
@@ -328,32 +342,33 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 			switch (renderType)
 			{
 			case RenderCore::RenderType::Whitted:
-				fscreen[x + base] += Trace<true>(ray, intensity, -1, 0);
+				fscreen[base2] += Trace<true>(ray, intensity, -1, 0);
 				break;
 			case RenderCore::RenderType::PathTracer:
-				fscreen[x + base] += Sample<true>(ray, intensity, -1, 0);
+				fscreen[base2] += Sample<true>(ray, intensity, -1, 0);
 				break;
 			default:
 				assert(false); // What are you doing here
 				break;
 			}
 		}
-		fscreen[x + base] *= invAaLevel;
-
-		// UV test
-		//fscreen[x + base] = make_float4(u, v, 0, 1);
-		//fscreen[x + base] = make_float4(0, 0, 0, 1);
+		fscreen[base2] *= invAaLevel;
 	}
 
 	float4 tempColor;
 	// HDR to 255 colors
 	base = yScanline * screen->width;
 	const float gammaCorrection = 1.0f / gamma;
+
+	// Draw
 	for (uint x = 0; x < screen->width; x++)
 	{
 		base2 = x + base;
 
-		tempColor = fscreen[base2];
+		// History mix
+		accumulationBuffer[base2] = lerp(fscreen[base2], accumulationBuffer[base2], historyMix);
+
+		tempColor = accumulationBuffer[base2];
 		tempColor.x = pow(tempColor.x, gammaCorrection);
 		tempColor.y = pow(tempColor.y, gammaCorrection);
 		tempColor.z = pow(tempColor.z, gammaCorrection);
@@ -377,6 +392,7 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 		updateCompleteScreen = true;
 		firstScanLoopComplete = true;
 		yScanline = 0;
+		offsetIter = (offsetIter + 1) % pixelOffsetsSize;
 
 		if (useChromaticAberration)
 		{
@@ -420,10 +436,10 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 						const float vG = v + aberrationRadialK.y * cvG * chromaticAberrationScale;
 						const float vB = v + aberrationRadialK.z * cvB * chromaticAberrationScale;
 
-						tempColor.w += textureFetch<true>(fscreen, screen->width, screen->height, u, v).w;
-						tempColor.x += textureFetch<true>(fscreen, screen->width, screen->height, uR, vR).x;
-						tempColor.y += textureFetch<true>(fscreen, screen->width, screen->height, uG, vG).y;
-						tempColor.z += textureFetch<true>(fscreen, screen->width, screen->height, uB, vB).z;
+						tempColor.w += textureFetch<true>(accumulationBuffer, screen->width, screen->height, u, v).w;
+						tempColor.x += textureFetch<true>(accumulationBuffer, screen->width, screen->height, uR, vR).x;
+						tempColor.y += textureFetch<true>(accumulationBuffer, screen->width, screen->height, uG, vG).y;
+						tempColor.z += textureFetch<true>(accumulationBuffer, screen->width, screen->height, uB, vB).z;
 
 					}
 

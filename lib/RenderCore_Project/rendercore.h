@@ -67,6 +67,9 @@ private:
 	Scene scene;									// color and texture data storage 
 	int maximumDepth = 10;
 
+	float4* accumulationBuffer = 0;					// History storage
+	float historyMix;								// History mix value
+
 	float* kernel;
 	bool useVignetting;
 	float sigma;
@@ -127,6 +130,11 @@ private:
 	/// Inverse of Anti Aliasing Level
 	/// </summary>
 	float invAaLevel;
+
+	/// <summary>
+	/// Current Offset used
+	/// </summary>
+	int offsetIter = 0;
 
 	/// <summary>
 	/// Number of Pixel Offsets for anti-aliasing

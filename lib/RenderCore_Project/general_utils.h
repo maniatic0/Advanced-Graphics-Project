@@ -217,6 +217,7 @@ namespace lh2core
 	inline mat4 CreateTBNMatrix(const float3& T, const float3& B, const float3& N)
 	{
 		mat4 TBN;
+		/*
 		TBN[0] = T.x;
 		TBN[1] = T.y;
 		TBN[2] = T.z;
@@ -227,6 +228,19 @@ namespace lh2core
 
 		TBN[8] = N.x;
 		TBN[9] = N.y;
+		TBN[10] = N.z;
+		*/
+
+		TBN[0] = T.x;
+		TBN[4] = T.y;
+		TBN[8] = T.z;
+
+		TBN[1] = B.x;
+		TBN[5] = B.y;
+		TBN[9] = B.z;
+
+		TBN[2] = N.x;
+		TBN[6] = N.y;
 		TBN[10] = N.z;
 		return TBN;
 	}
