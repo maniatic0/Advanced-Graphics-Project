@@ -214,7 +214,7 @@ namespace lh2core
 		{
 			// Pure Glass
 			const float ior = material.ior.value;
-			const float reflection = Fresnel(D, N, ior, n1);
+			const float reflection = fresnel(D, N, ior, n1);
 			const float refraction = 1.0f - reflection;
 
 			if (reflection > kEps)
@@ -228,7 +228,7 @@ namespace lh2core
 			if (refraction > kEps)
 			{
 				float3 T;
-				if (Refract(D, N, ior, n1, T))
+				if (refract(D, N, ior, n1, T))
 				{
 					r.SetOrigin(I);
 					r.SetDirection(normalize(T));
@@ -273,7 +273,7 @@ namespace lh2core
 			{
 				const float ior = material.ior.value;
 				float3 T;
-				if (Refract(D, N, ior, n1, T))
+				if (refract(D, N, ior, n1, T))
 				{
 					r.SetOrigin(I);
 					r.SetDirection(normalize(T));
@@ -366,7 +366,7 @@ namespace lh2core
 		{
 			// Pure Glass
 			const float ior = material.ior.value;
-			const float reflection = Fresnel(D, N, ior, n1);
+			const float reflection = fresnel(D, N, ior, n1);
 			const float refraction = 1.0f - reflection;
 
 			const float path = GetRandomFloat(0.0f, 1.0f);
@@ -384,7 +384,7 @@ namespace lh2core
 			{
 				// Refraction ray
 				float3 T;
-				if (Refract(D, N, ior, n1, T))
+				if (refract(D, N, ior, n1, T))
 				{
 					r.SetOrigin(I);
 					r.SetDirection(normalize(T));
@@ -511,7 +511,7 @@ namespace lh2core
 				// Refraction ray
 				const float ior = material.ior.value;
 				float3 T;
-				if (Refract(D, N, ior, n1, T))
+				if (refract(D, N, ior, n1, T))
 				{
 					r.SetOrigin(I);
 					r.SetDirection(normalize(T));

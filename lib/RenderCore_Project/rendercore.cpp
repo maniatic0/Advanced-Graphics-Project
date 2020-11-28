@@ -180,7 +180,7 @@ void RenderCore::SetTextures(const CoreTexDesc* tex, const int textureCount)
 			scene.texList[i].fdata = new float4[scene.texList[i].pixelCount];
 			memcpy(scene.texList[i].fdata, tex[i].fdata, tex[i].pixelCount * sizeof(float4));
 		}
-			break;
+		break;
 		case ARGB32:
 		{
 			scene.texList[i].idata = new uchar4[scene.texList[i].pixelCount];
@@ -191,7 +191,7 @@ void RenderCore::SetTextures(const CoreTexDesc* tex, const int textureCount)
 			assert(false);
 			break;
 		}
-		
+
 	}
 }
 
@@ -357,7 +357,7 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 		tempColor.x = pow(tempColor.x, gammaCorrection);
 		tempColor.y = pow(tempColor.y, gammaCorrection);
 		tempColor.z = pow(tempColor.z, gammaCorrection);
-		
+
 		if (useVignetting)
 		{
 			tempColor *= kernel[base2];
@@ -480,10 +480,25 @@ void RenderCore::Shutdown()
 
 	for (size_t i = 0; i < scene.texList.size(); i++)
 	{
-		if (scene.texList[i].fdata != nullptr)
+		switch (scene.texList[i].storage)
 		{
-			delete scene.texList[i].fdata;
+		case ARGB32:
+			if (scene.texList[i].idata != nullptr)
+			{
+				delete scene.texList[i].idata;
+			}
+			break;
+		case ARGB128:
+			if (scene.texList[i].fdata != nullptr)
+			{
+				delete scene.texList[i].fdata;
+			}
+			break;
+		default:
+			break;
 		}
+
+
 	}
 
 	if (screen == nullptr) return; // Nothing to release
@@ -539,60 +554,6 @@ void RenderCore::SetLights(const CoreLightTri* triLights, const int triLightCoun
 	{
 		scene.directionalLights[i] = directionalLights[i];
 	}
-}
-
-bool RenderCore::Refract(const float3& I, const float3& N, const float ior, float n1, float3& T)
-{
-	// Based on https://www.scratchapixel.com/lessons/3d-basic-rendering/introduction-to-shading/reflection-refraction-fresnel
-	float cosi = clamp(dot(I, N), -1.0f, 1.0f);
-	float n2 = ior;
-	float flipN = 1.0f;
-	if (cosi < 0)
-	{
-		cosi = -cosi;
-	}
-	else
-	{
-		std::swap(n1, n2);
-		flipN = -1.0f;
-	}
-	float eta = n1 / n2;
-	float k = 1 - eta * eta * (1 - cosi * cosi);
-	if (k < kEps)
-	{
-		T = make_float3(0);
-		return false;
-	}
-	else
-	{
-		T = (I * eta) + (N * flipN) * (eta * cosi - sqrtf(k));
-		return true;
-	}
-}
-
-float RenderCore::Fresnel(const float3& I, const float3& N, const float ior, float n1)
-{
-	// https://www.scratchapixel.com/lessons/3d-basic-rendering/introduction-to-shading/reflection-refraction-fresnel
-	float cosi = clamp(dot(I, N), -1.0f, 1.0f);
-	float etai = n1, etat = ior;
-	if (cosi > 0) { std::swap(etai, etat); }
-	// Compute sini using Snell's law
-	float sint = etai / etat * sqrtf(fmax(0.f, 1 - cosi * cosi));
-
-	if (sint >= 1 + kEps) {
-		// Total internal reflection
-		return 1;
-	}
-	else {
-		sint = clamp(sint, -1.0f, 1.0f);
-		float cost = sqrtf(std::max(0.f, 1 - sint * sint));
-		cosi = fabs(cosi);
-		float Rs = ((etat * cosi) - (etai * cost)) / ((etat * cosi) + (etai * cost));
-		float Rp = ((etai * cosi) - (etat * cost)) / ((etai * cosi) + (etat * cost));
-		return (Rs * Rs + Rp * Rp) / 2.0f;
-	}
-	// As a consequence of the conservation of energy, transmittance is given by:
-	// kt = 1 - kr;
 }
 
 void RenderCore::CreateGaussianKernel(uint width, uint height)
@@ -669,7 +630,7 @@ float4 RenderCore::LoadMaterialFloat4(const CoreMaterial::Vec3Value& val, const 
 	case ARGB128:
 		return textureFetch<false>(tex.fdata, tex.width, tex.height, newUV.x, newUV.y);
 	default:
-		break;	
+		break;
 	}
 
 	assert(false);

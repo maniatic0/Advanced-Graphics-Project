@@ -77,8 +77,6 @@ private:
 	float4 Trace(Ray &r, const float3 &intensity, int matId = -1, int currentDepth = 0) const;
 	template <bool backCulling>
 	float4 Sample(Ray& r, const float3& intensity, int matId = -1, int currentDepth = 0) const;
-	static bool Refract(const float3 &I, const float3 &N, const float ior, float n1, float3 &T);
-	static float Fresnel(const float3& I, const float3& N, const float ior, float n1);
 	void RenderCore::CreateGaussianKernel(uint width, uint height);
 	float4 LoadMaterialFloat4(const CoreMaterial::Vec3Value& val, const float2 &uv) const;
 	float3 DiffuseReflection(const float3& N, const CoreTri& triangle) const;

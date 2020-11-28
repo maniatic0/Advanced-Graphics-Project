@@ -237,4 +237,7 @@ namespace lh2core
 		float r = random * diff;
 		return a + r;
 	}
+
+	bool refract(const float3& I, const float3& N, const float ior, float n1, float3& T);
+	float fresnel(const float3& I, const float3& N, const float ior, float n1);
 }
