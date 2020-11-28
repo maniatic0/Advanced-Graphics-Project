@@ -357,7 +357,11 @@ namespace lh2core
 		{
 			// Area light
 			const CoreLightTri& light = scene.areaLights[triangle.ltriIdx];
-			return make_float4(intensityNew * light.radiance, 1.0f) * LoadMaterialFloat4(material.color, uv);
+			if (material.color.textureID != -1)
+			{
+				return make_float4(intensityNew * light.radiance, 1.0f) * LoadMaterialFloat4(material.color, uv);
+			}
+			return make_float4(intensityNew * light.radiance, 1.0f);
 		}
 
 		switch (material.pbrtMaterialType)
