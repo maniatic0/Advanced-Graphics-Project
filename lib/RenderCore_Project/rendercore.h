@@ -91,7 +91,7 @@ private:
 	/// <summary>
 	/// Mix of indirect and direct lighting
 	/// </summary>
-	float directIndirectMix;
+	float indirectDirectMix;
 
 	/// <summary>
 	/// Note this trick only works single threaded. We would need threadlocal stuff

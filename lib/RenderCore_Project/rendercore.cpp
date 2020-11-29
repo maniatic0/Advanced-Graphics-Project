@@ -53,7 +53,7 @@ void RenderCore::Init()
 	historyMix = 0.8f;
 	offsetIter = 0;
 
-	directIndirectMix = 0.5f;
+	indirectDirectMix = 0.5f;
 }
 
 void RenderCore::Setting(const char* name, float value)
@@ -72,7 +72,7 @@ void RenderCore::Setting(const char* name, float value)
 	}
 	else if (!strcmp(name, "indirect_direct_mix"))
 	{
-		directIndirectMix = clamp(value, 0.0f, 1.0f);
+		indirectDirectMix = clamp(value, 0.0f, 1.0f);
 	}
 	else if (!strcmp(name, "aa_mix"))
 	{
