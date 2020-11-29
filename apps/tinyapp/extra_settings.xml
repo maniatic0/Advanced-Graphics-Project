@@ -1,7 +1,7 @@
 <settings>
     <render_type>1</render_type>
     <aa_level>5</aa_level>
-    <aa_mix>0.5</aa_mix>
+    <aa_mix>0.9</aa_mix>
     <distortion_type>0</distortion_type>
     <vignetting_enabled>0</vignetting_enabled>
     <sigma>300</sigma>
