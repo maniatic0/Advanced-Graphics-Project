@@ -146,38 +146,49 @@ void PrepareScene()
 	int boxScene = renderer->AddMesh("../_shareddata/basic_box.obj", 0.2f);
 	renderer->AddInstance(boxScene);
 	renderer->AddPointLight(make_float3(0, 20, 0), 50 * make_float3(10, 10, 10));
+	renderer->AddPointLight(make_float3(-20, 15, 0), 50 * make_float3(10, 10, 10));
 
-	/*
-	HostMaterial& cubeMatHost = *renderer->GetMaterial(2);
-	cubeMatHost.ior.value = 1.5f; // Glass
-	cubeMatHost.absorption.value = make_float3(0.f);
-	cubeMatHost.pbrtMaterialType = MaterialType::PBRT_GLASS;*/
+	int sphere1 = renderer->AddMesh("../_shareddata/sphere2.obj", 1.0f);
+	renderer->AddInstance(sphere1);
 
-	/*
-	HostMaterial& cubeMatHost = *renderer->GetMaterial(0);
-	cubeMatHost.reflection = 1.0f;
-	*/
+	int sphere2 = renderer->AddMesh("../_shareddata/sphere3.obj", 1.0f);
+	renderer->AddInstance(sphere2);
+
+	HostMaterial& cubeMatHost = *renderer->GetMaterial(5);
+	//cubeMatHost.ior.value = 1.5f; // Glass
+	//cubeMatHost.absorption.value = make_float3(0.f);
+	//cubeMatHost.pbrtMaterialType = MaterialType::PBRT_GLASS;
+	cubeMatHost.reflection.value = 0.6f;
+
+	HostMaterial& cubeMatHost2 = *renderer->GetMaterial(4);
+	cubeMatHost2.reflection.value = 0.6f;
+
+	HostMaterial& cubeMatHost3 = *renderer->GetMaterial(3);
+	cubeMatHost3.reflection.value = 0.4f;
+
+	//HostMaterial& cubeMatHost1 = *renderer->GetMaterial(3);
+	//cubeMatHost1.reflection = 0.5f;
 	
-	int texId = renderer->AddTexture("../_shareddata/textures/LEGOSHLD.tga", 0);
-	//int texId = renderer->AddTexture("../_shareddata/textures/checker.png", 0);
+	//int texId = renderer->AddTexture("../_shareddata/textures/LEGOSHLD.tga", 0);
+	////int texId = renderer->AddTexture("../_shareddata/textures/checker.png", 0);
 
-	int lightMat = renderer->AddMaterial(make_float3(1, 1, 1));
-	HostMaterial &lightMatHost = *renderer->GetMaterial(lightMat);
-	lightMatHost.color.textureID = texId;
-	//lightMatHost.color.scale = 2.0f;
-	//lightMatHost.color.uvscale = make_float2(2.0f);
-	//lightMatHost.ior.value = 1.5f; // glass
-	//lightMatHost.absorption.value = make_float3(0.05f);
-	//lightMatHost.pbrtMaterialType = MaterialType::PBRT_GLASS;
-	int lightQuad = renderer->AddQuad( make_float3( 1, -1, 0 ), make_float3( 0, 10.1, 0 ), 10.0f, 10.0f, lightMat );
-	renderer->AddInstance( lightQuad );
-	int lightQuad_2 = renderer->AddQuad(make_float3(-1, 1, 0), make_float3(0, 10, 0), 10.0f, 10.0f, lightMat);
-	renderer->AddInstance(lightQuad_2);
+	//int lightMat = renderer->AddMaterial(make_float3(1, 1, 1));
+	//HostMaterial &lightMatHost = *renderer->GetMaterial(lightMat);
+	//lightMatHost.color.textureID = texId;
+	////lightMatHost.color.scale = 2.0f;
+	////lightMatHost.color.uvscale = make_float2(2.0f);
+	////lightMatHost.ior.value = 1.5f; // glass
+	////lightMatHost.absorption.value = make_float3(0.05f);
+	////lightMatHost.pbrtMaterialType = MaterialType::PBRT_GLASS;
+	//int lightQuad = renderer->AddQuad( make_float3( 1, -1, 0 ), make_float3( 0, 10.1, 0 ), 10.0f, 10.0f, lightMat );
+	//renderer->AddInstance( lightQuad );
+	//int lightQuad_2 = renderer->AddQuad(make_float3(-1, 1, 0), make_float3(0, 10, 0), 10.0f, 10.0f, lightMat);
+	//renderer->AddInstance(lightQuad_2);
 
 	//renderer->AddPointLight(make_float3(0, 0, 0), 50 * make_float3(10, 10, 10));
 
 	int lightMat2 = renderer->AddMaterial(make_float3(3, 3, 3));
-	int lightQuad2 = renderer->AddQuad(make_float3(-1, 1, 0), make_float3(0, 12, 12), 10.0f, 10.0f, lightMat2);
+	int lightQuad2 = renderer->AddQuad(make_float3(1, -1, 0), make_float3(0, 12, 10), 5.0f, 5.0f, lightMat2);
 	renderer->AddInstance(lightQuad2);
 }
 
