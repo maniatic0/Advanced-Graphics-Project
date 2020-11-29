@@ -24,6 +24,8 @@ using namespace lh2core;
 void RenderCore::Init()
 {
 	// initialize
+	maximumDepth = 10;
+
 	aaLevel = 1;
 	assert(0 < aaLevel && aaLevel <= pixelOffsetsSize);
 	invAaLevel = 1.0f / (float)(aaLevel);
@@ -57,6 +59,10 @@ void RenderCore::Setting(const char* name, float value)
 	if (!strcmp(name, "gamma"))
 	{
 		gamma = value;
+	}
+	else if (!strcmp(name, "max_depth"))
+	{
+		maximumDepth = (int)fabs(value);
 	}
 	else if (!strcmp(name, "render_type"))
 	{
@@ -656,12 +662,15 @@ float4 RenderCore::LoadMaterialFloat4(const CoreMaterial::Vec3Value& val, const 
 float3 RenderCore::DiffuseReflection(const float3& N, const CoreTri& triangle) const
 {
 	// Generate a random direction on a hemisphere
+	// Based of https://www.scratchapixel.com/lessons/3d-basic-rendering/global-illumination-path-tracing/global-illumination-path-tracing-practical-implementation
 	float3 randomDir;
-	float angle1 = 2 * PI * GetRandomFloat(0, 1);
-	float angle2 = acos(1 - 2 * GetRandomFloat(0, 1));
-	randomDir.x = sin(angle1) * sin(angle2);
-	randomDir.y = cos(angle1) * sin(angle2);
-	randomDir.z = abs(cos(angle2));
+	const float u = GetRandomFloat(0, 1);
+	const float v = GetRandomFloat(0, 1);
+	const float angle1 = 2.0f * PI * u;
+	const float sinTheta = sqrtf(1.0f - v * v);
+	randomDir.x = sinf(angle1) * sinTheta;
+	randomDir.y = cosf(angle1) * sinTheta;
+	randomDir.z = u;
 	randomDir = normalize(randomDir);
 
 	// Convert the random direction to world space
