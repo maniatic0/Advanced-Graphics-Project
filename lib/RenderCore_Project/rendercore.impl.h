@@ -149,6 +149,77 @@ namespace lh2core
 	}
 
 	template <bool backCulling>
+	float3 RenderCore::DirectLighting(const float3& p, const float3& N, int instanceId, int meshId, int triID) const
+	{
+		float3 position;
+		float3 intensity = make_float3(0);
+		float3 lightToP;
+		float3 lightDir;
+		float distSqr;
+		float dist;
+		float invDistSqr;
+		float cos_i;
+		float cos_o;
+		for (int i = 0; i < scene.areaLights.size(); i++)
+		{
+			const CoreLightTri& light = scene.areaLights[i];
+			position = randomPointTriangle(light.vertex0, light.vertex1, light.vertex2);
+			lightToP = position - p;
+
+			distSqr = sqrlength(lightToP);
+
+			if (distSqr < kEps)
+			{
+				// We are so close that we are at the same position
+				continue;
+			}
+
+			invDistSqr = 1.0f / distSqr;
+			if (invDistSqr < kEps)
+			{
+				// We are so far away it doesn't matter
+				continue;
+			}
+
+			dist = sqrt(distSqr);
+			lightDir = lightToP / dist;
+
+			if constexpr (backCulling)
+			{
+				cos_i = dot(N, -lightDir);
+			}
+			else
+			{
+				cos_i = fabs(dot(N, -lightDir));
+			}
+
+			cos_o = dot(lightDir, light.N);
+
+			if (cos_i < kEps || cos_o < kEps)
+			{
+				// Backculling
+				// The light doesn't matter
+				// Note that for glass the dot product uses the absolute value function
+				continue;
+			}
+
+			// Occlusion Tests
+			// Note this works only single threaded
+			lightRay.SetOrigin(position);
+			lightRay.SetDirection(lightDir);
+			if (TestDepthScene<backCulling>(lightRay, instanceId, meshId, triID, dist))
+			{
+				// Occluded
+				continue;
+			}
+
+			intensity +=  clamp(cos_i, 0.0f, 1.0f) * light.radiance * clamp(cos_o, 0.0f, 1.0f) * light.area * invDistSqr;
+		}
+		// We don't have N or light count because we sample once for each light
+		return intensity;
+	}
+
+	template <bool backCulling>
 	float4 RenderCore::Trace(Ray& r, const float3& intensity, int matId, int currentDepth) const
 	{
 		if (intensity.x + intensity.y + intensity.z < kEps)
@@ -445,13 +516,17 @@ namespace lh2core
 
 			if (cosR < kEps)
 			{
-				// No light from here
-				return make_float4(0);
+				// No indirect light from here. Only direct
+				return make_float4(intensityNew * DirectLighting<backCulling>(I, N, -1, hitInfo.meshId, hitInfo.triId) * INVPI, 1.0f)  * LoadMaterialFloat4(material.color, uv);
 			}
 
+			// Direct and Indirect Lighting
 			return
-				make_float4(intensityNew, 1.0f) * 2.0f * LoadMaterialFloat4(material.color, uv)
-				* cosR * Sample<backCulling>(r, intensityNew, matId, currentDepth + 1); // We omit PI because it is cancelled
+				make_float4(intensityNew, 1.0f) *  LoadMaterialFloat4(material.color, uv) 
+				*	(
+					make_float4(DirectLighting<backCulling>(I, N, -1, hitInfo.meshId, hitInfo.triId), 1.0f) * INVPI 
+					+ 2.0f * cosR * Sample<backCulling>(r, intensityNew, matId, currentDepth + 1)  // We omit PI from indirect because it is cancelled
+				);
 		}
 		break;
 		default:
@@ -513,19 +588,23 @@ namespace lh2core
 			{
 				const float3 R = DiffuseReflection(N, triangle);
 				const float cosR = dot(N, R);
-				assert(cosR >= - 10.0f * kEps);
+				assert(cosR >= -10.0f * kEps);
 				r.SetOrigin(I);
 				r.SetDirection(R);
 
 				if (cosR < kEps)
 				{
-					// No light from here
-					return make_float4(0);
+					// No indirect light from here. Only direct
+					return make_float4(intensityNew * DirectLighting<backCulling>(I, N, -1, hitInfo.meshId, hitInfo.triId) * INVPI, 1.0f) * LoadMaterialFloat4(material.color, uv);
 				}
 
+				// Direct and Indirect Lighting
 				return
-					make_float4(intensityNew, 1.0f) * 2.0f * LoadMaterialFloat4(material.color, uv)
-					* cosR * Sample<backCulling>(r, intensityNew, matId, currentDepth + 1); // We omit PI because it is cancelled
+					make_float4(intensityNew, 1.0f) * LoadMaterialFloat4(material.color, uv)
+					* (
+						make_float4(DirectLighting<backCulling>(I, N, -1, hitInfo.meshId, hitInfo.triId), 1.0f) * INVPI
+						+ 2.0f * cosR * Sample<backCulling>(r, intensityNew, matId, currentDepth + 1)  // We omit PI from indirect because it is cancelled
+						);
 			}
 			break;
 			case MaterialType::PBRT_GLASS:

@@ -244,4 +244,13 @@ namespace lh2core
 
 	bool refract(const float3& I, const float3& N, const float ior, float n1, float3& T);
 	float fresnel(const float3& I, const float3& N, const float ior, float n1);
+
+
+	inline float3 randomPointTriangle(const float3& A, const float3& B, const float3& C)
+	{
+		// From https://math.stackexchange.com/questions/1785136/generating-randomly-distributed-points-inside-a-given-triangle
+		const float r1 = GetRandomFloat(0, 1);
+		const float r2 = sqrtf(GetRandomFloat(0, 1));
+		return (1.0f - r1) * A + r1 * ((1.0f - r2) * B + r2 * C);
+	}
 }
