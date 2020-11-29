@@ -175,7 +175,7 @@ bool depthRayTriangle(
 	}
 
 	// New triangle closer
-	return t < tD;
+	return t - tD < kEps;
 }
 
 template <bool backCulling>
