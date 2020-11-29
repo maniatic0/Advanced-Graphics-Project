@@ -1,13 +1,15 @@
 <settings>
-    <render_type>0</render_type>
-    <aa_level>5</aa_level>
+    <render_type>1</render_type>
+    <max_depth>5</max_depth>
+    <indirect_direct_mix>0.5</indirect_direct_mix>
+    <aa_level>1</aa_level>
     <aa_mix>0.9</aa_mix>
     <distortion_type>0</distortion_type>
     <vignetting_enabled>0</vignetting_enabled>
     <sigma>300</sigma>
     <chromatic_aberration_enabled>0</chromatic_aberration_enabled>
     <chromatic_radial_k_r>-0.5</chromatic_radial_k_r>
-    <chromatic_v_offset_r>0</chromatic_v_offset_r>
+    <chromatic_v_offset_r>0.2</chromatic_v_offset_r>
     <chromatic_u_offset_r>0</chromatic_u_offset_r>
     <chromatic_radial_k_b>0.8</chromatic_radial_k_b>
     <chromatic_v_offset_b>0</chromatic_v_offset_b>

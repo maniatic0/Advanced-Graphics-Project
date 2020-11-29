@@ -514,19 +514,20 @@ namespace lh2core
 			r.SetOrigin(I);
 			r.SetDirection(R);
 
+			const float3 directLight = directIndirectMix > kEps ? DirectLighting<backCulling>(I, N, -1, hitInfo.meshId, hitInfo.triId) * INVPI : make_float3(0);
+
 			if (cosR < kEps)
 			{
 				// No indirect light from here. Only direct
-				return make_float4(intensityNew * DirectLighting<backCulling>(I, N, -1, hitInfo.meshId, hitInfo.triId) * INVPI, 1.0f)  * LoadMaterialFloat4(material.color, uv);
+				return make_float4(intensityNew * directLight * directIndirectMix, 1.0f)  * LoadMaterialFloat4(material.color, uv);
 			}
+
+			const float4 indirectLight = (1.0f - directIndirectMix) > kEps ? 2.0f * cosR * Sample<backCulling>(r, intensityNew, matId, currentDepth + 1) : make_float4(4); // We omit PI from indirect because it is cancelled
 
 			// Direct and Indirect Lighting
 			return
 				make_float4(intensityNew, 1.0f) *  LoadMaterialFloat4(material.color, uv) 
-				*	(
-					make_float4(DirectLighting<backCulling>(I, N, -1, hitInfo.meshId, hitInfo.triId), 1.0f) * INVPI 
-					+ 2.0f * cosR * Sample<backCulling>(r, intensityNew, matId, currentDepth + 1)  // We omit PI from indirect because it is cancelled
-				);
+					* lerp(make_float4(directLight, 1.0f), indirectLight, directIndirectMix);
 		}
 		break;
 		default:
@@ -592,19 +593,20 @@ namespace lh2core
 				r.SetOrigin(I);
 				r.SetDirection(R);
 
+				const float3 directLight = directIndirectMix > kEps ? DirectLighting<backCulling>(I, N, -1, hitInfo.meshId, hitInfo.triId) * INVPI : make_float3(0);
+
 				if (cosR < kEps)
 				{
 					// No indirect light from here. Only direct
-					return make_float4(intensityNew * DirectLighting<backCulling>(I, N, -1, hitInfo.meshId, hitInfo.triId) * INVPI, 1.0f) * LoadMaterialFloat4(material.color, uv);
+					return make_float4(intensityNew * directLight * directIndirectMix, 1.0f) * LoadMaterialFloat4(material.color, uv);
 				}
+
+				const float4 indirectLight = (1.0f - directIndirectMix) > kEps ? 2.0f * cosR * Sample<backCulling>(r, intensityNew, matId, currentDepth + 1) : make_float4(0); // We omit PI from indirect because it is cancelled
 
 				// Direct and Indirect Lighting
 				return
 					make_float4(intensityNew, 1.0f) * LoadMaterialFloat4(material.color, uv)
-					* (
-						make_float4(DirectLighting<backCulling>(I, N, -1, hitInfo.meshId, hitInfo.triId), 1.0f) * INVPI
-						+ 2.0f * cosR * Sample<backCulling>(r, intensityNew, matId, currentDepth + 1)  // We omit PI from indirect because it is cancelled
-						);
+					* lerp(make_float4(directLight, 1.0f), indirectLight, directIndirectMix);
 			}
 			break;
 			case MaterialType::PBRT_GLASS:

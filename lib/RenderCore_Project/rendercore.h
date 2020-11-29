@@ -89,6 +89,11 @@ private:
 	float3 DiffuseReflection(const float3& N, const CoreTri& triangle) const;
 
 	/// <summary>
+	/// Mix of indirect and direct lighting
+	/// </summary>
+	float directIndirectMix;
+
+	/// <summary>
 	/// Note this trick only works single threaded. We would need threadlocal stuff
 	/// </summary>
 	mutable RayMeshInterceptInfo hitInfo;
