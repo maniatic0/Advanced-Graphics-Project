@@ -1,7 +1,7 @@
 <settings>
     <render_type>1</render_type>
     <max_depth>5</max_depth>
-    <indirect_direct_mix>0.5</indirect_direct_mix>
+    <indirect_direct_mix>0.8</indirect_direct_mix>
     <aa_level>1</aa_level>
     <aa_mix>0.9</aa_mix>
     <distortion_type>0</distortion_type>
