@@ -1,0 +1,5 @@
+newmtl sphere2
+Kd 0.8 0.2 0.2
+
+newmtl sphere3
+Kd 0.4 0.2 0.6

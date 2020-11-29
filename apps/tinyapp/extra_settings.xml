@@ -1,5 +1,5 @@
 <settings>
-    <render_type>1</render_type>
+    <render_type>0</render_type>
     <aa_level>5</aa_level>
     <aa_mix>0.9</aa_mix>
     <distortion_type>0</distortion_type>
