@@ -1,9 +1,10 @@
 <settings>
-    <render_type>1</render_type>
+    <render_type>0</render_type>
     <max_depth>5</max_depth>
-    <indirect_direct_mix>0.9</indirect_direct_mix>
-    <aa_level>1</aa_level>
-    <aa_mix>0.9</aa_mix>
+    <indirect_direct_mix>1.0</indirect_direct_mix>
+    <aa_level>5</aa_level>
+    <aa_mix>0.95</aa_mix>
+    <tone_mapping_enabled>0</tone_mapping_enabled>
     <distortion_type>0</distortion_type>
     <vignetting_enabled>0</vignetting_enabled>
     <sigma>300</sigma>

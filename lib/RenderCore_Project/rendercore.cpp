@@ -54,6 +54,8 @@ void RenderCore::Init()
 	offsetIter = 0;
 
 	indirectDirectMix = 0.5f;
+
+	useToneMapping = false;
 }
 
 void RenderCore::Setting(const char* name, float value)
@@ -73,6 +75,10 @@ void RenderCore::Setting(const char* name, float value)
 	else if (!strcmp(name, "indirect_direct_mix"))
 	{
 		indirectDirectMix = clamp(value, 0.0f, 1.0f);
+	}
+	else if (!strcmp(name, "tone_mapping_enabled"))
+	{
+		useToneMapping = (bool)value;
 	}
 	else if (!strcmp(name, "aa_mix"))
 	{
@@ -381,6 +387,13 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 		accumulationBuffer[base2] = lerp(fscreen[base2], accumulationBuffer[base2], historyMix);
 
 		tempColor = accumulationBuffer[base2];
+
+		if (useToneMapping)
+		{
+			tempColor = ACESFilm(tempColor);
+			tempColor.w = 1.0f;
+		}
+
 		tempColor.x = pow(tempColor.x, gammaCorrection);
 		tempColor.y = pow(tempColor.y, gammaCorrection);
 		tempColor.z = pow(tempColor.z, gammaCorrection);
@@ -456,6 +469,12 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 					}
 
 					tempColor *= invAaLevel;
+
+					if (useToneMapping)
+					{
+						tempColor = ACESFilm(tempColor);
+						tempColor.w = 1.0f;
+					}
 
 					tempColor.x = pow(tempColor.x, gammaCorrection);
 					tempColor.y = pow(tempColor.y, gammaCorrection);

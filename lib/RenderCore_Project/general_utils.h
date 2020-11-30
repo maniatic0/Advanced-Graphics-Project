@@ -253,4 +253,15 @@ namespace lh2core
 		const float r2 = sqrtf(GetRandomFloat(0, 1));
 		return (1.0f - r1) * A + r1 * ((1.0f - r2) * B + r2 * C);
 	}
+
+	inline float4 ACESFilm(float4 x)
+	{
+		// From https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
+		constexpr float a = 2.51f;
+		constexpr float b = 0.03f;
+		constexpr float c = 2.43f;
+		constexpr float d = 0.59f;
+		constexpr float e = 0.14f;
+		return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0f, 1.0f);
+	}
 }

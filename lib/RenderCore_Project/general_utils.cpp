@@ -56,5 +56,4 @@ namespace lh2core
 		// As a consequence of the conservation of energy, transmittance is given by:
 		// kt = 1 - kr;
 	}
-
 }

@@ -74,6 +74,8 @@ private:
 	bool useVignetting;
 	float sigma;
 
+	bool useToneMapping;
+
 	uint yScanline;
 
 	template <bool backCulling>
