@@ -53,9 +53,11 @@ void RenderCore::Init()
 	historyMix = 0.8f;
 	offsetIter = 0;
 
-	indirectDirectMix = 0.5f;
+	indirectDirectMix = 1.0f;
 
 	useToneMapping = false;
+
+	exposure = 0.5f;
 }
 
 void RenderCore::Setting(const char* name, float value)
@@ -63,6 +65,10 @@ void RenderCore::Setting(const char* name, float value)
 	if (!strcmp(name, "gamma"))
 	{
 		gamma = value;
+	}
+	else if (!strcmp(name, "exposure"))
+	{
+		exposure = value;
 	}
 	else if (!strcmp(name, "max_depth"))
 	{
@@ -386,8 +392,9 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 		// History mix
 		accumulationBuffer[base2] = lerp(fscreen[base2], accumulationBuffer[base2], historyMix);
 
-		tempColor = accumulationBuffer[base2];
+		tempColor = accumulationBuffer[base2] * exposure;
 
+		// Order in part from https://blog.demofox.org/2020/06/06/casual-shadertoy-path-tracing-2-image-improvement-and-glossy-reflections/
 		if (useToneMapping)
 		{
 			tempColor = ACESFilm(tempColor);
@@ -403,7 +410,7 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 			tempColor *= kernel[base2];
 		}
 
-		screen->Plot(x, yScanline, float4ToUint(tempColor));
+		screen->Plot(x, yScanline, float4ToUint(LinearToSRGB(tempColor)));
 	}
 
 	++yScanline;
@@ -470,6 +477,8 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 
 					tempColor *= invAaLevel;
 
+					// Order in part from https://blog.demofox.org/2020/06/06/casual-shadertoy-path-tracing-2-image-improvement-and-glossy-reflections/
+					tempColor *= exposure;
 					if (useToneMapping)
 					{
 						tempColor = ACESFilm(tempColor);
@@ -485,7 +494,7 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 						tempColor *= kernel[base2];
 					}
 
-					screen->Plot(x, y, float4ToUint(tempColor));
+					screen->Plot(x, y, float4ToUint(LinearToSRGB(tempColor)));
 				}
 			}
 		}

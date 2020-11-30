@@ -264,4 +264,51 @@ namespace lh2core
 		constexpr float e = 0.14f;
 		return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0f, 1.0f);
 	}
+
+	inline float4 LessThan(float4 f, float value)
+	{
+		// From https://blog.demofox.org/2020/06/06/casual-shadertoy-path-tracing-2-image-improvement-and-glossy-reflections/
+		return make_float4(
+			(f.x < value) ? 1.0f : 0.0f,
+			(f.y < value) ? 1.0f : 0.0f,
+			(f.z < value) ? 1.0f : 0.0f,
+			(f.w < value) ? 1.0f : 0.0f);
+	}
+
+	inline float4 pow4(float4 f, float4 power)
+	{
+		return make_float4(
+			pow(f.x, power.x),
+			pow(f.y, power.y),
+			pow(f.z, power.z),
+			pow(f.z, power.z)
+		);
+	}
+
+	inline float4 lerp(float4 a, float4 b, float4 t) { return a + t * (b - a); }
+
+	inline float4 LinearToSRGB(float4 rgb)
+	{
+		// From https://blog.demofox.org/2020/06/06/casual-shadertoy-path-tracing-2-image-improvement-and-glossy-reflections/
+		rgb = clamp(rgb, 0.0f, 1.0f);
+
+		return lerp(
+			pow4(rgb, make_float4(1.0f / 2.4f)) * 1.055f - 0.055f,
+			rgb * 12.92f,
+			LessThan(rgb, 0.0031308f)
+		);
+	}
+
+
+	inline float4 SRGBToLinear(float4 rgb)
+	{
+		// From https://blog.demofox.org/2020/06/06/casual-shadertoy-path-tracing-2-image-improvement-and-glossy-reflections/
+		rgb = clamp(rgb, 0.0f, 1.0f);
+
+		return lerp(
+			pow4(((rgb + 0.055f) / 1.055f), make_float4(2.4f)),
+			rgb / 12.92f,
+			LessThan(rgb, 0.04045f)
+		);
+	}
 }

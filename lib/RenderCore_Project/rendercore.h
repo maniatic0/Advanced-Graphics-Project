@@ -76,6 +76,11 @@ private:
 
 	bool useToneMapping;
 
+	/// <summary>
+	/// Scene exposure. See https://blog.demofox.org/2020/06/06/casual-shadertoy-path-tracing-2-image-improvement-and-glossy-reflections/
+	/// </summary>
+	float exposure;
+
 	uint yScanline;
 
 	template <bool backCulling>
