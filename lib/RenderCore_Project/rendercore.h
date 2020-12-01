@@ -89,7 +89,7 @@ private:
 	void RenderCore::CreateGaussianKernel(uint width, uint height);
 
 
-	float4 LoadMaterialFloat4(const CoreMaterial::Vec3Value& val, const float2 &uv) const;
+	float4 LoadMaterialFloat4(const CoreMaterial::Vec3Value& val, const float2& uv) const;
 
 	template <bool backCulling>
 	float4 Sample(Ray& r, const float3& intensity, int matId = -1, int currentDepth = 0) const;

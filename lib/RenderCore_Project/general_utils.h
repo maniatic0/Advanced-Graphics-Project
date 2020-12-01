@@ -189,26 +189,6 @@ namespace lh2core
 	{
 		reflection = mat.reflection.value;
 		refraction = mat.refraction.value;
-		int maskIsNull = (reflection == 1e32f ? 1 : 0) | (refraction == 1e32f ? 2 : 0);
-		switch (maskIsNull)
-		{
-		case 0:
-			// All values
-			break;
-		case 1:
-			// no reflection
-			reflection = 0;
-			break;
-		case 2:
-			// no refrection
-			refraction = 0;
-			break;
-		default:
-			// No values
-			reflection = 0;
-			refraction = 0;
-			break;
-		}
 		diffuse = 1.0f - reflection - refraction;
 		assert(diffuse >= 0 && reflection >= 0 && refraction >= 0);
 		assert(diffuse <= 1 && reflection <= 1 && refraction <= 1);
