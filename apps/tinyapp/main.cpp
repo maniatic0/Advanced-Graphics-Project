@@ -15,6 +15,7 @@
 
 #include "platform.h"
 #include "rendersystem.h"
+#include "host_texture.h"
 
 #include <bitset>
 
@@ -146,34 +147,48 @@ void PrepareScene()
 	int boxScene = renderer->AddMesh("../_shareddata/basic_box.obj", 0.2f);
 	renderer->AddInstance(boxScene);
 	renderer->AddPointLight(make_float3(0, 20, 0), 50 * make_float3(10, 10, 10));
+	//renderer->AddPointLight(make_float3(10, 10, 0), make_float3(25, 25, 25));
 	renderer->AddPointLight(make_float3(0, -10, 0), 50 * make_float3(10, 10, 10));
 	renderer->AddPointLight(make_float3(-20, 15, 0), 50 * make_float3(10, 10, 10));
+	//renderer->AddDirectionalLight(make_float3(1, -1, -1), make_float3(0.2, 0.2, 0.2));
+	//renderer->AddSpotLight(make_float3(1, 10, 0), normalize(make_float3(0, -1, 0)), cos(20.0f * PI / 180.0f), cos(60.0f * PI / 180.0f), make_float3(10 * 10, 10 * 10, 10 * 10));
 	
+	
+	
+
 	/*
-	int sphere1 = renderer->AddMesh("../_shareddata/sphere2.obj", 1.0f);
+	* int sphere1 = renderer->AddMesh("../_shareddata/sphere2.obj", 1.0f);
 	renderer->AddInstance(sphere1);
 
 	int sphere2 = renderer->AddMesh("../_shareddata/sphere3.obj", 1.0f);
 	renderer->AddInstance(sphere2);
+	
 
 	HostMaterial& cubeMatHost = *renderer->GetMaterial(7);
 	cubeMatHost.color.value = make_float3(1.f);;
 	cubeMatHost.ior.value = 1.5f; // Glass
-	cubeMatHost.absorption.value = make_float3(0.05f);
-	cubeMatHost.pbrtMaterialType = MaterialType::PBRT_GLASS;
-	//cubeMatHost.reflection.value = 0.6f;
+	cubeMatHost.absorption.value = make_float3(0.0f);
+	cubeMatHost.roughness.value = 0.0f;
+	//cubeMatHost.pbrtMaterialType = MaterialType::PBRT_GLASS;
+	cubeMatHost.pbrtMaterialType = MaterialType::PBRT_MIRROR;
+	cubeMatHost.reflection.value = 1.0f;
 
 	HostMaterial& cubeMatHost2 = *renderer->GetMaterial(4);
 	cubeMatHost2.reflection.value = 0.6f;
+	cubeMatHost2.roughness.value = 0.3f;
 	*/
+	
+	
 
 	HostMaterial& cubeMatHost3 = *renderer->GetMaterial(3);
-	cubeMatHost3.reflection.value = 0.4f;
+	cubeMatHost3.reflection.value = 0.6f;
+	//cubeMatHost2.roughness.value = 0.0f;
+	cubeMatHost3.roughness.value = 0.7f;
 
 	//HostMaterial& cubeMatHost1 = *renderer->GetMaterial(3);
 	//cubeMatHost1.reflection = 0.5f;
 	
-	int texId = renderer->AddTexture("../_shareddata/textures/LEGOSHLD.tga", 0);
+	int texId = renderer->AddTexture("../_shareddata/textures/LEGOSHLD.tga", HostTexture::LINEARIZED | HostTexture::GAMMACORRECTION);
 	//int texId = renderer->AddTexture("../_shareddata/textures/checker.png", 0);
 
 	int lightMat = renderer->AddMaterial(make_float3(1, 1, 1));
@@ -194,8 +209,8 @@ void PrepareScene()
 
 	//renderer->AddPointLight(make_float3(0, 0, 0), 50 * make_float3(10, 10, 10));
 
-	int lightMat2 = renderer->AddMaterial(make_float3(10, 10, 10));
-	int lightQuad2 = renderer->AddQuad(make_float3(0, 0, 1), make_float3(0, 5, 12), 10.0f, 10.0f, lightMat2);
+	int lightMat2 = renderer->AddMaterial(make_float3(15, 15, 15));
+	int lightQuad2 = renderer->AddQuad(make_float3(0, 0, -1), make_float3(0, 5, 12), 10.0f, 10.0f, lightMat2);
 	renderer->AddInstance(lightQuad2);
 	HostMaterial& lightMatHost2 = *renderer->GetMaterial(lightMat2);
 	lightMatHost2.color.textureID = texId;
