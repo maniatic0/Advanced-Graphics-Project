@@ -17,6 +17,7 @@ public:
 	int meshID = 0;									// mesh id
 };
 
+
 // -----------------------------------------------------------
 // Scene class
 // owner of the scene graph;
