@@ -63,7 +63,6 @@ private:
 	Bitmap* screen = 0;								// temporary storage of RenderCore output; will be copied to render target
 	float4* fscreen = 0;							// HDR temp storage
 	int targetTextureID = 0;						// ID of the target OpenGL texture
-	vector<Mesh> meshes;							// mesh data storage
 	Scene scene;									// color and texture data storage 
 	int maximumDepth = 10;
 
@@ -87,7 +86,6 @@ private:
 	float4 Trace(Ray &r, const float3 &intensity, int matId = -1, int currentDepth = 0) const;
 
 	void RenderCore::CreateGaussianKernel(uint width, uint height);
-
 
 	float4 LoadMaterialFloat4(const CoreMaterial::Vec3Value& val, const float2& uv) const;
 
@@ -114,14 +112,14 @@ private:
 	[[nodiscard]]
 	inline bool IntersectScene(const Ray& v, RayMeshInterceptInfo& hit) const
 	{
-		return interceptRayScene<backCulling>(v, meshes, hit);
+		return interceptRayScene<backCulling>(v, scene.meshBVH, hit);
 	}
 
 	template <bool backCulling>
 	[[nodiscard]]
 	inline bool TestDepthScene(const Ray& v, const int instId, const int meshId, const int triId, const float tD) const
 	{
-		return depthRayScene<backCulling>(v, meshes, instId, meshId, triId, tD);
+		return depthRayScene<backCulling>(v, scene.meshBVH, instId, meshId, triId, tD);
 	}
 
 	template <bool backCulling>

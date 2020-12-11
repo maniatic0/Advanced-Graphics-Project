@@ -14,5 +14,7 @@
     <ClInclude Include="intersection_utils.impl.h" />
     <ClInclude Include="rendercore.impl.h" />
     <ClInclude Include="bvh_utils.h" />
+    <ClInclude Include="bvh_utils_impl.h" />
+    <ClInclude Include="scene_utils.h" />
   </ItemGroup>
 </Project>

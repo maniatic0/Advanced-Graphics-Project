@@ -113,6 +113,7 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">core_settings.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClInclude Include="bvh_utils.h" />
+    <ClInclude Include="bvh_utils_impl.h" />
     <ClInclude Include="intersection_utils.impl.h" />
     <ClCompile Include="general_utils.cpp" />
     <ClCompile Include="rendercore.cpp">
@@ -122,6 +123,7 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">core_settings.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClInclude Include="rendercore.impl.h" />
+    <ClInclude Include="scene_utils.h" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="core_settings.h" />

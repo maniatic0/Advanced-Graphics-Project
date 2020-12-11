@@ -190,17 +190,18 @@ void RenderCore::SetTarget(GLTexture* target, const uint)
 //  +-----------------------------------------------------------------------------+
 void RenderCore::SetGeometry(const int meshIdx, const float4* vertexData, const int vertexCount, const int triangleCount, const CoreTri* triangleData)
 {
-	Mesh newMesh;
+	BVH &newBVH = scene.meshBVH.emplace_back();
+	Mesh &newMesh = newBVH.GetMesh();
 	// copy the supplied vertices; we cannot assume that the render system does not modify
 	// the original data after we leave this function.
-	newMesh.meshID = static_cast<int>(meshes.size());
+	newMesh.meshID = static_cast<int>(scene.meshBVH.size() - 1); // TODO: Change this to keep the meshIdx
 	newMesh.vertices = new float4[vertexCount];
 	newMesh.vcount = vertexCount;
 	memcpy(newMesh.vertices, vertexData, vertexCount * sizeof(float4));
 	// copy the supplied 'fat triangles'
 	newMesh.triangles = new CoreTri[vertexCount / 3];
 	memcpy(newMesh.triangles, triangleData, (vertexCount / 3) * sizeof(CoreTri));
-	meshes.push_back(newMesh);
+	newBVH.ConstructBVH();
 }
 
 void RenderCore::SetTextures(const CoreTexDesc* tex, const int textureCount)
@@ -525,15 +526,6 @@ CoreStats RenderCore::GetCoreStats() const
 //  +-----------------------------------------------------------------------------+
 void RenderCore::Shutdown()
 {
-	for (size_t i = 0; i < meshes.size(); i++)
-	{
-		if (meshes[i].vertices != nullptr)
-		{
-			delete meshes[i].vertices;
-			delete meshes[i].triangles;
-		}
-	}
-
 	for (size_t i = 0; i < scene.texList.size(); i++)
 	{
 		switch (scene.texList[i].storage)

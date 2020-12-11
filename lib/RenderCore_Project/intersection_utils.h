@@ -11,34 +11,58 @@ namespace lh2core
 class Mesh
 {
 public:
-	float4* vertices = 0;							// vertex data received via SetGeometry
-	CoreTri* triangles = 0;							// 'fat' triangle data
+	float4* vertices = nullptr;							// vertex data received via SetGeometry
+	CoreTri* triangles = nullptr;							// 'fat' triangle data
 	int vcount = 0;									// vertex count
 	int meshID = 0;									// mesh id
-};
 
+	// No accidental copy
+	Mesh(const Mesh&) = delete;
+	Mesh& operator=(const Mesh&) = delete;
 
-// -----------------------------------------------------------
-// Scene class
-// owner of the scene graph;
-// owner of the material and texture list
-// -----------------------------------------------------------
-class Scene {
-public:
-	// constructor / destructor
-	Scene() = default;
-	// data members
-	vector<CoreMaterial> matList;
-	CoreMaterial air;
+	inline Mesh() noexcept  : vertices(nullptr), triangles(nullptr), vcount(0), meshID(0) {};
 
-	vector<CoreTexDesc> texList;
+	inline Mesh(Mesh&& other) noexcept {
+		vertices = other.vertices;
+		other.vertices = nullptr;
 
-	// Lights
-	vector<CorePointLight>			pointLights;
-	vector<CoreSpotLight>			spotLights;
-	vector<CoreDirectionalLight>	directionalLights;
-	vector<CoreLightTri>	areaLights;
+		triangles = other.triangles;
+		other.triangles = nullptr;
+	}
 
+	// Move assignment operator
+	inline Mesh& operator=(Mesh&& other) noexcept {
+		if (vertices != nullptr)
+		{
+			delete[] vertices;
+		}
+
+		if (triangles != nullptr)
+		{
+			delete[] triangles;
+		}
+
+		vertices = other.vertices;
+		other.vertices = nullptr;
+
+		triangles = other.triangles;
+		other.triangles = nullptr;
+
+		return *this;
+	}
+
+	inline ~Mesh()
+	{
+		if (vertices != nullptr)
+		{
+			delete[] vertices;
+		}
+
+		if (triangles != nullptr)
+		{
+			delete[] triangles;
+		}
+	}
 };
 
 //  +-----------------------------------------------------------------------------+
@@ -49,10 +73,7 @@ struct Ray {
 public:
 	float4 origin;
 	float4 direction;
-
-	// No copy by accident
-	Ray(const Ray&) = delete;
-	Ray& operator=(const Ray&) = delete;
+	float4 invDir;
 
 	/// <summary>
 	/// Copy Ray
@@ -63,13 +84,14 @@ public:
 		return Ray(origin, direction);
 	}
 
-	inline Ray() { origin = make_float4(0);  direction = make_float4(1, 0, 0, 0); }
+	inline Ray() : origin (make_float4(0)), direction(make_float4(1, 0, 0, 0)), invDir(1.0f / direction) { }
 
 	inline Ray(const float4 &ori, const float4 &dir)
 	{
 		assert(almost_equal(1, length(dir))); // "Unormalized Vector"
 		origin = ori;
 		direction = dir;
+		invDir = 1.0f / direction;
 	}
 
 	inline Ray(const float3& ori, const float3& dir)
@@ -77,6 +99,7 @@ public:
 		assert(almost_equal(1, length(dir))); // "Unormalized Vector"
 		origin = make_float4(ori);
 		direction = make_float4(dir);
+		invDir = 1.0f / direction;
 	}
 
 	inline void SetOrigin(const float4& ori)
@@ -92,11 +115,13 @@ public:
 	{
 		assert(almost_equal(1, length(dir))); // "Unormalized Vector"
 		direction = dir;
+		invDir = 1.0f / direction;
 	}
 	inline void SetDirection(const float3& dir)
 	{
 		assert(almost_equal(1, length(dir))); // "Unormalized Vector"
 		direction = make_float4(dir);
+		invDir = 1.0f / direction;
 	}
 
 	/// <summary>
@@ -108,6 +133,23 @@ public:
 	{
 		return origin + (t * direction);
 	}
+
+
+	inline bool TestAABBIntersection(const aabb &box) const
+	{
+		// From https://medium.com/@bromanz/another-view-on-the-classic-ray-aabb-intersection-algorithm-for-bvh-traversal-41125138b525
+		__m128 ori = _mm_set_ps(origin.x, origin.y, origin.z, origin.w);
+		__m128 dirInv = _mm_set_ps(invDir.x, invDir.y, invDir.z, invDir.w);
+
+		__m128 t0 = _mm_mul_ps(_mm_sub_ps(box.bmin4, ori), dirInv);
+		__m128 t1 = _mm_mul_ps(_mm_sub_ps(box.bmax4, ori), dirInv);
+		
+		__m128 tmin = _mm_min_ps(t0, t1);
+		__m128 tmax = _mm_max_ps(t0, t1);
+		
+		return max_component(tmin) <= min_component(tmax);
+	}
+	
 };
 
 

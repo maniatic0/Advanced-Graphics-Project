@@ -244,7 +244,7 @@ namespace lh2core
 		const float3 I = make_float3(r.Evaluate(t));
 		const float3 D = make_float3(r.direction);
 
-		const CoreTri& triangle = meshes[hitInfo.meshId].triangles[hitInfo.triId];
+		const CoreTri& triangle = scene.meshBVH[hitInfo.meshId].GetMesh().triangles[hitInfo.triId];
 		const CoreMaterial& material = scene.matList[triangle.material];
 
 		const float2 uv =
@@ -393,7 +393,7 @@ namespace lh2core
 		const float3 I = make_float3(r.Evaluate(t));
 		const float3 D = make_float3(r.direction);
 
-		const CoreTri& triangle = meshes[hitInfo.meshId].triangles[hitInfo.triId];
+		const CoreTri& triangle = scene.meshBVH[hitInfo.meshId].GetMesh().triangles[hitInfo.triId];
 		const CoreMaterial& material = scene.matList[triangle.material];
 
 		const float2 uv =
