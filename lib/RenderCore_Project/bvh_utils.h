@@ -18,10 +18,10 @@ namespace lh2core
 
 		inline bool IsLeaf() const { return leftFirst >= 0; }
 		inline bool HasChildren() const { return leftFirst < 0; }
-		inline bool LeftChild() const { assert(!IsLeaf());  return -leftFirst; }
-		inline bool RightChild() const { assert(!IsLeaf());  return LeftChild() + 1; }
+		inline int LeftChild() const { assert(!IsLeaf());  return -leftFirst; }
+		inline int RightChild() const { assert(!IsLeaf());  return LeftChild() + 1; }
 
-		inline bool FirstPrimitive() const { assert(IsLeaf()); return leftFirst; }
+		inline int FirstPrimitive() const { assert(IsLeaf()); return leftFirst; }
 
 		inline void SetLeftChild(int nodeId) { assert(nodeId > 0); leftFirst = -nodeId; }
 		
@@ -77,14 +77,14 @@ namespace lh2core
 		[[nodiscard]]
 		inline bool IntersectRayBVH(const Ray& r, RayMeshInterceptInfo& hit) const
 		{
-			return IntersectRayBVHInternal<backCulling>(r, hit, 0);
+			return IntersectRayBVHInternal<backCulling>(r, hit, 1);
 		}
 
 		template <bool backCulling>
 		[[nodiscard]]
 		inline bool DepthRayBVH(const Ray& r, const int meshId, const int triId, const float tD) const
 		{
-			return DepthRayBVHInternal<backCulling>(r, meshId, triId, tD, 0);
+			return DepthRayBVHInternal<backCulling>(r, meshId, triId, tD, 1);
 		}
 
 	};

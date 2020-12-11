@@ -18,13 +18,13 @@ namespace lh2core
 		poolSize = tcount * 2 - 1;
 		pool = std::make_unique<BVHNode[]>(poolSize);
 		assert(reinterpret_cast<uintptr_t>(pool.get()) % alignof(BVHNode) == 0);
-		root = &pool[0];
+		root = &pool[1];
 		poolPtr = 2; 
 		// subdivide root node
 		root->leftFirst = 0;
 		root->count = tcount;
 		CalculateBounds(root);
-		Subdivide(0);
+		Subdivide(1);
 	}
 
 	void BVH::CalculateBounds(BVHNode* node)
@@ -33,7 +33,7 @@ namespace lh2core
 		bounds.Reset();
 		
 		assert(node->IsLeaf());
-		const int tStart = node->leftFirst;
+		const int tStart = node->FirstPrimitive();
 		const int tSize = node->count;
 		const int tMax = tStart + tSize;
 		assert(0 <= tStart && 0 <= tSize);
@@ -50,9 +50,10 @@ namespace lh2core
 
 	void BVH::Subdivide(int nodeId)
 	{
-		assert(0 <= nodeId && nodeId < poolSize);
+		assert(1 <= nodeId && nodeId < poolSize);
 		BVHNode &node = pool[nodeId];
 		assert(node.IsLeaf());
+		assert(node.count > 0);
 		if (node.count < 3) { 
 			return; 
 		}
@@ -61,6 +62,7 @@ namespace lh2core
 		const int leftChild = poolPtr++;
 		const int rightChild = poolPtr++;
 		const int p = Partition(&node);
+		assert(p + 1 > first);
 
 		node.SetLeftChild(leftChild);
 
@@ -68,12 +70,12 @@ namespace lh2core
 		BVHNode &right = pool[rightChild];
 
 		left.leftFirst = first;
-		left.count = (p) - first + 1; // hi - lo + 1 = count
+		left.count = p - first + 1; // hi - lo + 1 = count
 		CalculateBounds(&left);
 		Subdivide(leftChild);
 
 		right.leftFirst = p + 1;
-		right.count = node.count - left.count;
+		right.count = count - left.count;
 		CalculateBounds(&right);
 		Subdivide(rightChild);
 	}

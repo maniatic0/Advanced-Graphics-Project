@@ -25,6 +25,22 @@ namespace lh2core
 #define almost_equal(target, value) approximately(kEps, (target), (value))
 
 	/// <summary>
+	/// Clamp a value to a target if they are almost equal
+	/// </summary>
+	/// <param name="eps">Epsilon</param>
+	/// <param name="target">Target Val</param>
+	/// <param name="value">Value</param>
+	/// <returns>Value if it is not almost equal to target</returns>
+	inline float clamp_near(float eps, float target, float value)
+	{
+		if (approximately(eps, target, value))
+		{
+			return target;
+		}
+		return value;
+	}
+
+	/// <summary>
 	/// 3D Cross product using float 4
 	/// </summary>
 	/// <param name="a"></param>

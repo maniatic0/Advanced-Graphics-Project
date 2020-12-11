@@ -20,17 +20,19 @@ namespace lh2core
 			RayTriangleInterceptInfo tempHitInfo;
 			bool hit = false;
 			int vPos;
+			int tIndex;
 
 			for (int i = node.FirstPrimitive(); i < triMax; i++)
 			{
-				vPos = i * 3;
+				tIndex = indices[i];
+				vPos = tIndex * 3;
 				if (interceptRayTriangle<backCulling>(r, mesh.vertices[vPos + 0], mesh.vertices[vPos + 1], mesh.vertices[vPos + 2], tempHitInfo))
 				{
 					if (tempHitInfo < hitInfo.triIntercept)
 					{
 						hit = true;
 						tempHitInfo.CopyTo(hitInfo.triIntercept);
-						hitInfo.triId = i;
+						hitInfo.triId = tIndex;
 					}
 				}
 			}
@@ -70,11 +72,13 @@ namespace lh2core
 			RayTriangleInterceptInfo tempHitInfo;
 			bool hit = false;
 			int vPos;
+			int tIndex;
 
 			for (int i = node.FirstPrimitive(); i < triMax; i++)
 			{
-				vPos = i * 3;
-				if ((!sameMesh || i != triId) && depthRayTriangle<backCulling>(r, mesh.vertices[vPos + 0], mesh.vertices[vPos + 1], mesh.vertices[vPos + 2], tD))
+				tIndex = indices[i];
+				vPos = tIndex * 3;
+				if ((!sameMesh || tIndex != triId) && depthRayTriangle<backCulling>(r, mesh.vertices[vPos + 0], mesh.vertices[vPos + 1], mesh.vertices[vPos + 2], tD))
 				{
 					if (!sameMesh)
 					{

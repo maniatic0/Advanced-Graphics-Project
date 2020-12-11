@@ -99,8 +99,9 @@ public:
 	inline bool TestAABBIntersection(const aabb &box) const
 	{
 		// From https://medium.com/@bromanz/another-view-on-the-classic-ray-aabb-intersection-algorithm-for-bvh-traversal-41125138b525
-		__m128 ori = _mm_set_ps(origin.x, origin.y, origin.z, origin.w);
-		__m128 dirInv = _mm_set_ps(invDir.x, invDir.y, invDir.z, invDir.w);
+#if 0
+		__m128 ori = _mm_setr_ps(origin.x, origin.y, origin.z, 0);
+		__m128 dirInv = _mm_setr_ps(invDir.x, invDir.y, invDir.z, 0);
 
 		__m128 t0 = _mm_mul_ps(_mm_sub_ps(box.bmin4, ori), dirInv);
 		__m128 t1 = _mm_mul_ps(_mm_sub_ps(box.bmax4, ori), dirInv);
@@ -109,6 +110,18 @@ public:
 		__m128 tmax = _mm_max_ps(t0, t1);
 		
 		return max_component(tmin) <= min_component(tmax);
+#else
+		float3 ori = make_float3(origin);
+		float3 dirInv = make_float3(invDir);
+
+		float3 t0 = (box.bmin3 - ori) * dirInv;
+		float3 t1 = (box.bmax3 - ori) * dirInv;
+
+		float3 tmin = fminf(t0, t1);
+		float3 tmax = fmaxf(t0, t1);
+
+		return max(tmin.x, max(tmin.y, tmin.z)) <= min(tmax.x, max(tmax.y, tmax.z));
+#endif
 	}
 	
 };

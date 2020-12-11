@@ -478,8 +478,23 @@ namespace lh2core
 				}
 				else
 				{
-					assert(false); // What
-					return make_float4(0);
+					// Reflection Ray, probably from calc error
+					const float roughness = material.roughness.value;
+					if (roughness < kEps)
+					{
+						// No roughness
+						r.SetOrigin(I);
+						r.SetDirection(reflect(D, N));
+						return make_float4(intensityNew, 1.0f) * LoadMaterialFloat4(material.color, uv) * Sample<backCulling>(r, intensityNew, matId, currentDepth + 1);
+					}
+					else
+					{
+						// Glossy
+						const float3 reflected = reflect(D, N);
+						const float3 diffuse = DiffuseReflection(N, triangle);
+						r.SetDirection(normalize(lerp(reflected, diffuse, roughness * roughness))); // Recommended by https://blog.demofox.org/2020/06/06/casual-shadertoy-path-tracing-2-image-improvement-and-glossy-reflections/
+						return make_float4(intensityNew, 1.0f) * LoadMaterialFloat4(material.color, uv) * Sample<backCulling>(r, intensityNew, matId, currentDepth + 1);
+					}
 				}
 			}
 			break;
