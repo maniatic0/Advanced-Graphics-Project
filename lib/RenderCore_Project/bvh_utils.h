@@ -2,7 +2,7 @@
 
 namespace lh2core
 {
-	struct alignas(64) BVHNode // Note: aligned to cache line
+	struct ALIGN(64) BVHNode // Note: aligned to cache line
 	{
 	private:
 		aabb bounds;
@@ -23,6 +23,7 @@ namespace lh2core
 
 		inline bool FirstPrimitive() const { assert(IsLeaf()); return leftFirst; }
 
+		inline void SetLeftChild(int nodeId) { assert(nodeId > 0); leftFirst = -nodeId; }
 		
 		friend class BVH;
 	};
@@ -40,18 +41,20 @@ namespace lh2core
 		bool DepthRayBVHInternal(const Ray& r, const int meshId, const int triId, const float tD, const int nodeId) const;
 
 
-		uint* indices;
-		BVHNode* pool;
+		unique_ptr<uint[]> indices;
+		unique_ptr<BVHNode[]> pool;
 		BVHNode* root;
 		uint poolPtr;
 		Mesh mesh;
 
+		int poolSize;
+
 	public:
 
-		inline BVH() : indices(nullptr), pool(nullptr), root(nullptr), poolPtr(0) {}
+		inline BVH() : indices(nullptr), pool(nullptr), root(nullptr), poolPtr(0), poolSize(0) {}
 
-		BVH(const BVH&) = default;
-		BVH& operator=(const BVH&) = default;
+		inline BVH(const BVH&) = delete;
+		BVH& operator=(const BVH&) = delete;
 		
 		BVH(BVH&& other) noexcept = default;
 		BVH& operator=(BVH&& other) noexcept = default;
@@ -67,7 +70,7 @@ namespace lh2core
 
 		void ConstructBVH();
 		void CalculateBounds(BVHNode* node);
-		void Subdivide(BVHNode* node);
+		void Subdivide(int nodeId);
 		int Partition(BVHNode* node);
 
 		template<bool backCulling>
@@ -84,13 +87,6 @@ namespace lh2core
 			return DepthRayBVHInternal<backCulling>(r, meshId, triId, tD, 0);
 		}
 
-		inline ~BVH()
-		{
-			root = nullptr;
-			delete[] pool;
-			pool = nullptr;
-			delete[] indices;
-		}
 	};
 
 	template <bool backCulling>

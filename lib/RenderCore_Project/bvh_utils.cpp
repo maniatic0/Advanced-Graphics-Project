@@ -6,22 +6,25 @@ namespace lh2core
 	void BVH::ConstructBVH()
 	{
 		assert(mesh.vcount >= 0);
+		assert(mesh.vcount % 3 == 0);
+
+		const int tcount = mesh.vcount / 3;
 		// create index array
-		indices = new uint[mesh.vcount];
-		for (int i = 0; i < mesh.vcount; i++) {
+		indices = std::make_unique<uint[]>(tcount);
+		for (int i = 0; i < tcount; i++) {
 			indices[i] = i; 
 		}
 		// allocate BVH root node
-		const int poolSize = mesh.vcount * 2 - 1;
-		pool = new BVHNode[poolSize];
-		assert(reinterpret_cast<uintptr_t>(pool) % alignof(BVHNode) == 0);
+		poolSize = tcount * 2 - 1;
+		pool = std::make_unique<BVHNode[]>(poolSize);
+		assert(reinterpret_cast<uintptr_t>(pool.get()) % alignof(BVHNode) == 0);
 		root = &pool[0];
 		poolPtr = 2; 
 		// subdivide root node
 		root->leftFirst = 0;
-		root->count = mesh.vcount;
+		root->count = tcount;
 		CalculateBounds(root);
-		Subdivide(root);
+		Subdivide(0);
 	}
 
 	void BVH::CalculateBounds(BVHNode* node)
@@ -45,29 +48,34 @@ namespace lh2core
 		}
 	}
 
-	void BVH::Subdivide(BVHNode* node)
+	void BVH::Subdivide(int nodeId)
 	{
-		assert(node->IsLeaf());
-		if (node->count < 3) { 
+		assert(0 <= nodeId && nodeId < poolSize);
+		BVHNode &node = pool[nodeId];
+		assert(node.IsLeaf());
+		if (node.count < 3) { 
 			return; 
 		}
-		const int first = node->leftFirst;
+		const int first = node.FirstPrimitive();
+		const int count = node.count;
 		const int leftChild = poolPtr++;
 		const int rightChild = poolPtr++;
-		const int p = Partition(node);
+		const int p = Partition(&node);
 
-		node->leftFirst = -leftChild;
+		node.SetLeftChild(leftChild);
 
-		BVHNode* left = &pool[leftChild];
-		BVHNode* right = &pool[rightChild];
+		BVHNode &left = pool[leftChild];
+		BVHNode &right = pool[rightChild];
 
-		left->leftFirst = first;
-		left->count = p;
-		Subdivide(left);
+		left.leftFirst = first;
+		left.count = (p) - first + 1; // hi - lo + 1 = count
+		CalculateBounds(&left);
+		Subdivide(leftChild);
 
-		right->leftFirst = p;
-		right->count = node->count;
-		Subdivide(right);
+		right.leftFirst = p + 1;
+		right.count = node.count - left.count;
+		CalculateBounds(&right);
+		Subdivide(rightChild);
 	}
 
 	inline float getTriangleCenterAxis(const float4& a, const float4& b, const float4& c, const int axis)
@@ -78,7 +86,7 @@ namespace lh2core
 			return (a.x + b.x + c.x) / 3.0f;
 		case 1:
 			return (a.y + b.y + c.y) / 3.0f;
-		case 3:
+		case 2:
 			return (a.z + b.z + c.z) / 3.0f;
 		default:
 			assert(false); // What
@@ -91,19 +99,20 @@ namespace lh2core
 	int BVH::Partition(BVHNode* node)
 	{
 		assert(node->IsLeaf());
-		// Lomuto's partition https://en.wikipedia.org/wiki/Quicksort
+		// Hoare's partition https://en.wikipedia.org/wiki/Quicksort
 		const int splitAxis = node->bounds.LongestAxis();
-		float4* vertices = mesh.vertices;
+		const float4* vertices = mesh.vertices.get();
 
-		int hi = node->count;
+		// Both inclusive
 		int lo = node->FirstPrimitive();
+		int hi = lo + node->count - 1;
 
 		int triangleIndex = indices[(hi + lo) / 2] * 3;
 
 		const float pivot = getTriangleCenterAxis(vertices[triangleIndex + 0], vertices[triangleIndex + 1], vertices[triangleIndex + 2], splitAxis);
 
 		int i = lo - 1;
-		int j = hi - 1;
+		int j = hi + 1;
 
 		float center = 0;
 		while (true)

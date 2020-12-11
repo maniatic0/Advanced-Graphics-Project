@@ -11,8 +11,8 @@ namespace lh2core
 class Mesh
 {
 public:
-	float4* vertices = nullptr;							// vertex data received via SetGeometry
-	CoreTri* triangles = nullptr;							// 'fat' triangle data
+	unique_ptr<float4[]> vertices = nullptr;							// vertex data received via SetGeometry
+	unique_ptr<CoreTri[]> triangles = nullptr;							// 'fat' triangle data
 	int vcount = 0;									// vertex count
 	int meshID = 0;									// mesh id
 
@@ -22,47 +22,8 @@ public:
 
 	inline Mesh() noexcept  : vertices(nullptr), triangles(nullptr), vcount(0), meshID(0) {};
 
-	inline Mesh(Mesh&& other) noexcept {
-		vertices = other.vertices;
-		other.vertices = nullptr;
-
-		triangles = other.triangles;
-		other.triangles = nullptr;
-	}
-
-	// Move assignment operator
-	inline Mesh& operator=(Mesh&& other) noexcept {
-		if (vertices != nullptr)
-		{
-			delete[] vertices;
-		}
-
-		if (triangles != nullptr)
-		{
-			delete[] triangles;
-		}
-
-		vertices = other.vertices;
-		other.vertices = nullptr;
-
-		triangles = other.triangles;
-		other.triangles = nullptr;
-
-		return *this;
-	}
-
-	inline ~Mesh()
-	{
-		if (vertices != nullptr)
-		{
-			delete[] vertices;
-		}
-
-		if (triangles != nullptr)
-		{
-			delete[] triangles;
-		}
-	}
+	inline Mesh(Mesh&& other) noexcept = default;
+	inline Mesh& operator=(Mesh&& other) noexcept = default;
 };
 
 //  +-----------------------------------------------------------------------------+
