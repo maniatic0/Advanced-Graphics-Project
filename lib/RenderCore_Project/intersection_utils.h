@@ -120,7 +120,7 @@ public:
 		float3 tmin = fminf(t0, t1);
 		float3 tmax = fmaxf(t0, t1);
 
-		return max(tmin.x, max(tmin.y, tmin.z)) <= min(tmax.x, max(tmax.y, tmax.z));
+		return max(tmin.x, max(tmin.y, tmin.z)) <= min(tmax.x, min(tmax.y, tmax.z));
 #endif
 	}
 	

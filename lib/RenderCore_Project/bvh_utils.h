@@ -17,7 +17,7 @@ namespace lh2core
 		BVHNode& operator=(const BVHNode&) = delete;
 
 		inline bool IsLeaf() const { return leftFirst >= 0; }
-		inline bool HasChildren() const { return leftFirst < 0; }
+		inline bool HasChildren() const { return !IsLeaf(); }
 		inline int LeftChild() const { assert(!IsLeaf());  return -leftFirst; }
 		inline int RightChild() const { assert(!IsLeaf());  return LeftChild() + 1; }
 
