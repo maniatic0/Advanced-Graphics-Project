@@ -20,10 +20,12 @@ public:
 	Mesh(const Mesh&) = delete;
 	Mesh& operator=(const Mesh&) = delete;
 
-	inline Mesh() noexcept  : vertices(nullptr), triangles(nullptr), vcount(0), meshID(0) {};
+	inline Mesh() noexcept  : vertices(nullptr), triangles(nullptr), vcount(-1), meshID(-1) {};
 
 	inline Mesh(Mesh&& other) noexcept = default;
 	inline Mesh& operator=(Mesh&& other) noexcept = default;
+
+	inline bool IsValid() const { return vcount > 0 && vcount % 3 == 0 && meshID >= 0 && vertices.get() != nullptr && triangles.get() != nullptr; }
 };
 
 //  +-----------------------------------------------------------------------------+

@@ -7,6 +7,7 @@ namespace lh2core
 	{
 		assert(mesh.vcount >= 0);
 		assert(mesh.vcount % 3 == 0);
+		assert(mesh.IsValid());
 
 		const int tcount = mesh.vcount / 3;
 		// create index array

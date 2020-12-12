@@ -6,6 +6,7 @@ namespace lh2core
 	bool BVH::IntersectRayBVHInternal(const Ray& r, RayMeshInterceptInfo& hitInfo, const int nodeId) const
 	{
 		// Slow version (also do this with stack)
+		assert(1 <= nodeId && nodeId < poolSize);
 		const BVHNode& node = pool[nodeId];
 
 		if (!r.TestAABBIntersection(node.bounds))
@@ -48,7 +49,9 @@ namespace lh2core
 		}
 		else
 		{
-			return IntersectRayBVHInternal<backCulling>(r, hitInfo, node.LeftChild()) || IntersectRayBVHInternal<backCulling>(r, hitInfo, node.RightChild());
+			bool left = IntersectRayBVHInternal<backCulling>(r, hitInfo, node.LeftChild());
+			bool right = IntersectRayBVHInternal<backCulling>(r, hitInfo, node.RightChild());
+			return left || right;
 		}
 	}
 
@@ -56,6 +59,9 @@ namespace lh2core
 	[[nodiscard]]
 	bool BVH::DepthRayBVHInternal(const Ray& r, const int meshId, const int triId, const float tD, const int nodeId) const
 	{
+		assert(poolSize > 0);
+		assert(1 <= nodeId && nodeId < poolSize);
+		assert(mesh.IsValid());
 		// Slow version (also do this with stack)
 		const BVHNode& node = pool[nodeId];
 		const bool sameMesh = mesh.meshID == meshId;
