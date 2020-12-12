@@ -143,6 +143,9 @@ void PrepareScene()
 	//int cubeQuad6 = renderer->AddQuad(make_float3(0, -1, 0), make_float3(0, -5, 20), 10.0f, 10.0f, cubeMat);
 	//renderer->AddInstance(cubeQuad6);
 
+	//int cornel = renderer->AddMesh("../_shareddata/cornel_box/CornellBox-Original.obj", 2.0f);
+	//renderer->AddInstance(cornel);
+
 	// initialize scene
 	int boxScene = renderer->AddMesh("../_shareddata/basic_box.obj", 0.2f);
 	renderer->AddInstance(boxScene);
@@ -187,7 +190,7 @@ void PrepareScene()
 
 	//HostMaterial& cubeMatHost1 = *renderer->GetMaterial(3);
 	//cubeMatHost1.reflection = 0.5f;
-	
+
 	int texId = renderer->AddTexture("../_shareddata/textures/LEGOSHLD.tga", HostTexture::LINEARIZED | HostTexture::GAMMACORRECTION);
 	//int texId = renderer->AddTexture("../_shareddata/textures/checker.png", 0);
 
@@ -214,6 +217,15 @@ void PrepareScene()
 	renderer->AddInstance(lightQuad2);
 	HostMaterial& lightMatHost2 = *renderer->GetMaterial(lightMat2);
 	lightMatHost2.color.textureID = texId;
+
+
+	int mori = renderer->AddMesh("../_shareddata/mori_knob/testObj.obj", 2.0f);
+	renderer->AddInstance(mori);
+	HostMaterial& moriMatHost = *renderer->GetMaterial(8);
+	moriMatHost.pbrtMaterialType = MaterialType::PBRT_GLASS;
+
+	//int cube = renderer->AddMesh("../_shareddata/cube/cube.obj", 2.0f);
+	//renderer->AddInstance(cube);
 }
 
 //  +-----------------------------------------------------------------------------+

@@ -190,6 +190,8 @@ void RenderCore::SetTarget(GLTexture* target, const uint)
 //  +-----------------------------------------------------------------------------+
 void RenderCore::SetGeometry(const int meshIdx, const float4* vertexData, const int vertexCount, const int triangleCount, const CoreTri* triangleData)
 {
+	Timer timer;
+	timer.reset();
 	BVH newBVH;
 	Mesh &newMesh = newBVH.GetMesh();
 	// copy the supplied vertices; we cannot assume that the render system does not modify
@@ -203,6 +205,8 @@ void RenderCore::SetGeometry(const int meshIdx, const float4* vertexData, const 
 	memcpy(newMesh.triangles.get(), triangleData, (vertexCount / 3) * sizeof(CoreTri));
 	newBVH.ConstructBVH();
 	scene.meshBVH.push_back(std::forward<BVH>(newBVH));
+
+	printf("built BVH for mesh-%d (triangle count %d) in %5.3fs\n", meshIdx, triangleCount, timer.elapsed());
 }
 
 void RenderCore::SetTextures(const CoreTexDesc* tex, const int textureCount)

@@ -62,21 +62,28 @@ namespace lh2core
 		const int leftChild = poolPtr++;
 		const int rightChild = poolPtr++;
 		const int p = Partition(&node);
-		assert(p + 1 > first);
+		assert(p >= first);
+		assert(p + 1 < first + count);
 
 		node.SetLeftChild(leftChild);
 
 		BVHNode &left = pool[leftChild];
 		BVHNode &right = pool[rightChild];
 
+		// Prepare Children
 		left.leftFirst = first;
 		left.count = p - first + 1; // hi - lo + 1 = count
 		CalculateBounds(&left);
-		Subdivide(leftChild);
 
-		right.leftFirst = p + 1;
+		right.leftFirst = left.leftFirst + left.count;
 		right.count = count - left.count;
 		CalculateBounds(&right);
+		assert(count == left.count + right.count);
+		assert(right.leftFirst == left.leftFirst + left.count);
+
+		
+		Subdivide(leftChild);
+
 		Subdivide(rightChild);
 	}
 
@@ -101,6 +108,7 @@ namespace lh2core
 	int BVH::Partition(BVHNode* node)
 	{
 		assert(node->IsLeaf());
+		assert(node->count > 0);
 		// Hoare's partition https://en.wikipedia.org/wiki/Quicksort
 		const int splitAxis = node->bounds.LongestAxis();
 		const float4* vertices = mesh.vertices.get();
