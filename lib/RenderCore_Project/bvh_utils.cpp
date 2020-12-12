@@ -33,6 +33,7 @@ namespace lh2core
 		bounds.Reset();
 		
 		assert(node->IsLeaf());
+		assert(node->count > 0);
 		const int tStart = node->FirstPrimitive();
 		const int tSize = node->count;
 		const int tMax = tStart + tSize;
@@ -116,6 +117,7 @@ namespace lh2core
 		// Both inclusive
 		int lo = node->FirstPrimitive();
 		int hi = lo + node->count - 1;
+		int temp;
 
 		int triangleIndex = indices[(hi + lo) / 2] * 3;
 
@@ -145,7 +147,10 @@ namespace lh2core
 			{
 				return j;
 			}
-			std::swap(indices[i], indices[j]);
+
+			temp = indices[i];
+			indices[i] = indices[j];
+			indices[j] = temp;
 		}
 		assert(false);
 		return -1;

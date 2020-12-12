@@ -190,6 +190,7 @@ void RenderCore::SetTarget(GLTexture* target, const uint)
 //  +-----------------------------------------------------------------------------+
 void RenderCore::SetGeometry(const int meshIdx, const float4* vertexData, const int vertexCount, const int triangleCount, const CoreTri* triangleData)
 {
+	assert(triangleCount * 3 == vertexCount);
 	Timer timer;
 	timer.reset();
 	BVH newBVH;

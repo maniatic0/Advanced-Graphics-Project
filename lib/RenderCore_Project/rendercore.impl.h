@@ -248,13 +248,13 @@ namespace lh2core
 		const CoreMaterial& material = scene.matList[triangle.material];
 
 		const float2 uv =
-			make_float2(triangle.u0, triangle.v0) * hitInfo.triIntercept.u
-			+ make_float2(triangle.u1, triangle.v1) * hitInfo.triIntercept.v
-			+ make_float2(triangle.u2, triangle.v2) * hitInfo.triIntercept.GetWCoord();
+			make_float2(triangle.u0, triangle.v0) * hitInfo.triIntercept.GetWCoord()
+			+ make_float2(triangle.u1, triangle.v1) * hitInfo.triIntercept.u
+			+ make_float2(triangle.u2, triangle.v2) * hitInfo.triIntercept.v;
 
 		// Note that this could be a texture map of normals in material
 		const float3& N
-			= normalize(triangle.vN0 * hitInfo.triIntercept.u + triangle.vN1 * hitInfo.triIntercept.v + triangle.vN2 * hitInfo.triIntercept.GetWCoord())
+			= normalize(triangle.vN0 * hitInfo.triIntercept.GetWCoord() + triangle.vN1 * hitInfo.triIntercept.u + triangle.vN2 * hitInfo.triIntercept.v)
 			* (hitInfo.triIntercept.backFacing ? -1.0f : 1.0f);
 
 		float3 color = make_float3(0);
@@ -397,12 +397,12 @@ namespace lh2core
 		const CoreMaterial& material = scene.matList[triangle.material];
 
 		const float2 uv =
-			make_float2(triangle.u0, triangle.v0) * hitInfo.triIntercept.u
-			+ make_float2(triangle.u1, triangle.v1) * hitInfo.triIntercept.v
-			+ make_float2(triangle.u2, triangle.v2) * hitInfo.triIntercept.GetWCoord();
+			make_float2(triangle.u0, triangle.v0) * hitInfo.triIntercept.GetWCoord()
+			+ make_float2(triangle.u1, triangle.v1) * hitInfo.triIntercept.u
+			+ make_float2(triangle.u2, triangle.v2) * hitInfo.triIntercept.v;
 
 		const float3& N
-			= normalize(triangle.vN0 * hitInfo.triIntercept.u + triangle.vN1 * hitInfo.triIntercept.v + triangle.vN2 * hitInfo.triIntercept.GetWCoord())
+			= normalize(triangle.vN0 * hitInfo.triIntercept.GetWCoord() + triangle.vN1 * hitInfo.triIntercept.u + triangle.vN2 * hitInfo.triIntercept.v)
 			* (hitInfo.triIntercept.backFacing ? -1.0f : 1.0f);
 
 		// Prev material
