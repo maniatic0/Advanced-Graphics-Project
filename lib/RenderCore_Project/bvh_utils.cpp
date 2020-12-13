@@ -142,6 +142,7 @@ namespace lh2core
 			
 			invCentroidsExtent = 1.0f / (centroidBounds.Maximum(splitAxis) - centroidBounds.Minimum(splitAxis));
 			for (int i = first; i < tMax; ++i) {
+				// Bucket partition (like bucket sorting)
 				const aabb& centroid = primitiveBounds[indices[i]];
 				b = nBucketsFloat * ((centroid.Center(splitAxis) - centroidBounds.Minimum(splitAxis)) * invCentroidsExtent);
 				if (b == nBuckets) { b = nBuckets - 1; }
@@ -149,16 +150,17 @@ namespace lh2core
 				buckets[b].bounds.Grow(centroid);
 			}
 
-			
+			// Left
+			b0.Reset();
+			count0 = 0;
 			for (int i = 0; i < nBuckets - 1; ++i) {
-				b0.Reset();
+				// Calculate Left and Right Cost
+				b0.Grow(buckets[i].bounds);
+				count0 += buckets[i].count;
+
+				// Right
 				b1.Reset();
-				count0 = 0;
 				count1 = 0;
-				for (int j = 0; j <= i; ++j) {
-					b0.Grow(buckets[j].bounds);
-					count0 += buckets[j].count;
-				}
 				for (int j = i + 1; j < nBuckets; ++j) {
 					b1.Grow(buckets[j].bounds);
 					count1 += buckets[j].count;
