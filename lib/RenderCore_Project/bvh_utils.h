@@ -49,6 +49,10 @@ namespace lh2core
 
 		int poolSize;
 
+		void CalculateBounds(BVHNode* node);
+		void Subdivide(int nodeId);
+		int Partition(BVHNode* node);
+
 	public:
 
 		inline BVH() : indices(nullptr), pool(nullptr), root(nullptr), poolPtr(0), poolSize(0) {}
@@ -67,11 +71,7 @@ namespace lh2core
 			return mesh;
 		}
 
-
 		void ConstructBVH();
-		void CalculateBounds(BVHNode* node);
-		void Subdivide(int nodeId);
-		int Partition(BVHNode* node);
 
 		template<bool backCulling>
 		[[nodiscard]]

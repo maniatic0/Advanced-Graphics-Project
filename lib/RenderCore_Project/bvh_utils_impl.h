@@ -56,8 +56,8 @@ namespace lh2core
 			}
 			else
 			{
-				stack[++stackCurr] = node.LeftChild();
 				stack[++stackCurr] = node.RightChild();
+				stack[++stackCurr] = node.LeftChild();
 				continue;
 			}
 		}
@@ -87,6 +87,7 @@ namespace lh2core
 
 		while (stackCurr >= 0)
 		{
+			assert(stackCurr < 64);
 			const BVHNode& node = pool[stack[stackCurr--]];
 
 			if (!r.TestAABBIntersection(node.bounds))
@@ -117,8 +118,8 @@ namespace lh2core
 			}
 			else
 			{
-				stack[++stackCurr] = node.LeftChild();
 				stack[++stackCurr] = node.RightChild();
+				stack[++stackCurr] = node.LeftChild();
 				continue;
 			}
 		}

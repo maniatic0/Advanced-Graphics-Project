@@ -53,41 +53,61 @@ namespace lh2core
 
 	void BVH::Subdivide(int nodeId)
 	{
-		assert(1 <= nodeId && nodeId < poolSize);
-		BVHNode &node = pool[nodeId];
-		assert(node.IsLeaf());
-		assert(node.count > 0);
-		if (node.count < 3) { 
-			return; 
+		assert(mesh.IsValid());
+		assert(mesh.vcount / 3 <= INT_MAX); // 4 GB of triangles means a bad time
+
+		int stack[64]; // if we have more than 64 levels in a tree, we have more than 4GB of triangles and we are going to have a bad time
+		int stackCurr = 0;
+		stack[stackCurr] = nodeId;
+
+		int first;
+		int count;
+		int leftChild;
+		int rightChild;
+		int p;
+
+		while (stackCurr >= 0)
+		{
+			assert(stackCurr < 64);
+			nodeId = stack[stackCurr--];
+
+			assert(1 <= nodeId && nodeId < poolSize);
+			BVHNode& node = pool[nodeId];
+			assert(node.IsLeaf());
+			assert(node.count > 0);
+
+			if (node.count < 3) {
+				continue;
+			}
+
+			first = node.FirstPrimitive();
+			count = node.count;
+			leftChild = poolPtr++;
+			rightChild = poolPtr++;
+			p = Partition(&node);
+			assert(p >= first);
+			assert(p + 1 < first + count);
+
+			node.SetLeftChild(leftChild);
+
+			BVHNode& left = pool[leftChild];
+			BVHNode& right = pool[rightChild];
+
+			// Prepare Children
+			left.leftFirst = first;
+			left.count = p - first + 1; // hi - lo + 1 = count
+			CalculateBounds(&left);
+
+			right.leftFirst = left.leftFirst + left.count;
+			right.count = count - left.count;
+			CalculateBounds(&right);
+			assert(count == left.count + right.count);
+			assert(right.leftFirst == left.leftFirst + left.count);
+
+
+			stack[++stackCurr] = rightChild;
+			stack[++stackCurr] = leftChild;
 		}
-		const int first = node.FirstPrimitive();
-		const int count = node.count;
-		const int leftChild = poolPtr++;
-		const int rightChild = poolPtr++;
-		const int p = Partition(&node);
-		assert(p >= first);
-		assert(p + 1 < first + count);
-
-		node.SetLeftChild(leftChild);
-
-		BVHNode &left = pool[leftChild];
-		BVHNode &right = pool[rightChild];
-
-		// Prepare Children
-		left.leftFirst = first;
-		left.count = p - first + 1; // hi - lo + 1 = count
-		CalculateBounds(&left);
-
-		right.leftFirst = left.leftFirst + left.count;
-		right.count = count - left.count;
-		CalculateBounds(&right);
-		assert(count == left.count + right.count);
-		assert(right.leftFirst == left.leftFirst + left.count);
-
-		
-		Subdivide(leftChild);
-
-		Subdivide(rightChild);
 	}
 
 	inline float getTriangleCenterAxis(const float4& a, const float4& b, const float4& c, const int axis)
