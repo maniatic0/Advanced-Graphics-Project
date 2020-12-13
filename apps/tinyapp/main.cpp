@@ -219,10 +219,10 @@ void PrepareScene()
 	lightMatHost2.color.textureID = texId;
 
 
-	int mori = renderer->AddMesh("../_shareddata/mori_knob/testObj.obj", 2.0f);
+	int mori = renderer->AddMesh("../_shareddata/mori_knob/testObj.obj");
 	renderer->AddInstance(mori);
-	HostMaterial& moriMatHost = *renderer->GetMaterial(8);
-	moriMatHost.pbrtMaterialType = MaterialType::PBRT_GLASS;
+	//HostMaterial& moriMatHost = *renderer->GetMaterial(8);
+	//moriMatHost.pbrtMaterialType = MaterialType::PBRT_GLASS;
 
 	//int cube = renderer->AddMesh("../_shareddata/cube/cube.obj", 2.0f);
 	//renderer->AddInstance(cube);

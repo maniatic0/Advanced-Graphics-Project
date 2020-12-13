@@ -28,6 +28,13 @@ namespace lh2core
 		friend class BVH;
 	};
 
+	constexpr int nBuckets = 12;
+	struct ALIGN(16) BucketInfo {
+	public:
+		aabb bounds;
+		int count = 0;
+	};
+
 	class BVH
 	{
 	private:
@@ -52,6 +59,7 @@ namespace lh2core
 		void CalculateBounds(BVHNode* node);
 		void Subdivide(int nodeId);
 		int Partition(BVHNode* node);
+		int PartitionBucket(BVHNode* node, int bucketId, BucketInfo* bucketInfo);
 
 	public:
 
