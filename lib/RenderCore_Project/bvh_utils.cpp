@@ -8,6 +8,7 @@ namespace lh2core
 		assert(mesh.vcount >= 0);
 		assert(mesh.vcount % 3 == 0);
 		assert(mesh.IsValid());
+		assert(mesh.vcount / 3 <= INT_MAX); // 4 GB of triangles means a bad time
 
 		const int tcount = mesh.vcount / 3;
 		// create index array

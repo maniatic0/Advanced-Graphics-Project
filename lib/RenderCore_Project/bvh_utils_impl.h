@@ -5,54 +5,65 @@ namespace lh2core
 	[[nodiscard]]
 	bool BVH::IntersectRayBVHInternal(const Ray& r, RayMeshInterceptInfo& hitInfo, const int nodeId) const
 	{
-		// Slow version (also do this with stack)
+		assert(poolSize > 0);
 		assert(1 <= nodeId && nodeId < poolSize);
-		const BVHNode& node = pool[nodeId];
+		assert(mesh.IsValid());
+		assert(mesh.vcount / 3 <= INT_MAX);
 
-		if (!r.TestAABBIntersection(node.bounds))
+		int stack[64]; // if we have more than 64 levels in a tree, we have more than 4GB of triangles and we are going to have a bad time
+		int stackCurr = 0;
+		stack[stackCurr] = nodeId;
+
+		// Algo Info
+		RayTriangleInterceptInfo tempHitInfo;
+		bool hit = false;
+		int vPos;
+		int tIndex;
+
+		while (stackCurr >= 0)
 		{
-			return false;
-		}
+			assert(stackCurr < 64);
+			const BVHNode& node = pool[stack[stackCurr--]]; // Get from stack and pop
 
-		if (node.IsLeaf())
-		{
-			assert(mesh.vcount % 3 == 0); // No weird meshes
-			const int triMax = node.count + node.FirstPrimitive();
-			RayTriangleInterceptInfo tempHitInfo;
-			bool hit = false;
-			int vPos;
-			int tIndex;
-
-			for (int i = node.FirstPrimitive(); i < triMax; i++)
+			if (!r.TestAABBIntersection(node.bounds))
 			{
-				tIndex = indices[i];
-				vPos = tIndex * 3;
-				if (interceptRayTriangle<backCulling>(r, mesh.vertices[vPos + 0], mesh.vertices[vPos + 1], mesh.vertices[vPos + 2], tempHitInfo))
+				// No intersection
+				continue;
+			}
+
+			if (node.IsLeaf())
+			{
+				assert(mesh.vcount % 3 == 0); // No weird meshes
+				const int triMax = node.count + node.FirstPrimitive();
+				tempHitInfo.Reset();
+
+				for (int i = node.FirstPrimitive(); i < triMax; i++)
 				{
-					if (tempHitInfo < hitInfo.triIntercept)
+					tIndex = indices[i];
+					vPos = tIndex * 3;
+					if (interceptRayTriangle<backCulling>(r, mesh.vertices[vPos + 0], mesh.vertices[vPos + 1], mesh.vertices[vPos + 2], tempHitInfo))
 					{
-						hit = true;
-						tempHitInfo.CopyTo(hitInfo.triIntercept);
-						hitInfo.triId = tIndex;
+						if (tempHitInfo < hitInfo.triIntercept)
+						{
+							hit = true;
+							hitInfo.meshId = mesh.meshID;
+							tempHitInfo.CopyTo(hitInfo.triIntercept);
+							hitInfo.triId = tIndex;
+						}
 					}
 				}
+				continue;
 			}
-
-			if (!hit)
+			else
 			{
-				return false;
+				stack[++stackCurr] = node.LeftChild();
+				stack[++stackCurr] = node.RightChild();
+				continue;
 			}
+		}
 
 
-			hitInfo.meshId = mesh.meshID;
-			return true;
-		}
-		else
-		{
-			bool left = IntersectRayBVHInternal<backCulling>(r, hitInfo, node.LeftChild());
-			bool right = IntersectRayBVHInternal<backCulling>(r, hitInfo, node.RightChild());
-			return left || right;
-		}
+		return hit;
 	}
 
 	template <bool backCulling>
@@ -62,43 +73,57 @@ namespace lh2core
 		assert(poolSize > 0);
 		assert(1 <= nodeId && nodeId < poolSize);
 		assert(mesh.IsValid());
-		// Slow version (also do this with stack)
-		const BVHNode& node = pool[nodeId];
+		assert(mesh.vcount / 3 <= INT_MAX);
+
+		int stack[64]; // if we have more than 64 levels in a tree, we have more than 4GB of triangles and we are going to have a bad time
+		int stackCurr = 0;
+		stack[stackCurr] = nodeId;
+
 		const bool sameMesh = mesh.meshID == meshId;
 
-		if (!r.TestAABBIntersection(node.bounds))
-		{
-			return false;
-		}
+		RayTriangleInterceptInfo tempHitInfo;
+		int vPos;
+		int tIndex;
 
-		if (node.IsLeaf())
+		while (stackCurr >= 0)
 		{
-			assert(mesh.vcount % 3 == 0); // No weird meshes
-			const int triMax = node.count + node.FirstPrimitive();
-			RayTriangleInterceptInfo tempHitInfo;
-			bool hit = false;
-			int vPos;
-			int tIndex;
+			const BVHNode& node = pool[stack[stackCurr--]];
 
-			for (int i = node.FirstPrimitive(); i < triMax; i++)
+			if (!r.TestAABBIntersection(node.bounds))
 			{
-				tIndex = indices[i];
-				vPos = tIndex * 3;
-				if ((!sameMesh || tIndex != triId) && depthRayTriangle<backCulling>(r, mesh.vertices[vPos + 0], mesh.vertices[vPos + 1], mesh.vertices[vPos + 2], tD))
-				{
-					if (!sameMesh)
-					{
-						return true;
-					}
-				}
+				return false;
 			}
 
-			return false;
+			if (node.IsLeaf())
+			{
+				assert(mesh.vcount % 3 == 0); // No weird meshes
+				const int triMax = node.count + node.FirstPrimitive();
+				tempHitInfo.Reset();
+
+				for (int i = node.FirstPrimitive(); i < triMax; i++)
+				{
+					tIndex = indices[i];
+					vPos = tIndex * 3;
+					if ((!sameMesh || tIndex != triId) && depthRayTriangle<backCulling>(r, mesh.vertices[vPos + 0], mesh.vertices[vPos + 1], mesh.vertices[vPos + 2], tD))
+					{
+						if (!sameMesh)
+						{
+							return true;
+						}
+					}
+				}
+
+				continue;
+			}
+			else
+			{
+				stack[++stackCurr] = node.LeftChild();
+				stack[++stackCurr] = node.RightChild();
+				continue;
+			}
 		}
-		else
-		{
-			return DepthRayBVHInternal<backCulling>(r, meshId, triId, tD, node.LeftChild()) || DepthRayBVHInternal<backCulling>(r, meshId, triId, tD, node.RightChild());
-		}
+
+		return false;
 	}
 
 
