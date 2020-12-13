@@ -128,11 +128,13 @@ namespace lh2core
 
 			if (node.count < 5 || centroidBounds.Maximum(splitAxis) == centroidBounds.Minimum(splitAxis)) {
 				// Too small or no volume
-				Partition(&node);
+				Partition(&node, splitAxis);
 				continue;
 			}
 			
-			for (int i = 0; i < nBuckets; i++)
+			// SAH + Binning based on http://www.pbr-book.org/3ed-2018/Primitives_and_Intersection_Acceleration/Bounding_Volume_Hierarchies.html#fragment-CreateleafmonoBVHBuildNode-0
+
+			for (int i = 0; i < nBuckets; ++i)
 			{
 				buckets[i].count = 0;
 				buckets[i].bounds.Reset();
@@ -142,8 +144,8 @@ namespace lh2core
 			for (int i = first; i < tMax; ++i) {
 				const aabb& centroid = primitiveBounds[indices[i]];
 				b = nBucketsFloat * ((centroid.Center(splitAxis) - centroidBounds.Minimum(splitAxis)) * invCentroidsExtent);
-				if (b == nBuckets) b = nBuckets - 1;
-				buckets[b].count++;
+				if (b == nBuckets) { b = nBuckets - 1; }
+				++buckets[b].count;
 				buckets[b].bounds.Grow(centroid);
 			}
 
@@ -167,7 +169,7 @@ namespace lh2core
 			minCost = std::numeric_limits<float>::infinity();
 			minCostSplitBucket = -1;
 			for (int i = 0; i < nBuckets - 1; ++i) {
-				if (!isnan(cost[i]) && cost[i] < minCost) {
+				if (cost[i] < minCost) {
 					minCost = cost[i];
 					minCostSplitBucket = i;
 				}
@@ -176,13 +178,13 @@ namespace lh2core
 
 			if (count < 5 && minCost >= (float)count) {
 				// Bad Node
-				Partition(&node);
+				Partition(&node, splitAxis);
 				continue;
 			}
 			
 			leftChild = poolPtr++;
 			rightChild = poolPtr++;
-			p = PartitionBucket(&node, minCostSplitBucket, centroidBounds);
+			p = PartitionBucket(&node, minCostSplitBucket, centroidBounds, splitAxis);
 			assert(p >= first);
 			assert(p + 1 < first + count);
 
@@ -205,12 +207,11 @@ namespace lh2core
 		}
 	}
 
-	int BVH::Partition(BVHNode* node)
+	int BVH::Partition(BVHNode* node, int splitAxis)
 	{
 		assert(node->IsLeaf());
 		assert(node->count > 0);
 		// Hoare's partition https://en.wikipedia.org/wiki/Quicksort
-		const int splitAxis = node->bounds.LongestAxis();
 		const float4* vertices = mesh.vertices.get();
 
 		// Both inclusive
@@ -251,12 +252,11 @@ namespace lh2core
 		return -1;
 	}
 
-	int BVH::PartitionBucket(BVHNode* node, int bucketId, const aabb& centroidBounds)
+	int BVH::PartitionBucket(BVHNode* node, int bucketId, const aabb& centroidBounds, int splitAxis)
 	{
 		assert(node->IsLeaf());
 		assert(node->count > 0);
 		// Hoare's partition https://en.wikipedia.org/wiki/Quicksort
-		const int splitAxis = centroidBounds.LongestAxis();
 		const float invExtent = 1.0f / (centroidBounds.Maximum(splitAxis) - centroidBounds.Minimum(splitAxis));
 		const float4* vertices = mesh.vertices.get();
 
@@ -276,7 +276,7 @@ namespace lh2core
 				++i;
 				const float centroid = primitiveBounds[indices[i]].Center(splitAxis);
 				b = nBucketsFloat * ((centroid - centroidBounds.Minimum(splitAxis)) * invExtent);
-				if (b == nBuckets) b = nBuckets - 1;
+				if (b == nBuckets) { b = nBuckets - 1; }
 			} while (b < bucketId);
 
 			do
@@ -284,7 +284,7 @@ namespace lh2core
 				--j;
 				const float centroid = primitiveBounds[indices[j]].Center(splitAxis);
 				b = nBucketsFloat * ((centroid - centroidBounds.Minimum(splitAxis)) * invExtent);
-				if (b == nBuckets) b = nBuckets - 1;
+				if (b == nBuckets) { b = nBuckets - 1; }
 			} while (b > bucketId);
 
 			if (i >= j)

@@ -61,8 +61,8 @@ namespace lh2core
 
 		void CalculateBounds(BVHNode* node, aabb& centroidBounds);
 		void Subdivide(int nodeId);
-		int Partition(BVHNode* node);
-		int PartitionBucket(BVHNode* node, int bucketId, const aabb &centroidBounds);
+		int Partition(BVHNode* node, int splitAxis);
+		int PartitionBucket(BVHNode* node, int bucketId, const aabb &centroidBounds, int splitAxis);
 
 	public:
 
