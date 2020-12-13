@@ -52,14 +52,14 @@ namespace lh2core
 		// subdivide root node
 		root->leftFirst = 0;
 		root->count = tcount;
-		CalculateBounds(root);
 		Subdivide(1);
 	}
 
-	void BVH::CalculateBounds(BVHNode* node)
+	void BVH::CalculateBounds(BVHNode* node, aabb &centroidBounds)
 	{
 		aabb& bounds = node->bounds;
 		bounds.Reset();
+		centroidBounds.Reset();
 		
 		assert(node->IsLeaf());
 		assert(node->count > 0);
@@ -71,7 +71,9 @@ namespace lh2core
 		for (int i = tStart; i < tMax; i++)
 		{
 			const int index = indices[i];
-			bounds.Grow(primitiveBounds[index]);
+			const aabb& triangleBounds = primitiveBounds[index];
+			bounds.Grow(triangleBounds);
+			centroidBounds.Grow(triangleBounds.Center());
 		}
 	}
 
@@ -90,6 +92,17 @@ namespace lh2core
 		int leftChild;
 		int rightChild;
 		int p;
+
+		aabb centroidBounds;
+
+		// Binning
+		int splitAxis;
+		float invCentroidsExtent;
+		int b;
+		aabb b0, b1;
+		int count0, count1;
+		float minCost;
+		int minCostSplitBucket;
 		BucketInfo buckets[nBuckets];
 		float cost[nBuckets - 1];
 
@@ -109,15 +122,11 @@ namespace lh2core
 			count = node.count;
 			tMax = first + count;
 			
-			aabb centroidBounds;
-			for (int i = first; i < tMax; ++i)
-			{
-				centroidBounds.Grow(primitiveBounds[indices[i]].Center());
-			}
+			
+			CalculateBounds(&node, centroidBounds);
+			splitAxis = centroidBounds.LongestAxis();
 
-			const int splitAxis = centroidBounds.LongestAxis();
-
-			if (node.count < 5 || node.bounds.Maximum(splitAxis) == node.bounds.Minimum(splitAxis)) {
+			if (node.count < 5 || centroidBounds.Maximum(splitAxis) == centroidBounds.Minimum(splitAxis)) {
 				// Too small or no volume
 				Partition(&node);
 				continue;
@@ -128,18 +137,17 @@ namespace lh2core
 				buckets[i].count = 0;
 				buckets[i].bounds.Reset();
 			}
-
-			int b;
+			
+			invCentroidsExtent = 1.0f / (centroidBounds.Maximum(splitAxis) - centroidBounds.Minimum(splitAxis));
 			for (int i = first; i < tMax; ++i) {
 				const aabb& centroid = primitiveBounds[indices[i]];
-				b = nBuckets * ((centroid.Center(splitAxis) - centroidBounds.Minimum(splitAxis)) / (centroidBounds.Maximum(splitAxis) - centroidBounds.Minimum(splitAxis)));
+				b = nBucketsFloat * ((centroid.Center(splitAxis) - centroidBounds.Minimum(splitAxis)) * invCentroidsExtent);
 				if (b == nBuckets) b = nBuckets - 1;
 				buckets[b].count++;
 				buckets[b].bounds.Grow(centroid);
 			}
 
-			aabb b0, b1;
-			int count0, count1;
+			
 			for (int i = 0; i < nBuckets - 1; ++i) {
 				b0.Reset();
 				b1.Reset();
@@ -156,8 +164,8 @@ namespace lh2core
 				cost[i] = .125f + (count0 * b0.Area() + count1 * b1.Area()) / node.bounds.Area();
 			}
 
-			float minCost = std::numeric_limits<float>::infinity();
-			int minCostSplitBucket = -1;
+			minCost = std::numeric_limits<float>::infinity();
+			minCostSplitBucket = -1;
 			for (int i = 0; i < nBuckets - 1; ++i) {
 				if (!isnan(cost[i]) && cost[i] < minCost) {
 					minCost = cost[i];
@@ -167,6 +175,7 @@ namespace lh2core
 			assert(minCostSplitBucket != -1);
 
 			if (count < 5 && minCost >= (float)count) {
+				// Bad Node
 				Partition(&node);
 				continue;
 			}
@@ -185,11 +194,9 @@ namespace lh2core
 			// Prepare Children
 			left.leftFirst = first;
 			left.count = p - first + 1; // hi - lo + 1 = count
-			CalculateBounds(&left);
 
 			right.leftFirst = left.leftFirst + left.count;
 			right.count = count - left.count;
-			CalculateBounds(&right);
 			assert(count == left.count + right.count);
 			assert(right.leftFirst == left.leftFirst + left.count);
 
@@ -250,6 +257,7 @@ namespace lh2core
 		assert(node->count > 0);
 		// Hoare's partition https://en.wikipedia.org/wiki/Quicksort
 		const int splitAxis = centroidBounds.LongestAxis();
+		const float invExtent = 1.0f / (centroidBounds.Maximum(splitAxis) - centroidBounds.Minimum(splitAxis));
 		const float4* vertices = mesh.vertices.get();
 
 		// Both inclusive
@@ -267,7 +275,7 @@ namespace lh2core
 			{
 				++i;
 				const float centroid = primitiveBounds[indices[i]].Center(splitAxis);
-				b = nBuckets * ((centroid - centroidBounds.Minimum(splitAxis)) / (centroidBounds.Maximum(splitAxis) - centroidBounds.Minimum(splitAxis)));
+				b = nBucketsFloat * ((centroid - centroidBounds.Minimum(splitAxis)) * invExtent);
 				if (b == nBuckets) b = nBuckets - 1;
 			} while (b < bucketId);
 
@@ -275,7 +283,7 @@ namespace lh2core
 			{
 				--j;
 				const float centroid = primitiveBounds[indices[j]].Center(splitAxis);
-				b = nBuckets * ((centroid - centroidBounds.Minimum(splitAxis)) / (centroidBounds.Maximum(splitAxis) - centroidBounds.Minimum(splitAxis)));
+				b = nBucketsFloat * ((centroid - centroidBounds.Minimum(splitAxis)) * invExtent);
 				if (b == nBuckets) b = nBuckets - 1;
 			} while (b > bucketId);
 

@@ -29,6 +29,8 @@ namespace lh2core
 	};
 
 	constexpr int nBuckets = 12;
+	constexpr float nBucketsFloat = nBuckets;
+
 	struct ALIGN(16) BucketInfo {
 	public:
 		aabb bounds;
@@ -57,7 +59,7 @@ namespace lh2core
 
 		int poolSize;
 
-		void CalculateBounds(BVHNode* node);
+		void CalculateBounds(BVHNode* node, aabb& centroidBounds);
 		void Subdivide(int nodeId);
 		int Partition(BVHNode* node);
 		int PartitionBucket(BVHNode* node, int bucketId, const aabb &centroidBounds);
