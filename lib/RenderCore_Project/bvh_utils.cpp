@@ -28,11 +28,20 @@ namespace lh2core
 		assert(mesh.IsValid());
 		assert(mesh.vcount / 3 <= INT_MAX); // 4 GB of triangles means a bad time
 
+		const float4* vertices = mesh.vertices.get();
+
 		const int tcount = mesh.vcount / 3;
-		// create index array
+		// create index and bounds array
 		indices = std::make_unique<uint[]>(tcount);
+		primitiveBounds = std::make_unique<aabb[]>(tcount);
+		int triangleIndex;
 		for (int i = 0; i < tcount; i++) {
-			indices[i] = i; 
+			indices[i] = i;
+			triangleIndex = i * 3;
+			primitiveBounds[i].Reset();
+			primitiveBounds[i].Grow(vertices[triangleIndex + 0]);
+			primitiveBounds[i].Grow(vertices[triangleIndex + 1]);
+			primitiveBounds[i].Grow(vertices[triangleIndex + 2]);
 		}
 		// allocate BVH root node
 		poolSize = tcount * 2 - 1;
@@ -62,10 +71,7 @@ namespace lh2core
 		for (int i = tStart; i < tMax; i++)
 		{
 			const int index = indices[i];
-			const int realIndex = 3 * index;
-			bounds.Grow(mesh.vertices[realIndex + 0]);
-			bounds.Grow(mesh.vertices[realIndex + 1]);
-			bounds.Grow(mesh.vertices[realIndex + 2]);
+			bounds.Grow(primitiveBounds[index]);
 		}
 	}
 
@@ -80,11 +86,14 @@ namespace lh2core
 
 		int first;
 		int count;
+		int tMax;
 		int leftChild;
 		int rightChild;
 		int p;
 		BucketInfo buckets[nBuckets];
 		float cost[nBuckets - 1];
+
+		const float4* vertices = mesh.vertices.get();
 
 		while (stackCurr >= 0)
 		{
@@ -96,39 +105,46 @@ namespace lh2core
 			assert(node.IsLeaf());
 			assert(node.count > 0);
 
-			if (node.count < 5) {
+			first = node.FirstPrimitive();
+			count = node.count;
+			tMax = first + count;
+			
+			aabb centroidBounds;
+			for (int i = first; i < tMax; ++i)
+			{
+				centroidBounds.Grow(primitiveBounds[indices[i]].Center());
+			}
+
+			const int splitAxis = centroidBounds.LongestAxis();
+
+			if (node.count < 5 || node.bounds.Maximum(splitAxis) == node.bounds.Minimum(splitAxis)) {
+				// Too small or no volume
 				Partition(&node);
 				continue;
 			}
-
-			first = node.FirstPrimitive();
-			count = node.count;
-			const int splitAxis = node.bounds.LongestAxis();
-			const float4* vertices = mesh.vertices.get();
-
+			
 			for (int i = 0; i < nBuckets; i++)
 			{
 				buckets[i].count = 0;
 				buckets[i].bounds.Reset();
 			}
 
-			for (int i = first; i < count; ++i) {
-				int triangleIndex = indices[i] * 3;
-				const float centroid = getTriangleCenterAxis(vertices[triangleIndex + 0], vertices[triangleIndex + 1], vertices[triangleIndex + 2], splitAxis);
-
-				int b = nBuckets * ((centroid - node.bounds.Minimum(splitAxis)) / (node.bounds.Maximum(splitAxis) - node.bounds.Minimum(splitAxis)));
+			int b;
+			for (int i = first; i < tMax; ++i) {
+				const aabb& centroid = primitiveBounds[indices[i]];
+				b = nBuckets * ((centroid.Center(splitAxis) - centroidBounds.Minimum(splitAxis)) / (centroidBounds.Maximum(splitAxis) - centroidBounds.Minimum(splitAxis)));
 				if (b == nBuckets) b = nBuckets - 1;
 				buckets[b].count++;
-				buckets[b].bounds.Grow(vertices[triangleIndex + 0]);
-				buckets[b].bounds.Grow(vertices[triangleIndex + 1]);
-				buckets[b].bounds.Grow(vertices[triangleIndex + 2]);
+				buckets[b].bounds.Grow(centroid);
 			}
 
 			aabb b0, b1;
+			int count0, count1;
 			for (int i = 0; i < nBuckets - 1; ++i) {
 				b0.Reset();
 				b1.Reset();
-				int count0 = 0, count1 = 0;
+				count0 = 0;
+				count1 = 0;
 				for (int j = 0; j <= i; ++j) {
 					b0.Grow(buckets[j].bounds);
 					count0 += buckets[j].count;
@@ -137,27 +153,27 @@ namespace lh2core
 					b1.Grow(buckets[j].bounds);
 					count1 += buckets[j].count;
 				}
-				cost[i] = .125f + (count0 * b0.Area() +
-					count1 * b1.Area()) / node.bounds.Area();
+				cost[i] = .125f + (count0 * b0.Area() + count1 * b1.Area()) / node.bounds.Area();
 			}
 
-			float minCost = cost[0];
-			int minCostSplitBucket = 0;
-			for (int i = 1; i < nBuckets - 1; ++i) {
-				if (cost[i] < minCost) {
+			float minCost = std::numeric_limits<float>::infinity();
+			int minCostSplitBucket = -1;
+			for (int i = 0; i < nBuckets - 1; ++i) {
+				if (!isnan(cost[i]) && cost[i] < minCost) {
 					minCost = cost[i];
 					minCostSplitBucket = i;
 				}
 			}
+			assert(minCostSplitBucket != -1);
 
-			if (count < 5 && minCost >= count) {
+			if (count < 5 && minCost >= (float)count) {
 				Partition(&node);
 				continue;
 			}
 			
 			leftChild = poolPtr++;
 			rightChild = poolPtr++;
-			p = PartitionBucket(&node, minCostSplitBucket, buckets);
+			p = PartitionBucket(&node, minCostSplitBucket, centroidBounds);
 			assert(p >= first);
 			assert(p + 1 < first + count);
 
@@ -195,9 +211,7 @@ namespace lh2core
 		int hi = lo + node->count - 1;
 		int temp;
 
-		int triangleIndex = indices[(hi + lo) / 2] * 3;
-
-		const float pivot = getTriangleCenterAxis(vertices[triangleIndex + 0], vertices[triangleIndex + 1], vertices[triangleIndex + 2], splitAxis);
+		const float pivot = primitiveBounds[indices[(hi + lo) / 2]].Center(splitAxis);
 
 		int i = lo - 1;
 		int j = hi + 1;
@@ -208,15 +222,13 @@ namespace lh2core
 			do
 			{
 				++i;
-				triangleIndex = indices[i] * 3;
-				center = getTriangleCenterAxis(vertices[triangleIndex + 0], vertices[triangleIndex + 1], vertices[triangleIndex + 2], splitAxis);
+				center = primitiveBounds[indices[i]].Center(splitAxis);
 			} while (center < pivot);
 			
 			do
 			{
 				--j;
-				triangleIndex = indices[j] * 3;
-				center = getTriangleCenterAxis(vertices[triangleIndex + 0], vertices[triangleIndex + 1], vertices[triangleIndex + 2], splitAxis);
+				center = primitiveBounds[indices[j]].Center(splitAxis);
 			} while (center > pivot);
 
 			if (i >= j)
@@ -232,12 +244,12 @@ namespace lh2core
 		return -1;
 	}
 
-	int BVH::PartitionBucket(BVHNode* node, int bucketId, BucketInfo* bucketInfo) 
+	int BVH::PartitionBucket(BVHNode* node, int bucketId, const aabb& centroidBounds)
 	{
 		assert(node->IsLeaf());
 		assert(node->count > 0);
 		// Hoare's partition https://en.wikipedia.org/wiki/Quicksort
-		const int splitAxis = node->bounds.LongestAxis();
+		const int splitAxis = centroidBounds.LongestAxis();
 		const float4* vertices = mesh.vertices.get();
 
 		// Both inclusive
@@ -245,8 +257,6 @@ namespace lh2core
 		int hi = lo + node->count - 1;
 		int temp;
 		int b = 0;
-
-		int triangleIndex = indices[(hi + lo) / 2] * 3;
 
 		int i = lo - 1;
 		int j = hi + 1;
@@ -256,18 +266,16 @@ namespace lh2core
 			do
 			{
 				++i;
-				int triangleIndex = indices[i] * 3;
-				const float centroid = getTriangleCenterAxis(vertices[triangleIndex + 0], vertices[triangleIndex + 1], vertices[triangleIndex + 2], splitAxis);
-				b = nBuckets * ((centroid - node->bounds.Minimum(splitAxis)) / (node->bounds.Maximum(splitAxis) - node->bounds.Minimum(splitAxis)));
+				const float centroid = primitiveBounds[indices[i]].Center(splitAxis);
+				b = nBuckets * ((centroid - centroidBounds.Minimum(splitAxis)) / (centroidBounds.Maximum(splitAxis) - centroidBounds.Minimum(splitAxis)));
 				if (b == nBuckets) b = nBuckets - 1;
 			} while (b < bucketId);
 
 			do
 			{
 				--j;
-				int triangleIndex = indices[j] * 3;
-				const float centroid = getTriangleCenterAxis(vertices[triangleIndex + 0], vertices[triangleIndex + 1], vertices[triangleIndex + 2], splitAxis);
-				b = nBuckets * ((centroid - node->bounds.Minimum(splitAxis)) / (node->bounds.Maximum(splitAxis) - node->bounds.Minimum(splitAxis)));
+				const float centroid = primitiveBounds[indices[j]].Center(splitAxis);
+				b = nBuckets * ((centroid - centroidBounds.Minimum(splitAxis)) / (centroidBounds.Maximum(splitAxis) - centroidBounds.Minimum(splitAxis)));
 				if (b == nBuckets) b = nBuckets - 1;
 			} while (b > bucketId);
 

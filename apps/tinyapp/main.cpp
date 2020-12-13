@@ -218,14 +218,30 @@ void PrepareScene()
 	HostMaterial& lightMatHost2 = *renderer->GetMaterial(lightMat2);
 	lightMatHost2.color.textureID = texId;
 
-
-	int mori = renderer->AddMesh("../_shareddata/mori_knob/testObj.obj");
-	renderer->AddInstance(mori);
-	//HostMaterial& moriMatHost = *renderer->GetMaterial(8);
-	//moriMatHost.pbrtMaterialType = MaterialType::PBRT_GLASS;
-
 	//int cube = renderer->AddMesh("../_shareddata/cube/cube.obj", 2.0f);
 	//renderer->AddInstance(cube);
+
+	
+	int mori = renderer->AddMesh("../_shareddata/mori_knob/testObj.obj", 2.0f);
+	renderer->AddInstance(mori);
+	for (size_t i = 6; i < 11; i++)
+	{
+		HostMaterial& moriMatHost = *renderer->GetMaterial(8);
+		moriMatHost.pbrtMaterialType = MaterialType::DISNEY;
+		moriMatHost.refraction.value = 0.0f;
+		moriMatHost.reflection.value = 0.0f;
+	}
+	
+	
+	int pain_ball = renderer->AddMesh("../_shareddata/hairball/hairball.obj", 2.0f);
+	renderer->AddInstance(pain_ball);
+	
+	
+	/*
+	int cube = renderer->AddMesh("../_shareddata/cube/cube.obj", 2.0f);
+	renderer->AddInstance(cube);
+	*/
+	
 }
 
 //  +-----------------------------------------------------------------------------+
@@ -263,7 +279,7 @@ int main()
 	// renderer = RenderAPI::CreateRenderAPI( "RenderCore_Optix7filter" );			// OPTIX7 core, with filtering (static scenes only for now)
 	// renderer = RenderAPI::CreateRenderAPI( "RenderCore_Optix7" );			// OPTIX7 core, best for RTX devices
 	// renderer = RenderAPI::CreateRenderAPI( "RenderCore_OptixPrime_B" );		// OPTIX PRIME, best for pre-RTX CUDA devices
-	// renderer = RenderAPI::CreateRenderAPI( "RenderCore_SoftRasterizer" );	// RASTERIZER, your only option if not on NVidia
+	//renderer = RenderAPI::CreateRenderAPI( "RenderCore_SoftRasterizer" );	// RASTERIZER, your only option if not on NVidia
 	// renderer = RenderAPI::CreateRenderAPI( "RenderCore_Vulkan_RT" );			// Meir's Vulkan / RTX core
 	// renderer = RenderAPI::CreateRenderAPI( "RenderCore_OptixPrime_BDPT" );	// Peter's OptixPrime / BDPT core
 

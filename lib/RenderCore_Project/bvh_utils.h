@@ -49,6 +49,7 @@ namespace lh2core
 
 
 		unique_ptr<uint[]> indices;
+		unique_ptr<aabb[]> primitiveBounds;
 		unique_ptr<BVHNode[]> pool;
 		BVHNode* root;
 		uint poolPtr;
@@ -59,7 +60,7 @@ namespace lh2core
 		void CalculateBounds(BVHNode* node);
 		void Subdivide(int nodeId);
 		int Partition(BVHNode* node);
-		int PartitionBucket(BVHNode* node, int bucketId, BucketInfo* bucketInfo);
+		int PartitionBucket(BVHNode* node, int bucketId, const aabb &centroidBounds);
 
 	public:
 
