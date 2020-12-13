@@ -32,11 +32,10 @@ public:
 //  |  Ray                                                                        |
 //  |  Minimalistic ray storage.											  2020|
 //  +-----------------------------------------------------------------------------+
-struct Ray {
+struct ALIGN(16) Ray {
 public:
 	float4 origin;
 	float4 direction;
-	float4 invDir;
 
 	/// <summary>
 	/// Copy Ray
@@ -47,14 +46,13 @@ public:
 		return Ray(origin, direction);
 	}
 
-	inline Ray() : origin (make_float4(0)), direction(make_float4(1, 0, 0, 0)), invDir(1.0f / direction) { }
+	inline Ray() : origin (make_float4(0)), direction(make_float4(1, 0, 0, 0)) { }
 
 	inline Ray(const float4 &ori, const float4 &dir)
 	{
 		assert(almost_equal(1, length(dir))); // "Unormalized Vector"
 		origin = ori;
 		direction = dir;
-		invDir = 1.0f / direction;
 	}
 
 	inline Ray(const float3& ori, const float3& dir)
@@ -62,7 +60,6 @@ public:
 		assert(almost_equal(1, length(dir))); // "Unormalized Vector"
 		origin = make_float4(ori);
 		direction = make_float4(dir);
-		invDir = 1.0f / direction;
 	}
 
 	inline void SetOrigin(const float4& ori)
@@ -78,13 +75,11 @@ public:
 	{
 		assert(almost_equal(1, length(dir))); // "Unormalized Vector"
 		direction = dir;
-		invDir = 1.0f / direction;
 	}
 	inline void SetDirection(const float3& dir)
 	{
 		assert(almost_equal(1, length(dir))); // "Unormalized Vector"
 		direction = make_float4(dir);
-		invDir = 1.0f / direction;
 	}
 
 	/// <summary>
@@ -96,37 +91,38 @@ public:
 	{
 		return origin + (t * direction);
 	}
-
-
-	inline bool TestAABBIntersection(const aabb &box) const
-	{
-		// From https://medium.com/@bromanz/another-view-on-the-classic-ray-aabb-intersection-algorithm-for-bvh-traversal-41125138b525
-#if 0
-		__m128 ori = _mm_setr_ps(origin.x, origin.y, origin.z, 0);
-		__m128 dirInv = _mm_setr_ps(invDir.x, invDir.y, invDir.z, 0);
-
-		__m128 t0 = _mm_mul_ps(_mm_sub_ps(box.bmin4, ori), dirInv);
-		__m128 t1 = _mm_mul_ps(_mm_sub_ps(box.bmax4, ori), dirInv);
-		
-		__m128 tmin = _mm_min_ps(t0, t1);
-		__m128 tmax = _mm_max_ps(t0, t1);
-		
-		return max_component(tmin) <= min_component(tmax);
-#else
-		float3 ori = make_float3(origin);
-		float3 dirInv = make_float3(invDir);
-
-		float3 t0 = (box.bmin3 - ori) * dirInv;
-		float3 t1 = (box.bmax3 - ori) * dirInv;
-
-		float3 tmin = fminf(t0, t1);
-		float3 tmax = fmaxf(t0, t1);
-
-		return max(tmin.x, max(tmin.y, tmin.z)) <= min(tmax.x, min(tmax.y, tmax.z));
-#endif
-	}
 	
+	inline float4 InverseDirection() const {
+		return 1.0f / direction;
+	}
 };
+
+inline bool TestAABBIntersection(const Ray &r, const aabb& box, float3 invDir)
+{
+	// From https://medium.com/@bromanz/another-view-on-the-classic-ray-aabb-intersection-algorithm-for-bvh-traversal-41125138b525
+#if 0
+	__m128 ori = _mm_setr_ps(r.origin.x, r.origin.y, r.origin.z, 0);
+	__m128 dirInv = _mm_setr_ps(invDir.x, invDir.y, invDir.z, 0);
+
+	__m128 t0 = _mm_mul_ps(_mm_sub_ps(box.bmin4, ori), dirInv);
+	__m128 t1 = _mm_mul_ps(_mm_sub_ps(box.bmax4, ori), dirInv);
+
+	__m128 tmin = _mm_min_ps(t0, t1);
+	__m128 tmax = _mm_max_ps(t0, t1);
+
+	return max_component(tmin) <= min_component(tmax);
+#else
+	float3 ori = make_float3(r.origin);
+
+	float3 t0 = (box.bmin3 - ori) * invDir;
+	float3 t1 = (box.bmax3 - ori) * invDir;
+
+	float3 tmin = fminf(t0, t1);
+	float3 tmax = fmaxf(t0, t1);
+
+	return max(tmin.x, max(tmin.y, tmin.z)) <= min(tmax.x, min(tmax.y, tmax.z));
+#endif
+}
 
 
 /// <summary>

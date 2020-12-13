@@ -14,18 +14,24 @@ namespace lh2core
 		int stackCurr = 0;
 		stack[stackCurr] = nodeId;
 
+		const float3 invDir = make_float3(r.InverseDirection());
+		int isDirNeg[3] = { r.direction.x > 0, r.direction.y > 0, r.direction.z > 0 }; // Trick from http://www.pbr-book.org/3ed-2018/Primitives_and_Intersection_Acceleration/Bounding_Volume_Hierarchies.html#BVHAccel::splitMethod
+
+
 		// Algo Info
 		RayTriangleInterceptInfo tempHitInfo;
 		bool hit = false;
 		int vPos;
 		int tIndex;
 
+		int splitAxis;
+
 		while (stackCurr >= 0)
 		{
 			assert(stackCurr < 64);
 			const BVHNode& node = pool[stack[stackCurr--]]; // Get from stack and pop
 
-			if (!r.TestAABBIntersection(node.bounds))
+			if (!TestAABBIntersection(r, node.bounds, invDir))
 			{
 				// No intersection
 				continue;
@@ -56,8 +62,20 @@ namespace lh2core
 			}
 			else
 			{
-				stack[++stackCurr] = node.RightChild();
-				stack[++stackCurr] = node.LeftChild();
+				splitAxis = node.bounds.LongestAxis();
+
+				if (isDirNeg[splitAxis])
+				{
+					// Ray is negative in axis, test first left then right
+					stack[++stackCurr] = node.RightChild();
+					stack[++stackCurr] = node.LeftChild();
+				}
+				else
+				{
+					// Ray is positive in axis, test first right then left
+					stack[++stackCurr] = node.LeftChild();
+					stack[++stackCurr] = node.RightChild();
+				}
 				continue;
 			}
 		}
@@ -79,18 +97,23 @@ namespace lh2core
 		int stackCurr = 0;
 		stack[stackCurr] = nodeId;
 
+		const float3 invDir = make_float3(r.InverseDirection());
+		int isDirNeg[3] = { r.direction.x > 0, r.direction.y > 0, r.direction.z > 0 }; // Trick from http://www.pbr-book.org/3ed-2018/Primitives_and_Intersection_Acceleration/Bounding_Volume_Hierarchies.html#BVHAccel::splitMethod
+
 		const bool sameMesh = mesh.meshID == meshId;
 
 		RayTriangleInterceptInfo tempHitInfo;
 		int vPos;
 		int tIndex;
 
+		int splitAxis;
+
 		while (stackCurr >= 0)
 		{
 			assert(stackCurr < 64);
 			const BVHNode& node = pool[stack[stackCurr--]];
 
-			if (!r.TestAABBIntersection(node.bounds))
+			if (!TestAABBIntersection(r, node.bounds, invDir))
 			{
 				return false;
 			}
@@ -118,8 +141,21 @@ namespace lh2core
 			}
 			else
 			{
-				stack[++stackCurr] = node.RightChild();
-				stack[++stackCurr] = node.LeftChild();
+				splitAxis = node.bounds.LongestAxis();
+
+				if (isDirNeg[splitAxis])
+				{
+					// Ray is negative in axis, test first left then right
+					stack[++stackCurr] = node.RightChild();
+					stack[++stackCurr] = node.LeftChild();
+				}
+				else
+				{
+					// Ray is positive in axis, test first right then left
+					stack[++stackCurr] = node.LeftChild();
+					stack[++stackCurr] = node.RightChild();
+				}
+				
 				continue;
 			}
 		}
