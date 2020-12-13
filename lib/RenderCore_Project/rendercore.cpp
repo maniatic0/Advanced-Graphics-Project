@@ -204,10 +204,12 @@ void RenderCore::SetGeometry(const int meshIdx, const float4* vertexData, const 
 	// copy the supplied 'fat triangles'
 	newMesh.triangles = make_unique<CoreTri[]>(vertexCount / 3);
 	memcpy(newMesh.triangles.get(), triangleData, (vertexCount / 3) * sizeof(CoreTri));
+	printf("copied data for BVH from mesh-%d (triangle count %d) in %5.3fs\n", meshIdx, triangleCount, timer.elapsed());
+	timer.reset();
 	newBVH.ConstructBVH();
 	scene.meshBVH.push_back(std::forward<BVH>(newBVH));
-
 	printf("built BVH for mesh-%d (triangle count %d) in %5.3fs\n", meshIdx, triangleCount, timer.elapsed());
+	
 }
 
 void RenderCore::SetTextures(const CoreTexDesc* tex, const int textureCount)
