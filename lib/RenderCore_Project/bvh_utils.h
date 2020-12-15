@@ -22,8 +22,11 @@ namespace lh2core
 		inline int RightChild() const { assert(!IsLeaf());  return LeftChild() + 1; }
 
 		inline int FirstPrimitive() const { assert(IsLeaf()); return leftFirst; }
+		inline int Count() const { assert(IsLeaf()); return count; }
 
 		inline void SetLeftChild(int nodeId) { assert(nodeId > 0); leftFirst = -nodeId; }
+
+		inline aabb GetBounds() const { return bounds; }
 		
 		friend class BVH;
 	};
@@ -84,20 +87,23 @@ namespace lh2core
 
 		void ConstructBVH();
 
+		static constexpr int rootIndex = 1;
+
 		template<bool backCulling>
 		[[nodiscard]]
 		inline bool IntersectRayBVH(const Ray& r, RayMeshInterceptInfo& hit) const
 		{
-			return IntersectRayBVHInternal<backCulling>(r, hit, 1);
+			return IntersectRayBVHInternal<backCulling>(r, hit, rootIndex);
 		}
 
 		template <bool backCulling>
 		[[nodiscard]]
 		inline bool DepthRayBVH(const Ray& r, const int meshId, const int triId, const float tD) const
 		{
-			return DepthRayBVHInternal<backCulling>(r, meshId, triId, tD, 1);
+			return DepthRayBVHInternal<backCulling>(r, meshId, triId, tD, rootIndex);
 		}
 
+		friend class BVH4;
 	};
 
 	template <bool backCulling>

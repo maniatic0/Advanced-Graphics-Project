@@ -1,5 +1,4 @@
 ﻿#include "core_settings.h"
-#include "bvh_utils.h"
 
 namespace lh2core
 {
@@ -47,7 +46,7 @@ namespace lh2core
 		poolSize = tcount * 2 - 1;
 		pool = std::make_unique<BVHNode[]>(poolSize);
 		assert(reinterpret_cast<uintptr_t>(pool.get()) % alignof(BVHNode) == 0);
-		root = &pool[1];
+		root = &pool[rootIndex];
 		poolPtr = 2; 
 		// subdivide root node
 		root->leftFirst = 0;
@@ -198,9 +197,11 @@ namespace lh2core
 			// Prepare Children
 			left.leftFirst = first;
 			left.count = p - first + 1; // hi - lo + 1 = count
+			assert(left.count > 0);
 
 			right.leftFirst = left.leftFirst + left.count;
 			right.count = count - left.count;
+			assert(right.count > 0);
 			assert(count == left.count + right.count);
 			assert(right.leftFirst == left.leftFirst + left.count);
 

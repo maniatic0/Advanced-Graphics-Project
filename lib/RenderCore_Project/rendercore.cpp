@@ -207,9 +207,12 @@ void RenderCore::SetGeometry(const int meshIdx, const float4* vertexData, const 
 	printf("copied data for BVH from mesh-%d (triangle count %d) in %5.3fs\n", meshIdx, triangleCount, timer.elapsed());
 	timer.reset();
 	newBVH.ConstructBVH();
-	scene.meshBVH.push_back(std::forward<BVH>(newBVH));
+	//scene.meshBVH.push_back(std::forward<BVH>(newBVH));
 	printf("built BVH for mesh-%d (triangle count %d) in %5.3fs\n", meshIdx, triangleCount, timer.elapsed());
-	
+	BVH4 bvh4;
+	timer.reset();
+	bvh4.ConstructBVH(std::forward<BVH>(newBVH));
+	printf("built BVH4 for mesh-%d (triangle count %d) in %5.3fs\n", meshIdx, triangleCount, timer.elapsed());
 }
 
 void RenderCore::SetTextures(const CoreTexDesc* tex, const int textureCount)
