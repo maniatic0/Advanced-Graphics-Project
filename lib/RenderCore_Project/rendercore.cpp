@@ -252,6 +252,9 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 {
 	// render
 	//screen->Clear(); // TODO: un comment when we have achieved useful times
+	Timer timer;
+	timer.reset();
+
 	Ray ray;
 	float3 intensity = make_float3(1);
 	float3 dir;
@@ -425,6 +428,8 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 		screen->Plot(x, yScanline, float4ToUint(LinearToSRGB(tempColor)));
 	}
 
+	elapsedTime += timer.elapsed();
+
 	++yScanline;
 
 	if (yScanline < screen->height)
@@ -437,6 +442,9 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 		firstScanLoopComplete = true;
 		yScanline = 0;
 		offsetIter = (offsetIter + 1) % pixelOffsetsSize;
+
+		printf("rendered the complete screen in %5.3fs\n", elapsedTime);
+		elapsedTime = 0.f;
 
 		if (useChromaticAberration)
 		{
@@ -556,7 +564,6 @@ void RenderCore::Shutdown()
 		default:
 			break;
 		}
-
 
 	}
 
