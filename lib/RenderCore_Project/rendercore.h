@@ -72,8 +72,10 @@ private:
 	float* kernel;
 	bool useVignetting;
 	float sigma;
-
 	bool useToneMapping;
+
+	float elapsedTime = 0;
+
 
 	/// <summary>
 	/// Scene exposure. See https://blog.demofox.org/2020/06/06/casual-shadertoy-path-tracing-2-image-improvement-and-glossy-reflections/

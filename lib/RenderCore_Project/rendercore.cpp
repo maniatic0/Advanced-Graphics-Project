@@ -209,7 +209,6 @@ void RenderCore::SetGeometry(const int meshIdx, const float4* vertexData, const 
 	newBVH.ConstructBVH();
 	scene.meshBVH.push_back(std::forward<BVH>(newBVH));
 	printf("built BVH for mesh-%d (triangle count %d) in %5.3fs\n", meshIdx, triangleCount, timer.elapsed());
-	
 }
 
 void RenderCore::SetTextures(const CoreTexDesc* tex, const int textureCount)
@@ -249,6 +248,9 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 {
 	// render
 	//screen->Clear(); // TODO: un comment when we have achieved useful times
+	Timer timer;
+	timer.reset();
+
 	Ray ray;
 	float3 intensity = make_float3(1);
 	float3 dir;
@@ -422,6 +424,8 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 		screen->Plot(x, yScanline, float4ToUint(LinearToSRGB(tempColor)));
 	}
 
+	elapsedTime += timer.elapsed();
+
 	++yScanline;
 
 	if (yScanline < screen->height)
@@ -434,6 +438,9 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 		firstScanLoopComplete = true;
 		yScanline = 0;
 		offsetIter = (offsetIter + 1) % pixelOffsetsSize;
+
+		printf("rendered the complete screen in %5.3fs\n", elapsedTime);
+		elapsedTime = 0.f;
 
 		if (useChromaticAberration)
 		{
@@ -553,7 +560,6 @@ void RenderCore::Shutdown()
 		default:
 			break;
 		}
-
 
 	}
 
