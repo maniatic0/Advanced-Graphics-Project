@@ -99,6 +99,9 @@ namespace lh2core
 
 			for (int i = static_cast<int>(NodeClusterName::Count) - 1; 0 <= i ; --i)
 			{
+				if (childrenId[i] == -1) {
+					continue;
+				}
 				++stackPtr;
 				stackPos = stackPtr * 3;
 
