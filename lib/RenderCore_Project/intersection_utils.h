@@ -100,7 +100,7 @@ public:
 inline bool TestAABBIntersection(const Ray &r, const aabb& box, float3 invDir)
 {
 	// From https://medium.com/@bromanz/another-view-on-the-classic-ray-aabb-intersection-algorithm-for-bvh-traversal-41125138b525
-#if 0
+#if 1
 	__m128 ori = _mm_setr_ps(r.origin.x, r.origin.y, r.origin.z, 0);
 	__m128 dirInv = _mm_setr_ps(invDir.x, invDir.y, invDir.z, 0);
 
@@ -110,7 +110,7 @@ inline bool TestAABBIntersection(const Ray &r, const aabb& box, float3 invDir)
 	__m128 tmin = _mm_min_ps(t0, t1);
 	__m128 tmax = _mm_max_ps(t0, t1);
 
-	return max_component(tmin) <= min_component(tmax);
+	return max_component3(tmin) <= min_component3(tmax);
 #else
 	float3 ori = make_float3(r.origin);
 

@@ -329,4 +329,26 @@ namespace lh2core
 		float result = _mm_cvtss_f32(min4);
 		return result;
 	}
+
+	inline float max_component3(__m128 x)
+	{
+		// from https://stackoverflow.com/a/46126018
+		__m128 max1 = _mm_shuffle_ps(x, x, _MM_SHUFFLE(0, 0, 2, 2));
+		__m128 max2 = _mm_max_ps(x, max1);
+		__m128 max3 = _mm_shuffle_ps(max2, max2, _MM_SHUFFLE(0, 0, 0, 1));
+		__m128 max4 = _mm_max_ps(max2, max3);
+		float result = _mm_cvtss_f32(max4);
+		return result;
+	}
+
+	inline float min_component3(__m128 x)
+	{
+		// Modified from https://stackoverflow.com/a/46126018
+		__m128 min1 = _mm_shuffle_ps(x, x, _MM_SHUFFLE(0, 0, 2, 2));
+		__m128 min2 = _mm_min_ps(x, min1);
+		__m128 min3 = _mm_shuffle_ps(min2, min2, _MM_SHUFFLE(0, 0, 0, 1));
+		__m128 min4 = _mm_min_ps(min2, min3);
+		float result = _mm_cvtss_f32(min4);
+		return result;
+	}
 }
