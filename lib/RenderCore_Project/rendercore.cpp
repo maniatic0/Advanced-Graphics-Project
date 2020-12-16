@@ -58,6 +58,8 @@ void RenderCore::Init()
 	useToneMapping = false;
 
 	exposure = 0.5f;
+
+	BVH4::PrepareBVH4Tables();
 }
 
 void RenderCore::Setting(const char* name, float value)

@@ -2,6 +2,9 @@
 
 namespace lh2core
 {
+	typedef unsigned int uint;
+	typedef unsigned char uchar;
+
 	enum class NodeClusterName : int
 	{
 		LeftLeft = 0,
@@ -17,8 +20,8 @@ namespace lh2core
 	private:
 		int child;
 		signed char index;
-		unsigned char active;
-		unsigned char perm;
+		uchar active;
+		uchar perm;
 	public:
 
 		inline BVH4NodeCluster() : active(0), perm(0), index(-1), child(0) {};
@@ -39,6 +42,17 @@ namespace lh2core
 			assert(!IsActive());
 			index = static_cast<signed char>(clusterId);
 		}
+
+		inline void SetPerm(int axis1, int axis2, int axis3, int topologyId)
+		{
+			assert(0 <= axis1 && axis1 < 4);
+			assert(0 <= axis1 && axis2 < 4);
+			assert(0 <= axis1 && axis3 < 4);
+			assert(0 <= topologyId && topologyId < 6);
+			perm = (uchar)axis1 + (uchar)axis2 * 3 + (uchar)axis3 * 9 + (uchar)topologyId * 27;
+		}
+
+		inline uchar GetPerm() const { assert(IsActive()); return perm; }
 
 		inline bool IsLeaf() const { assert(IsActive());  return active == 0; }
 		inline bool HasChildren() const { return !IsLeaf(); }
@@ -101,6 +115,30 @@ namespace lh2core
 
 		int poolSize;
 
+		// Paper Helpers
+
+		// order generation marco
+#define P(n0, n1, n2, n3) ((n0 << 6) | (n1 << 4) | (n2 << 2) | n3)
+
+		// arbitrary order index to order mapping
+		static constexpr uchar indexToOrderLUT[24] = {
+			P(0, 1, 2, 3), P(0, 2, 1, 3), P(2, 0, 1, 3), P(1, 0, 2, 3), P(1, 2, 0, 3), P(2, 1, 0, 3),
+			P(0, 1, 3, 2), P(0, 2, 3, 1), P(2, 0, 3, 1), P(1, 0, 3, 2), P(1, 2, 3, 0), P(2, 1, 3, 0),
+			P(0, 3, 1, 2), P(0, 3, 2, 1), P(2, 3, 0, 1), P(1, 3, 0, 2), P(1, 3, 2, 0), P(2, 3, 1, 0),
+			P(3, 0, 1, 2), P(3, 0, 2, 1), P(3, 2, 0, 1), P(3, 1, 0, 2), P(3, 1, 2, 0), P(3, 2, 1, 0)
+		};
+#undef P
+
+		// LUTs to fill
+		static uchar orderLUT[8][136];
+		static uchar compressLUT[24][16];
+
+		// helper LUT
+		static constexpr uchar shiftLUT[4] = { 6, 4, 2, 0 };
+
+		// helper function
+		static uchar orderToIndex(const uchar order);
+			
 	public:
 
 		inline BVH4() : indices(nullptr), primitiveBounds(nullptr), pool(nullptr), root(nullptr), poolPtr(0), poolSize(0) {}
@@ -138,6 +176,8 @@ namespace lh2core
 			return DepthRayBVHInternal<backCulling>(r, meshId, triId, tD, 1);
 		}
 
+
+		static void PrepareBVH4Tables();
 	};
 
 	template <bool backCulling>
