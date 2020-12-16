@@ -5,7 +5,7 @@ namespace lh2core
 {
 	// Paper Functions
 	uchar BVH4::orderLUT[8][136];
-	uchar BVH4::compressLUT[24][16];
+	uchar BVH4::compactLUT[24][16];
 
 	uchar BVH4::orderToIndex(const uchar order) {
 		uchar idx;
@@ -21,7 +21,7 @@ namespace lh2core
 
 	void BVH4::PrepareBVH4Tables()
 	{
-		// fill compressLUT
+		// fill compactLUT
 		for (int orderIdx = 0; orderIdx < 24; orderIdx++) {
 			for (int mask = 0; mask < 16; mask++) {
 				const uchar order = indexToOrderLUT[orderIdx];
@@ -33,7 +33,7 @@ namespace lh2core
 						corder |= idx;
 					}
 				}
-				compressLUT[orderIdx][mask] = corder;
+				compactLUT[orderIdx][mask] = corder;
 			}
 		}
 
@@ -176,7 +176,7 @@ namespace lh2core
 
 				continue;
 			}
-			assert(poolPtr < poolSize);
+			assert((int)poolPtr < poolSize);
 
 			for (int i = 0; i < static_cast<int>(NodeClusterName::Count); i++)
 			{

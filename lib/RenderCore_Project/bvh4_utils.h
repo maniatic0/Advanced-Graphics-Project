@@ -46,8 +46,8 @@ namespace lh2core
 		inline void SetPerm(int axis1, int axis2, int axis3, int topologyId)
 		{
 			assert(0 <= axis1 && axis1 < 4);
-			assert(0 <= axis1 && axis2 < 4);
-			assert(0 <= axis1 && axis3 < 4);
+			assert(0 <= axis2 && axis2 < 4);
+			assert(0 <= axis3 && axis3 < 4);
 			assert(0 <= topologyId && topologyId < 6);
 			perm = (uchar)axis1 + (uchar)axis2 * 3 + (uchar)axis3 * 9 + (uchar)topologyId * 27;
 		}
@@ -57,16 +57,18 @@ namespace lh2core
 		inline bool IsLeaf() const { assert(IsActive());  return active == 0; }
 		inline bool HasChildren() const { return !IsLeaf(); }
 
-		inline int ChildrenCluster() const { assert(!IsLeaf()); return -child; }
+		inline int GetChildrenCluster() const { assert(!IsLeaf()); return -child; }
 		inline void SetChildrenCluster(int id) { assert(id > 0);  child = -id; }
+
 		inline void SetActiveChildren(const int childrenId[4]) { 
 			assert(IsActive()); 
 			active = 0; 
-			active |= (childrenId[(int)NodeClusterName::LeftLeft] != -1);
+			active |= ((childrenId[(int)NodeClusterName::LeftLeft] != -1) << 0);
 			active |= ((childrenId[(int)NodeClusterName::LeftRight] != -1) << 1);
 			active |= ((childrenId[(int)NodeClusterName::RightLeft] != -1) << 2);
 			active |= ((childrenId[(int)NodeClusterName::RightRight] != -1) << 3);
 		}
+		inline uchar GetActiveChildren() const { assert(!IsLeaf()); return active; }
 
 		inline int GetFirstPrimitive() const { assert(IsLeaf()); return child; }
 		inline int GetPrimitiveCount() const { assert(IsLeaf()); return perm; }
@@ -97,15 +99,6 @@ namespace lh2core
 	{
 	private:
 
-		template<bool backCulling>
-		[[nodiscard]]
-		bool IntersectRayBVHInternal(const Ray& r, RayMeshInterceptInfo& hit, const int nodeId) const;
-
-		template<bool backCulling>
-		[[nodiscard]]
-		bool DepthRayBVHInternal(const Ray& r, const int meshId, const int triId, const float tD, const int nodeId) const;
-
-
 		unique_ptr<uint[]> indices;
 		unique_ptr<aabb[]> primitiveBounds;
 		unique_ptr<BVH4Node[]> pool;
@@ -117,7 +110,7 @@ namespace lh2core
 
 		// Paper Helpers
 
-		// order generation marco
+		// order generation macro
 #define P(n0, n1, n2, n3) ((n0 << 6) | (n1 << 4) | (n2 << 2) | n3)
 
 		// arbitrary order index to order mapping
@@ -131,7 +124,7 @@ namespace lh2core
 
 		// LUTs to fill
 		static uchar orderLUT[8][136];
-		static uchar compressLUT[24][16];
+		static uchar compactLUT[24][16];
 
 		// helper LUT
 		static constexpr uchar shiftLUT[4] = { 6, 4, 2, 0 };
@@ -164,17 +157,11 @@ namespace lh2core
 
 		template<bool backCulling>
 		[[nodiscard]]
-		inline bool IntersectRayBVH(const Ray& r, RayMeshInterceptInfo& hit) const
-		{
-			return IntersectRayBVHInternal<backCulling>(r, hit, 1);
-		}
+		bool IntersectRayBVH(const Ray& r, RayMeshInterceptInfo& hit) const;
 
 		template <bool backCulling>
 		[[nodiscard]]
-		inline bool DepthRayBVH(const Ray& r, const int meshId, const int triId, const float tD) const
-		{
-			return DepthRayBVHInternal<backCulling>(r, meshId, triId, tD, 1);
-		}
+		bool DepthRayBVH(const Ray& r, const int meshId, const int triId, const float tD) const;
 
 
 		static void PrepareBVH4Tables();
@@ -182,7 +169,7 @@ namespace lh2core
 
 	template <bool backCulling>
 	[[nodiscard]]
-	bool interceptRayScene(const Ray& v, const vector<BVH4>& meshes, RayMeshInterceptInfo& hitInfo);
+	bool interceptRayScene(const Ray& r, const vector<BVH4>& meshes, RayMeshInterceptInfo& hitInfo);
 
 	template <bool backCulling>
 	[[nodiscard]]

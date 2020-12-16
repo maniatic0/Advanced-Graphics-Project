@@ -24,7 +24,7 @@ namespace lh2core
 		vector<CoreLightTri>	areaLights;
 
 		// BVH
-		vector<BVH> meshBVH;
+		vector<BVH4> meshBVH;
 
 	};
 
