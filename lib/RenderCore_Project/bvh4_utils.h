@@ -150,7 +150,7 @@ namespace lh2core
 			return mesh;
 		}
 
-		void ConstructBVH(BVH&& original);
+		void ConstructBVH(BVH2&& original);
 
 		static constexpr int rootIndex = 0;
 		static constexpr int rootClusterIndex = 0;

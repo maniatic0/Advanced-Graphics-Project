@@ -27,8 +27,9 @@ using namespace lighthouse2;
 #include "core_api_base.h"
 #include "general_utils.h"
 #include "intersection_utils.h"
-#include "bvh_utils.h"
+#include "bvh2_utils.h"
 #include "bvh4_utils.h"
+#include "bvh_utils.h"
 #include "scene_utils.h"
 #include "rendercore.h"
 

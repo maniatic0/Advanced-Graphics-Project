@@ -21,10 +21,10 @@ namespace lh2core
 		vector<CorePointLight>			pointLights;
 		vector<CoreSpotLight>			spotLights;
 		vector<CoreDirectionalLight>	directionalLights;
-		vector<CoreLightTri>	areaLights;
+		vector<CoreLightTri>			areaLights;
 
 		// BVH
-		vector<BVH4> meshBVH;
+		vector<BVH> meshBVH;
 
 	};
 

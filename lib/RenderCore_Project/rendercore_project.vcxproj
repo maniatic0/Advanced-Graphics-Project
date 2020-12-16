@@ -155,7 +155,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="bvh4_utils.cpp" />
-    <ClCompile Include="bvh_utils.cpp" />
+    <ClCompile Include="bvh2_utils.cpp" />
     <ClCompile Include="core_api.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">core_settings.h</PrecompiledHeaderFile>
@@ -166,8 +166,9 @@
     </ClCompile>
     <ClInclude Include="bvh4_utils.h" />
     <ClInclude Include="bvh4_utils_impl.h" />
+    <ClInclude Include="bvh2_utils.h" />
+    <ClInclude Include="bvh2_utils_impl.h" />
     <ClInclude Include="bvh_utils.h" />
-    <ClInclude Include="bvh_utils_impl.h" />
     <ClInclude Include="intersection_utils.impl.h" />
     <ClCompile Include="general_utils.cpp" />
     <ClCompile Include="rendercore.cpp">

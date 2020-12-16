@@ -122,9 +122,11 @@ namespace lh2core
 
 	// End of paper functions
 
-	void BVH4::ConstructBVH(BVH&& original)
+	void BVH4::ConstructBVH(BVH2&& original)
 	{
-		indices = std::forward<unique_ptr<uint[]>>(original.indices);
+		assert(original.indices != nullptr);
+		assert(original.primitiveBounds != nullptr);
+		indices = std::forward< unique_ptr<uint[]> >(original.indices);
 		primitiveBounds = std::forward<unique_ptr<aabb[]>>(original.primitiveBounds);
 		mesh = std::forward<Mesh>(original.mesh);
 

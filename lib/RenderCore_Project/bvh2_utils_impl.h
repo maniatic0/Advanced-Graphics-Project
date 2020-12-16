@@ -3,7 +3,7 @@ namespace lh2core
 {
 	template<bool backCulling>
 	[[nodiscard]]
-	bool BVH::IntersectRayBVHInternal(const Ray& r, RayMeshInterceptInfo& hitInfo, const int nodeId) const
+	bool BVH2::IntersectRayBVHInternal(const Ray& r, RayMeshInterceptInfo& hitInfo, const int nodeId) const
 	{
 		assert(poolSize > 0);
 		assert(1 <= nodeId && nodeId < poolSize);
@@ -86,7 +86,7 @@ namespace lh2core
 
 	template <bool backCulling>
 	[[nodiscard]]
-	bool BVH::DepthRayBVHInternal(const Ray& r, const int meshId, const int triId, const float tD, const int nodeId) const
+	bool BVH2::DepthRayBVHInternal(const Ray& r, const int meshId, const int triId, const float tD, const int nodeId) const
 	{
 		assert(poolSize > 0);
 		assert(1 <= nodeId && nodeId < poolSize);
@@ -166,14 +166,14 @@ namespace lh2core
 
 	template <bool backCulling>
 	[[nodiscard]]
-	bool interceptRayScene(const Ray& r, const vector<BVH>& meshes, RayMeshInterceptInfo& hitInfo)
+	bool interceptRayScene(const Ray& r, const vector<BVH2>& meshes, RayMeshInterceptInfo& hitInfo)
 	{
 		RayMeshInterceptInfo tempInfo;
 		bool hit = false;
 		hitInfo.Reset();
 		for (size_t i = 0; i < meshes.size(); i++)
 		{
-			const BVH& m = meshes[i];
+			const BVH2& m = meshes[i];
 			if (m.IntersectRayBVH<backCulling>(r, tempInfo))
 			{
 				if (tempInfo < hitInfo)
@@ -188,11 +188,11 @@ namespace lh2core
 
 	template <bool backCulling>
 	[[nodiscard]]
-	bool depthRayScene(const Ray& r, const vector<BVH>& meshes, const int instId, const int meshId, const int triId, const float tD)
+	bool depthRayScene(const Ray& r, const vector<BVH2>& meshes, const int instId, const int meshId, const int triId, const float tD)
 	{
 		for (size_t i = 0; i < meshes.size(); i++)
 		{
-			const BVH& m = meshes[i];
+			const BVH2& m = meshes[i];
 			if (m.DepthRayBVH<backCulling>(r, meshId, triId, tD))
 			{
 				return true;

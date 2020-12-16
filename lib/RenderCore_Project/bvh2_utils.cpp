@@ -20,8 +20,9 @@ namespace lh2core
 		return 0;
 	}
 	
-	void BVH::ConstructBVH()
+	void BVH2::ConstructBVH(Mesh &&newMesh)
 	{
+		mesh = std::forward<Mesh>(newMesh);
 		assert(mesh.vcount >= 0);
 		assert(mesh.vcount % 3 == 0);
 		assert(mesh.IsValid());
@@ -42,7 +43,7 @@ namespace lh2core
 			primitiveBounds[i].Grow(vertices[triangleIndex + 1]);
 			primitiveBounds[i].Grow(vertices[triangleIndex + 2]);
 		}
-		// allocate BVH root node
+		// allocate BVH2 root node
 		poolSize = tcount * 2 - 1;
 		pool = std::make_unique<BVHNode[]>(poolSize);
 		assert(reinterpret_cast<uintptr_t>(pool.get()) % alignof(BVHNode) == 0);
@@ -54,7 +55,7 @@ namespace lh2core
 		Subdivide(1);
 	}
 
-	void BVH::CalculateBounds(BVHNode* node, aabb &centroidBounds)
+	void BVH2::CalculateBounds(BVHNode* node, aabb &centroidBounds)
 	{
 		aabb& bounds = node->bounds;
 		bounds.Reset();
@@ -76,7 +77,7 @@ namespace lh2core
 		}
 	}
 
-	void BVH::Subdivide(int nodeId)
+	void BVH2::Subdivide(int nodeId)
 	{
 		assert(mesh.IsValid());
 		assert(mesh.vcount / 3 <= INT_MAX); // 4 GB of triangles means a bad time
@@ -210,7 +211,7 @@ namespace lh2core
 		}
 	}
 
-	int BVH::Partition(BVHNode* node, int splitAxis)
+	int BVH2::Partition(BVHNode* node, int splitAxis)
 	{
 		assert(node->IsLeaf());
 		assert(node->count > 0);
@@ -255,7 +256,7 @@ namespace lh2core
 		return -1;
 	}
 
-	int BVH::PartitionBucket(BVHNode* node, int bucketId, const aabb& centroidBounds, int splitAxis)
+	int BVH2::PartitionBucket(BVHNode* node, int bucketId, const aabb& centroidBounds, int splitAxis)
 	{
 		assert(node->IsLeaf());
 		assert(node->count > 0);

@@ -60,6 +60,8 @@ void RenderCore::Init()
 	exposure = 0.5f;
 
 	BVH4::PrepareBVH4Tables();
+
+	bvhType = BVH_Type::BVH4;
 }
 
 void RenderCore::Setting(const char* name, float value)
@@ -79,6 +81,10 @@ void RenderCore::Setting(const char* name, float value)
 	else if (!strcmp(name, "render_type"))
 	{
 		renderType = (RenderType)clamp((int)value, 0, (int)RenderType::Count - 1);
+	}
+	else if (!strcmp(name, "bvh_type"))
+	{
+		bvhType = (BVH_Type)clamp((int)value, 0, (int)BVH_Type::Count - 1);
 	}
 	else if (!strcmp(name, "indirect_direct_mix"))
 	{
@@ -195,8 +201,7 @@ void RenderCore::SetGeometry(const int meshIdx, const float4* vertexData, const 
 	assert(triangleCount * 3 == vertexCount);
 	Timer timer;
 	timer.reset();
-	BVH newBVH;
-	Mesh &newMesh = newBVH.GetMesh();
+	Mesh newMesh;
 	// copy the supplied vertices; we cannot assume that the render system does not modify
 	// the original data after we leave this function.
 	newMesh.meshID = static_cast<int>(scene.meshBVH.size()); // TODO: Change this to keep the meshIdx
@@ -207,15 +212,9 @@ void RenderCore::SetGeometry(const int meshIdx, const float4* vertexData, const 
 	newMesh.triangles = make_unique<CoreTri[]>(vertexCount / 3);
 	memcpy(newMesh.triangles.get(), triangleData, (vertexCount / 3) * sizeof(CoreTri));
 	printf("copied data for BVH from mesh-%d (triangle count %d) in %5.3fs\n", meshIdx, triangleCount, timer.elapsed());
-	timer.reset();
-	newBVH.ConstructBVH();
-	//scene.meshBVH.push_back(std::forward<BVH>(newBVH));
-	printf("built BVH2 for mesh-%d (triangle count %d) in %5.3fs\n", meshIdx, triangleCount, timer.elapsed());
-	BVH4 bvh4;
-	timer.reset();
-	bvh4.ConstructBVH(std::forward<BVH>(newBVH));
-	printf("built BVH4 for mesh-%d (triangle count %d) in %5.3fs\n", meshIdx, triangleCount, timer.elapsed());
-	scene.meshBVH.push_back(std::forward<BVH4>(bvh4));
+
+	BVH& bvh = scene.meshBVH.emplace_back();
+	bvh.ConstructBVH(bvhType, std::forward<Mesh>(newMesh));
 }
 
 void RenderCore::SetTextures(const CoreTexDesc* tex, const int textureCount)

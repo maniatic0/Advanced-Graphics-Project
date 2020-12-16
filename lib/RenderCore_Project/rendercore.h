@@ -100,6 +100,8 @@ private:
 	/// </summary>
 	float indirectDirectMix;
 
+	BVH_Type bvhType;
+
 	/// <summary>
 	/// Note this trick only works single threaded. We would need threadlocal stuff
 	/// </summary>

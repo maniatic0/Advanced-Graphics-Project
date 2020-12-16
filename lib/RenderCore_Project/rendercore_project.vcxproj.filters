@@ -4,8 +4,8 @@
     <ClCompile Include="rendercore.cpp" />
     <ClCompile Include="core_api.cpp" />
     <ClCompile Include="general_utils.cpp" />
-    <ClCompile Include="bvh_utils.cpp" />
     <ClCompile Include="bvh4_utils.cpp" />
+    <ClCompile Include="bvh2_utils.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="rendercore.h" />
@@ -14,10 +14,11 @@
     <ClInclude Include="general_utils.h" />
     <ClInclude Include="intersection_utils.impl.h" />
     <ClInclude Include="rendercore.impl.h" />
-    <ClInclude Include="bvh_utils.h" />
-    <ClInclude Include="bvh_utils_impl.h" />
     <ClInclude Include="scene_utils.h" />
     <ClInclude Include="bvh4_utils.h" />
     <ClInclude Include="bvh4_utils_impl.h" />
+    <ClInclude Include="bvh2_utils_impl.h" />
+    <ClInclude Include="bvh2_utils.h" />
+    <ClInclude Include="bvh_utils.h" />
   </ItemGroup>
 </Project>
