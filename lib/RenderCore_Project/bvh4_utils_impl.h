@@ -74,16 +74,20 @@ namespace lh2core
 			orderMask = compactLUT[orderLUT[signs][cluster.GetPerm()]][cluster.GetActiveChildren()];
 
 			childrenCluster = cluster.GetChildrenCluster();
+			const int childCount = bitCountLUT[cluster.GetActiveChildren()];
 			// low bits are the last nodes
-			for (int i = 0; i < 4; ++i)
+			for (int i = 0; i < childCount; ++i)
 			{
+				const int childId = (int)(orderMask & 0x03);
+				orderMask >>= 2;
+
 				++stackPtr;
 				stackPos = stackPtr * 2;
 
 				// parentNodeId + clusterPosition + oldNodeId
 				stack[stackPos + 0] = childrenCluster; // Children cluster
-				stack[stackPos + 1] = (int)(orderMask & 0x03);
-				orderMask >>= 2;
+				stack[stackPos + 1] = childId;
+				
 			}
 
 		}

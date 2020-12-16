@@ -125,6 +125,7 @@ namespace lh2core
 		// LUTs to fill
 		static uchar orderLUT[8][136];
 		static uchar compactLUT[24][16];
+		static uchar bitCountLUT[16];
 
 		// helper LUT
 		static constexpr uchar shiftLUT[4] = { 6, 4, 2, 0 };

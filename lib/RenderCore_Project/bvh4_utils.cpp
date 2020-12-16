@@ -6,6 +6,7 @@ namespace lh2core
 	// Paper Functions
 	uchar BVH4::orderLUT[8][136];
 	uchar BVH4::compactLUT[24][16];
+	uchar BVH4::bitCountLUT[16];
 
 	uchar BVH4::orderToIndex(const uchar order) {
 		uchar idx;
@@ -21,6 +22,13 @@ namespace lh2core
 
 	void BVH4::PrepareBVH4Tables()
 	{
+		// Fill bit count for 4 childs
+		for (int i = 0; i < 16; i++)
+		{
+			bitCountLUT[i] = (i & 1) + ((i >> 1) & 1) + ((i >> 2) & 1) + ((i >> 3) & 1);
+		}
+
+
 		// fill compactLUT
 		for (int orderIdx = 0; orderIdx < 24; orderIdx++) {
 			for (int mask = 0; mask < 16; mask++) {
