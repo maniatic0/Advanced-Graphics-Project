@@ -84,7 +84,7 @@ namespace lh2core
 				++stackPtr;
 				stackPos = stackPtr * 2;
 
-				// parentNodeId + clusterPosition + oldNodeId
+				// parentNodeId + clusterPosition
 				stack[stackPos + 0] = childrenCluster; // Children cluster
 				stack[stackPos + 1] = childId;
 				
