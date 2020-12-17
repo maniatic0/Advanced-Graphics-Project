@@ -133,6 +133,8 @@ namespace lh2core
 			const aabb& clusterBounds = node.bounds[nodeClusterId];
 			const BVH4NodeCluster& cluster = node.children[nodeClusterId];
 
+			const uchar test = TestAABB4Intersection(r, node.bounds, invDir);
+
 			if (!cluster.IsActive() || !TestAABBIntersection(r, clusterBounds, invDir))
 			{
 				// No intersection

@@ -124,6 +124,46 @@ inline bool TestAABBIntersection(const Ray &r, const aabb& box, float3 invDir)
 #endif
 }
 
+inline uchar TestAABB4Intersection(const Ray& r, const aabb boxes[4], float3 invDir)
+{
+	// Modified From https://medium.com/@bromanz/another-view-on-the-classic-ray-aabb-intersection-algorithm-for-bvh-traversal-41125138b525
+
+	uchar res = 0;
+
+	__m256 ori = _mm256_setr_ps(r.origin.x, r.origin.y, r.origin.z, 0, r.origin.x, r.origin.y, r.origin.z, 0);
+	__m256 dirInv = _mm256_setr_ps(invDir.x, invDir.y, invDir.z, 0, invDir.x, invDir.y, invDir.z, 0);
+
+	for (int i = 0; i < 2; i++)
+	{
+		__m256 t0 = _mm256_mul_ps(_mm256_sub_ps(_mm256_setr_m128(boxes[2 * i + 0].bmin4, boxes[2 * i + 1].bmin4), ori), dirInv);
+		__m256 t1 = _mm256_mul_ps(_mm256_sub_ps(_mm256_setr_m128(boxes[2 * i + 0].bmax4, boxes[2 * i + 1].bmax4), ori), dirInv);
+
+		__m256 tmin = _mm256_min_ps(t0, t1);
+		__m256 tmax = _mm256_max_ps(t0, t1);
+
+		// Modified from https://stackoverflow.com/a/17639457
+		// Horizontal max. Note that the last component is trash
+		tmin = _mm256_max_ps(tmin, _mm256_shuffle_ps(tmin, tmin, _MM_SHUFFLE(2, 1, 0, 2)));
+		tmin = _mm256_max_ps(tmin, _mm256_shuffle_ps(tmin, tmin, _MM_SHUFFLE(1, 0, 2, 2)));
+
+		// Horizontal min. Note that the last component is trash
+		tmax = _mm256_min_ps(tmax, _mm256_shuffle_ps(tmax, tmax, _MM_SHUFFLE(2, 1, 0, 2)));
+		tmax = _mm256_min_ps(tmax, _mm256_shuffle_ps(tmax, tmax, _MM_SHUFFLE(1, 0, 2, 2)));
+
+		__m256 comp = _mm256_cmp_ps(tmin, tmax, _CMP_LE_OQ);
+
+		bool r0 = isnan(_mm_cvtss_f32(_mm256_extractf128_ps(comp, 0))); // Low
+		bool r1 = isnan(_mm_cvtss_f32(_mm256_extractf128_ps(comp, 1))); // Hi
+
+		// assert(r0 == TestAABBIntersection(r, boxes[2 * i + 0], invDir));
+		// assert(r1 == TestAABBIntersection(r, boxes[2 * i + 1], invDir));
+
+		res |= (r0 << (2 * i + 0)) | (r1 << (2 * i + 1));
+	}
+	
+	return res;
+}
+
 
 /// <summary>
 /// Ray Triangle Interception Information
