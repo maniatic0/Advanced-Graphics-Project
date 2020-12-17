@@ -151,6 +151,11 @@ namespace lh2core
 			return mesh;
 		}
 
+		inline aabb GetBounds() const
+		{
+			return pool[rootIndex].bounds[rootClusterIndex];
+		}
+
 		void ConstructBVH(BVH2&& original);
 
 		static constexpr int rootIndex = 0;

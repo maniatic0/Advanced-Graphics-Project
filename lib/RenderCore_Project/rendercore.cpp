@@ -215,6 +215,17 @@ void RenderCore::SetGeometry(const int meshIdx, const float4* vertexData, const 
 
 	BVH& bvh = scene.meshBVH.emplace_back();
 	bvh.ConstructBVH(bvhType, std::forward<Mesh>(newMesh));
+
+#ifdef MEASURE_BVH
+	aabb bounds = bvh.GetBounds();
+	Ray r(bounds.bmax3, normalize(make_float3(bounds.Center(0), bounds.Center(1), bounds.Center(2)) - bounds.bmax3));
+
+	RayMeshInterceptInfo hitInfo;
+	hitInfo.Reset();
+	bvh.IntersectRayBVH<true>(r, hitInfo);
+	bvh.DepthRayBVH<true>(r, -1, -1, hitInfo.triIntercept.t);
+#endif
+
 }
 
 void RenderCore::SetTextures(const CoreTexDesc* tex, const int textureCount)

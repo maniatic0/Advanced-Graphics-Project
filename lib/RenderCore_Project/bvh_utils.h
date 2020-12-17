@@ -94,6 +94,11 @@ namespace lh2core
 			return std::visit([](auto&& ptr) -> Mesh& { assert(ptr != nullptr);  return ptr->GetMesh(); }, bvhPtr);
 		}
 
+		inline aabb GetBounds() const
+		{
+			return std::visit([](auto&& ptr) -> aabb { assert(ptr != nullptr);  return ptr->GetBounds(); }, bvhPtr);
+		}
+
 		template<bool backCulling>
 		[[nodiscard]]
 		inline bool IntersectRayBVH(const Ray& r, RayMeshInterceptInfo& hitInfo) const

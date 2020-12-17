@@ -26,10 +26,21 @@ namespace lh2core
 
 		int splitAxis;
 
+#ifdef MEASURE_BVH
+		int nodeIntersections = 0;
+		int aabbIntersections = 0;
+		int triangleIntersections = 0;
+#endif
+
 		while (stackCurr >= 0)
 		{
 			assert(stackCurr < 64);
 			const BVHNode& node = pool[stack[stackCurr--]]; // Get from stack and pop
+
+#ifdef MEASURE_BVH
+			++nodeIntersections;
+			++aabbIntersections;
+#endif
 
 			if (!TestAABBIntersection(r, node.bounds, invDir))
 			{
@@ -47,6 +58,11 @@ namespace lh2core
 				{
 					tIndex = indices[i];
 					vPos = tIndex * 3;
+
+#ifdef MEASURE_BVH
+					++triangleIntersections;
+#endif
+
 					if (interceptRayTriangle<backCulling>(r, mesh.vertices[vPos + 0], mesh.vertices[vPos + 1], mesh.vertices[vPos + 2], tempHitInfo))
 					{
 						if (tempHitInfo < hitInfo.triIntercept)
@@ -80,6 +96,9 @@ namespace lh2core
 			}
 		}
 
+#ifdef MEASURE_BVH
+		printf("BVH2 Intersect nodes=%d/%d aabbIntersects=%d triangleIntersects=%d/%d\n", nodeIntersections, poolPtr, aabbIntersections, triangleIntersections, mesh.vcount / 3);
+#endif
 
 		return hit;
 	}
@@ -108,10 +127,21 @@ namespace lh2core
 
 		int splitAxis;
 
+#ifdef MEASURE_BVH
+		int nodeIntersections = 0;
+		int aabbIntersections = 0;
+		int triangleIntersections = 0;
+#endif
+
 		while (stackCurr >= 0)
 		{
 			assert(stackCurr < 64);
 			const BVHNode& node = pool[stack[stackCurr--]];
+
+#ifdef MEASURE_BVH
+			++nodeIntersections;
+			++aabbIntersections;
+#endif
 
 			if (!TestAABBIntersection(r, node.bounds, invDir))
 			{
@@ -128,10 +158,18 @@ namespace lh2core
 				{
 					tIndex = indices[i];
 					vPos = tIndex * 3;
+
+#ifdef MEASURE_BVH
+					++triangleIntersections;
+#endif
+
 					if ((!sameMesh || tIndex != triId) && depthRayTriangle<backCulling>(r, mesh.vertices[vPos + 0], mesh.vertices[vPos + 1], mesh.vertices[vPos + 2], tD))
 					{
 						if (!sameMesh)
 						{
+#ifdef MEASURE_BVH
+							printf("BVH2 Depth nodes=%d/%d aabbIntersects=%d triangleIntersects=%d/%d\n", nodeIntersections, poolPtr, aabbIntersections, triangleIntersections, mesh.vcount / 3);
+#endif
 							return true;
 						}
 					}
@@ -160,6 +198,9 @@ namespace lh2core
 			}
 		}
 
+#ifdef MEASURE_BVH
+		printf("BVH2 Depth nodes=%d/%d aabbIntersects=%d triangleIntersects=%d/%d\n", nodeIntersections, poolPtr, aabbIntersections, triangleIntersections, mesh.vcount / 3);
+#endif
 		return false;
 	}
 

@@ -85,6 +85,11 @@ namespace lh2core
 			return mesh;
 		}
 
+		inline aabb GetBounds() const
+		{
+			return pool[rootIndex].bounds;
+		}
+
 		void ConstructBVH(Mesh&& newMesh);
 
 		static constexpr int rootIndex = 1;
