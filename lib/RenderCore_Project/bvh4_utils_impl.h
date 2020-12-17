@@ -12,7 +12,6 @@ namespace lh2core
 		// Traversal
 		const uchar signs = ((r.direction.x >= 0) << 0) | ((r.direction.y >= 0) << 1) | ((r.direction.z >= 0) << 2);
 		uchar orderMask;
-		int childrenCluster;
 
 		// Hit info
 		RayTriangleInterceptInfo tempHitInfo;
@@ -20,78 +19,101 @@ namespace lh2core
 		int vPos;
 		int tIndex;
 
+		const int rootAxis = pool[0].bounds[0].LongestAxis();
+		const int rootPerm = (uchar)rootAxis + (uchar)rootAxis * 3 + (uchar)rootAxis * 9 + (uchar)0 * 27; // (uchar)axis1 + (uchar)axis2 * 3 + (uchar)axis3 * 9 + (uchar)topologyId * 27
+
+
 		int stackPtr = 0;
-		int stackPos = 0 * 2;
-		uint stack[256]; // ParentnodeId + clusterPosition + oldNodeId 
+		int stackPos = 0 * 3;
+		uint stack[512]; // ParentnodeId + perm + activeMask
 		stack[stackPos + 0] = rootIndex;
-		stack[stackPos + 1] = rootClusterIndex;
+		stack[stackPos + 1] = rootPerm; // Perm for first child
+		stack[stackPos + 2] = 1; // Only the first node is active for root
+
+#ifdef MEASURE_BVH
+		int nodeIntersections = 0;
+		int aabbIntersections = 0;
+		int triangleIntersections = 0;
+#endif
 
 		while (stackPtr >= 0)
 		{
-			assert(stackPtr < 256);
-			stackPos = stackPtr * 2;
-			--stackPtr;
+			assert(stackPtr < 512);
+
+			stackPos = (stackPtr--) * 3;
 
 			const int parentNodeId = stack[stackPos + 0];
-			const int nodeClusterId = stack[stackPos + 1];
+			const int perm = stack[stackPos + 1];
+			const int activeMask = stack[stackPos + 2];
 
-			const BVH4Node &node = pool[parentNodeId];
 
-			// New Parent
-			const aabb& clusterBounds = node.bounds[nodeClusterId];
-			const BVH4NodeCluster &cluster = node.children[nodeClusterId];
 
-			if (!cluster.IsActive() || !TestAABBIntersection(r, clusterBounds, invDir))
+			const BVH4Node& node = pool[parentNodeId];
+
+			const int test = TestAABB4Intersection(r, node.bounds, invDir);
+
+#ifdef MEASURE_BVH
+			++nodeIntersections;
+			aabbIntersections += 4;
+#endif
+
+			orderMask = compactLUT[orderLUT[signs][perm]][activeMask];
+
+			// low bits are the last nodes
+			for (int i = 0; i < 4; ++i)
 			{
-				// No intersection
-				continue;
-			}
+				const uchar childId = (int)(orderMask & 0x03);
+				orderMask >>= 2;
+				const BVH4NodeCluster& cluster = node.children[childId];
 
-			if (cluster.IsLeaf())
-			{
-				assert(mesh.vcount % 3 == 0); // No weird meshes
-				const int triMax = cluster.GetPrimitiveCount() + cluster.GetFirstPrimitive();
-				tempHitInfo.Reset();
-
-				for (int i = cluster.GetFirstPrimitive(); i < triMax; i++)
+				if (!(test & (1 << childId) & activeMask))
 				{
-					tIndex = indices[i];
-					vPos = tIndex * 3;
-					if (interceptRayTriangle<backCulling>(r, mesh.vertices[vPos + 0], mesh.vertices[vPos + 1], mesh.vertices[vPos + 2], tempHitInfo))
+					// No intersection
+					assert(!cluster.IsActive() || !(test & (1 << childId)));
+					continue;
+				}
+
+				if (cluster.IsLeaf())
+				{
+					assert(mesh.vcount % 3 == 0); // No weird meshes
+					const int triMax = cluster.GetPrimitiveCount() + cluster.GetFirstPrimitive();
+					tempHitInfo.Reset();
+
+					for (int i = cluster.GetFirstPrimitive(); i < triMax; i++)
 					{
-						if (tempHitInfo < hitInfo.triIntercept)
+						tIndex = indices[i];
+						vPos = tIndex * 3;
+
+#ifdef MEASURE_BVH
+						++triangleIntersections;
+#endif
+
+						if (interceptRayTriangle<backCulling>(r, mesh.vertices[vPos + 0], mesh.vertices[vPos + 1], mesh.vertices[vPos + 2], tempHitInfo))
 						{
-							hit = true;
-							hitInfo.meshId = mesh.meshID;
-							tempHitInfo.CopyTo(hitInfo.triIntercept);
-							hitInfo.triId = tIndex;
+							if (tempHitInfo < hitInfo.triIntercept)
+							{
+								hit = true;
+								hitInfo.meshId = mesh.meshID;
+								tempHitInfo.CopyTo(hitInfo.triIntercept);
+								hitInfo.triId = tIndex;
+							}
 						}
 					}
+					continue;
 				}
-				continue;
-			}
 
-			orderMask = compactLUT[orderLUT[signs][cluster.GetPerm()]][cluster.GetActiveChildren()];
-
-			childrenCluster = cluster.GetChildrenCluster();
-			const int childCount = bitCountLUT[cluster.GetActiveChildren()];
-			// low bits are the last nodes
-			for (int i = 0; i < childCount; ++i)
-			{
-				const int childId = (int)(orderMask & 0x03);
-				orderMask >>= 2;
-
-				++stackPtr;
-				stackPos = stackPtr * 2;
-
-				// parentNodeId + clusterPosition
-				stack[stackPos + 0] = childrenCluster; // Children cluster
-				stack[stackPos + 1] = childId;
-				
+				// New node to traverse
+				stackPos = (++stackPtr) * 3;
+				stack[stackPos + 0] = cluster.GetChildrenCluster(); // Children cluster
+				stack[stackPos + 1] = cluster.GetPerm();
+				stack[stackPos + 2] = cluster.GetActiveChildren();
 			}
 
 		}
 
+#ifdef MEASURE_BVH
+		printf("BVH4 Intersect nodes=%d/%d aabbIntersects=%d (4 at the same time = %d) triangleIntersects=%d/%d\n", nodeIntersections, poolPtr, aabbIntersections, aabbIntersections / 4, triangleIntersections, mesh.vcount / 3);
+#endif
 		return hit;
 	}
 
@@ -105,79 +127,104 @@ namespace lh2core
 		// Traversal
 		const uchar signs = ((r.direction.x >= 0) << 0) | ((r.direction.y >= 0) << 1) | ((r.direction.z >= 0) << 2);
 		uchar orderMask;
-		int childrenCluster;
 
 		// Hit info
 		int vPos;
 		int tIndex;
 		const bool sameMesh = mesh.meshID == meshId;
 
+		const int rootAxis = pool[0].bounds[0].LongestAxis();
+		const int rootPerm = (uchar)rootAxis + (uchar)rootAxis * 3 + (uchar)rootAxis * 9 + (uchar)0 * 27; // (uchar)axis1 + (uchar)axis2 * 3 + (uchar)axis3 * 9 + (uchar)topologyId * 27
+
+
 		int stackPtr = 0;
-		int stackPos = 0 * 2;
-		uint stack[256]; // ParentnodeId + clusterPosition + oldNodeId 
+		int stackPos = 0 * 3;
+		uint stack[512]; // ParentnodeId + perm + activeMask
 		stack[stackPos + 0] = rootIndex;
-		stack[stackPos + 1] = rootClusterIndex;
+		stack[stackPos + 1] = rootPerm; // Perm for first child
+		stack[stackPos + 2] = 1; // Only the first node is active for root
+
+#ifdef MEASURE_BVH
+		int nodeIntersections = 0;
+		int aabbIntersections = 0;
+		int triangleIntersections = 0;
+#endif
 
 		while (stackPtr >= 0)
 		{
-			assert(stackPtr < 256);
-			stackPos = stackPtr * 2;
-			--stackPtr;
+			assert(stackPtr < 512);
+
+			stackPos = (stackPtr--) * 3;
 
 			const int parentNodeId = stack[stackPos + 0];
-			const int nodeClusterId = stack[stackPos + 1];
+			const int perm = stack[stackPos + 1];
+			const int activeMask = stack[stackPos + 2];
 
-			const BVH4Node& node = pool[parentNodeId];
+			const BVH4Node& node = pool[parentNodeId];			
 
-			// New Parent
-			const aabb& clusterBounds = node.bounds[nodeClusterId];
-			const BVH4NodeCluster& cluster = node.children[nodeClusterId];
+			const int test = TestAABB4Intersection(r, node.bounds, invDir);
 
-			const uchar test = TestAABB4Intersection(r, node.bounds, invDir);
+#ifdef MEASURE_BVH
+			++nodeIntersections;
+			aabbIntersections += 4;
+#endif
 
-			if (!cluster.IsActive() || !TestAABBIntersection(r, clusterBounds, invDir))
-			{
-				// No intersection
-				continue;
-			}
+			orderMask = compactLUT[orderLUT[signs][perm]][activeMask];
 
-			if (cluster.IsLeaf())
-			{
-				assert(mesh.vcount % 3 == 0); // No weird meshes
-				const int triMax = cluster.GetPrimitiveCount() + cluster.GetFirstPrimitive();
-
-				for (int i = cluster.GetFirstPrimitive(); i < triMax; i++)
-				{
-					tIndex = indices[i];
-					vPos = tIndex * 3;
-					if ((!sameMesh || tIndex != triId) && depthRayTriangle<backCulling>(r, mesh.vertices[vPos + 0], mesh.vertices[vPos + 1], mesh.vertices[vPos + 2], tD))
-					{
-						if (!sameMesh)
-						{
-							return true;
-						}
-					}
-				}
-				continue;
-			}
-
-			orderMask = compactLUT[orderLUT[signs][cluster.GetPerm()]][cluster.GetActiveChildren()];
-
-			childrenCluster = cluster.GetChildrenCluster();
 			// low bits are the last nodes
 			for (int i = 0; i < 4; ++i)
 			{
-				++stackPtr;
-				stackPos = stackPtr * 2;
-
-				// parentNodeId + clusterPosition + oldNodeId
-				stack[stackPos + 0] = childrenCluster; // Children cluster
-				stack[stackPos + 1] = (int)(orderMask & 0x03);
+				const uchar childId = (int)(orderMask & 0x03);
 				orderMask >>= 2;
+				const BVH4NodeCluster& cluster = node.children[childId];
+
+				if (!(test & (1 << childId) & activeMask))
+				{
+					// No intersection
+					assert(!cluster.IsActive() || !(test & (1 << childId)));
+					continue;
+				}
+
+				if (cluster.IsLeaf())
+				{
+					assert(mesh.vcount % 3 == 0); // No weird meshes
+					const int triMax = cluster.GetPrimitiveCount() + cluster.GetFirstPrimitive();
+
+					for (int i = cluster.GetFirstPrimitive(); i < triMax; i++)
+					{
+						tIndex = indices[i];
+						vPos = tIndex * 3;
+
+#ifdef MEASURE_BVH
+						++triangleIntersections;
+#endif
+
+						if ((!sameMesh || tIndex != triId) && depthRayTriangle<backCulling>(r, mesh.vertices[vPos + 0], mesh.vertices[vPos + 1], mesh.vertices[vPos + 2], tD))
+						{
+							if (!sameMesh)
+							{
+#ifdef MEASURE_BVH
+								printf("BVH4 Depth nodes=%d/%d aabbIntersects=%d (4 at the same time = %d) triangleIntersects=%d/%d\n", nodeIntersections, poolPtr, aabbIntersections, aabbIntersections / 4, triangleIntersections, mesh.vcount / 3);
+#endif
+								return true;
+							}
+						}
+					}
+					continue;
+				}
+
+				// New node to traverse
+				stackPos = (++stackPtr) * 3;
+				stack[stackPos + 0] = cluster.GetChildrenCluster(); // Children cluster
+				stack[stackPos + 1] = cluster.GetPerm();
+				stack[stackPos + 2] = cluster.GetActiveChildren();
 			}
 
 		}
 
+#ifdef MEASURE_BVH
+		printf("BVH4 Depth nodes=%d/%d aabbIntersects=%d (4 at the same time = %d) triangleIntersects=%d/%d\n", nodeIntersections, poolPtr, aabbIntersections, aabbIntersections / 4, triangleIntersections, mesh.vcount / 3);
+#endif
 		return false;
 	}
 
