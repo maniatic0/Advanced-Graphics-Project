@@ -50,7 +50,7 @@ namespace lh2core
 
 			const BVH4Node& node = pool[parentNodeId];
 
-			const int test = TestAABB4Intersection(r, node.bounds, invDir);
+			const int test = (int)TestAABB4Intersection(r, node.bounds, invDir) & activeMask;
 
 #ifdef MEASURE_BVH
 			++nodeIntersections;
@@ -60,13 +60,14 @@ namespace lh2core
 			orderMask = compactLUT[orderLUT[signs][perm]][activeMask];
 
 			// low bits are the last nodes
-			for (int i = 0; i < 4; ++i)
+			const int childCount = bitCountLUT[activeMask];
+			for (int i = 0; i < childCount; ++i)
 			{
 				const uchar childId = (int)(orderMask & 0x03);
 				orderMask >>= 2;
 				const BVH4NodeCluster& cluster = node.children[childId];
 
-				if (!(test & (1 << childId) & activeMask))
+				if (!(test & (1 << childId)))
 				{
 					// No intersection
 					assert(!cluster.IsActive() || !(test & (1 << childId)));
@@ -162,7 +163,7 @@ namespace lh2core
 
 			const BVH4Node& node = pool[parentNodeId];			
 
-			const int test = TestAABB4Intersection(r, node.bounds, invDir);
+			const int test = (int)TestAABB4Intersection(r, node.bounds, invDir) & activeMask;
 
 #ifdef MEASURE_BVH
 			++nodeIntersections;
@@ -172,13 +173,14 @@ namespace lh2core
 			orderMask = compactLUT[orderLUT[signs][perm]][activeMask];
 
 			// low bits are the last nodes
-			for (int i = 0; i < 4; ++i)
+			const int childCount = bitCountLUT[activeMask];
+			for (int i = 0; i < childCount; ++i)
 			{
 				const uchar childId = (int)(orderMask & 0x03);
 				orderMask >>= 2;
 				const BVH4NodeCluster& cluster = node.children[childId];
 
-				if (!(test & (1 << childId) & activeMask))
+				if (!(test & (1 << childId)))
 				{
 					// No intersection
 					assert(!cluster.IsActive() || !(test & (1 << childId)));
