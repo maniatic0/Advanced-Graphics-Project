@@ -220,8 +220,8 @@ inline uchar TestAABB4IntersectionBounds(const Ray& r, const aabb boxes[4], floa
 		bool r0 = isnan(_mm_cvtss_f32(_mm256_extractf128_ps(and4, 0))); // Low
 		bool r1 = isnan(_mm_cvtss_f32(_mm256_extractf128_ps(and4, 1))); // Hi
 
-		// assert(r0 == TestAABBIntersection(r, boxes[2 * i + 0], invDir));
-		// assert(r1 == TestAABBIntersection(r, boxes[2 * i + 1], invDir));
+		// assert(r0 == TestAABBIntersectionBounds(r, boxes[2 * i + 0], invDir, minT, maxT));
+		// assert(r1 == TestAABBIntersectionBounds(r, boxes[2 * i + 1], invDir, minT, maxT));
 
 		res |= (r0 << (2 * i + 0)) | (r1 << (2 * i + 1));
 	}

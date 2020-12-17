@@ -2,6 +2,7 @@
 
 namespace lh2core
 {
+#define BVH4_USE_BOUNDS_TEST 1
 	template<bool backCulling>
 	[[nodiscard]]
 	bool BVH4::IntersectRayBVH(const Ray& r, RayMeshInterceptInfo& hitInfo) const
@@ -51,6 +52,7 @@ namespace lh2core
 			const BVH4Node& node = pool[parentNodeId];
 
 			const int test = (int)TestAABB4Intersection(r, node.bounds, invDir) & activeMask;
+			//const int test = (int)TestAABB4IntersectionBounds(r, node.bounds, invDir, -kEps, hitInfo.triIntercept.t) & activeMask;
 
 #ifdef MEASURE_BVH
 			++nodeIntersections;
@@ -76,6 +78,7 @@ namespace lh2core
 
 				if (cluster.IsLeaf())
 				{
+#ifdef BVH4_USE_BOUNDS_TEST 
 #ifdef MEASURE_BVH
 					++aabbIntersections;
 #endif
@@ -85,6 +88,7 @@ namespace lh2core
 						// Not sure why it is faster when repeating the test
 						continue;
 					}
+#endif
 
 					assert(mesh.vcount % 3 == 0); // No weird meshes
 					const int triMax = cluster.GetPrimitiveCount() + cluster.GetFirstPrimitive();
@@ -174,6 +178,7 @@ namespace lh2core
 			const BVH4Node& node = pool[parentNodeId];			
 
 			const int test = (int)TestAABB4Intersection(r, node.bounds, invDir) & activeMask;
+			//const int test = (int)TestAABB4IntersectionBounds(r, node.bounds, invDir, -kEps, tD) & activeMask;
 
 #ifdef MEASURE_BVH
 			++nodeIntersections;
@@ -199,6 +204,7 @@ namespace lh2core
 
 				if (cluster.IsLeaf())
 				{
+#ifdef BVH4_USE_BOUNDS_TEST
 #ifdef MEASURE_BVH
 					++aabbIntersections;
 #endif
@@ -208,6 +214,7 @@ namespace lh2core
 						// Not sure why it is faster when repeating the test
 						continue;
 					}
+#endif
 
 					assert(mesh.vcount % 3 == 0); // No weird meshes
 					const int triMax = cluster.GetPrimitiveCount() + cluster.GetFirstPrimitive();
@@ -288,4 +295,8 @@ namespace lh2core
 
 		return false;
 	}
+#ifdef BVH4_USE_BOUNDS_TEST 
+#undef BVH4_USE_BOUNDS_TEST
+#endif
+
 }
