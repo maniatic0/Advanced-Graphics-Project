@@ -170,9 +170,10 @@ inline uchar TestAABB4Intersection(const Ray& r, const aabb boxes[4], float3 inv
 		tmax = _mm256_min_ps(tmax, _mm256_shuffle_ps(tmax, tmax, _MM_SHUFFLE(1, 0, 2, 2)));
 
 		__m256 comp = _mm256_cmp_ps(tmin, tmax, _CMP_LE_OQ);
+		const int mask = _mm256_movemask_ps(comp);
 
-		bool r0 = isnan(_mm_cvtss_f32(_mm256_extractf128_ps(comp, 0))); // Low
-		bool r1 = isnan(_mm_cvtss_f32(_mm256_extractf128_ps(comp, 1))); // Hi
+		const bool r0 = (mask & 0x7) == 0x7;
+		const bool r1 = (mask & 0x70) == 0x70;
 
 		// assert(r0 == TestAABBIntersection(r, boxes[2 * i + 0], invDir));
 		// assert(r1 == TestAABBIntersection(r, boxes[2 * i + 1], invDir));
@@ -206,14 +207,10 @@ inline uchar TestAABB4IntersectionBounds(const Ray& r, const aabb boxes[4], floa
 		// Compare
 		__m256 comp = _mm256_cmp_ps(tmin, tmax, _CMP_LE_OQ);
 
-		// Horizontal And
-		__m256 and1 = _mm256_shuffle_ps(comp, comp, _MM_SHUFFLE(0, 0, 2, 2));
-		__m256 and2 = _mm256_and_ps(comp, and1);
-		__m256 and3 = _mm256_shuffle_ps(and2, and2, _MM_SHUFFLE(0, 0, 0, 1));
-		__m256 and4 = _mm256_and_ps(and2, and3);
+		const int mask = _mm256_movemask_ps(comp);
 
-		bool r0 = isnan(_mm_cvtss_f32(_mm256_extractf128_ps(and4, 0))); // Low
-		bool r1 = isnan(_mm_cvtss_f32(_mm256_extractf128_ps(and4, 1))); // Hi
+		const bool r0 = (mask & 0x7) == 0x7;
+		const bool r1 = (mask & 0x70) == 0x70;
 
 		// assert(r0 == TestAABBIntersectionBounds(r, boxes[2 * i + 0], invDir, minT, maxT));
 		// assert(r1 == TestAABBIntersectionBounds(r, boxes[2 * i + 1], invDir, minT, maxT));
