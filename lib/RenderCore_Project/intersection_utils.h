@@ -139,12 +139,7 @@ inline bool TestAABBIntersectionBounds(const Ray& r, const aabb& box, float3 inv
 
 	__m128 comp = _mm_cmple_ps(tmin, tmax);
 
-	__m128 and1 = _mm_shuffle_ps(comp, comp, _MM_SHUFFLE(0, 0, 2, 2));
-	__m128 and2 = _mm_and_ps(comp, and1);
-	__m128 and3 = _mm_shuffle_ps(and2, and2, _MM_SHUFFLE(0, 0, 0, 1));
-	__m128 and4 = _mm_and_ps(and2, and3);
-	bool result = isnan(_mm_cvtss_f32(and4));
-
+	bool result = (_mm_movemask_ps(comp) & 0x7) == 0x7;
 	return result;
 }
 
