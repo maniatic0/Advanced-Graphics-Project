@@ -128,7 +128,6 @@ inline bool TestAABBIntersectionBounds(const Ray& r, const aabb& box, float3 inv
 {
 	// From https://medium.com/@bromanz/another-view-on-the-classic-ray-aabb-intersection-algorithm-for-bvh-traversal-41125138b525
 	// With Modifications from https://psgraphics.blogspot.com/2016/02/new-simple-ray-box-test-from-andrew.html
-#if 1
 	__m128 ori = _mm_setr_ps(r.origin.x, r.origin.y, r.origin.z, 0);
 	__m128 dirInv = _mm_setr_ps(invDir.x, invDir.y, invDir.z, 0);
 
@@ -147,17 +146,6 @@ inline bool TestAABBIntersectionBounds(const Ray& r, const aabb& box, float3 inv
 	bool result = isnan(_mm_cvtss_f32(and4));
 
 	return result;
-#else
-	float3 ori = make_float3(r.origin);
-
-	float3 t0 = (box.bmin3 - ori) * invDir;
-	float3 t1 = (box.bmax3 - ori) * invDir;
-
-	float3 tmin = fminf(t0, t1);
-	float3 tmax = fmaxf(t0, t1);
-
-	return max(tmin.x, max(tmin.y, tmin.z)) <= min(tmax.x, min(tmax.y, tmax.z));
-#endif
 }
 
 inline uchar TestAABB4Intersection(const Ray& r, const aabb boxes[4], float3 invDir)
