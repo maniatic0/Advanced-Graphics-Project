@@ -142,7 +142,7 @@ inline bool TestAABBIntersectionBounds(const Ray& r, const aabb& box, float3 inv
 	__m128 and1 = _mm_shuffle_ps(comp, comp, _MM_SHUFFLE(0, 0, 2, 2));
 	__m128 and2 = _mm_and_ps(comp, and1);
 	__m128 and3 = _mm_shuffle_ps(and2, and2, _MM_SHUFFLE(0, 0, 0, 1));
-	__m128 and4 = _mm_max_ps(and2, and3);
+	__m128 and4 = _mm_and_ps(and2, and3);
 	bool result = isnan(_mm_cvtss_f32(and4));
 
 	return result;
@@ -185,6 +185,47 @@ inline uchar TestAABB4Intersection(const Ray& r, const aabb boxes[4], float3 inv
 		res |= (r0 << (2 * i + 0)) | (r1 << (2 * i + 1));
 	}
 	
+	return res;
+}
+
+inline uchar TestAABB4IntersectionBounds(const Ray& r, const aabb boxes[4], float3 invDir, float minT, float maxT)
+{
+	// Modified From https://medium.com/@bromanz/another-view-on-the-classic-ray-aabb-intersection-algorithm-for-bvh-traversal-41125138b525
+
+	uchar res = 0;
+
+	__m256 ori = _mm256_setr_ps(r.origin.x, r.origin.y, r.origin.z, 0, r.origin.x, r.origin.y, r.origin.z, 0);
+	__m256 dirInv = _mm256_setr_ps(invDir.x, invDir.y, invDir.z, 0, invDir.x, invDir.y, invDir.z, 0);
+
+	__m256 maxT_ = _mm256_set1_ps(maxT);
+	__m256 minT_ = _mm256_set1_ps(minT);
+
+	for (int i = 0; i < 2; i++)
+	{
+		__m256 t0 = _mm256_mul_ps(_mm256_sub_ps(_mm256_setr_m128(boxes[2 * i + 0].bmin4, boxes[2 * i + 1].bmin4), ori), dirInv);
+		__m256 t1 = _mm256_mul_ps(_mm256_sub_ps(_mm256_setr_m128(boxes[2 * i + 0].bmax4, boxes[2 * i + 1].bmax4), ori), dirInv);
+
+		__m256 tmin = _mm256_max_ps(_mm256_min_ps(t0, t1), minT_);
+		__m256 tmax = _mm256_min_ps(_mm256_max_ps(t0, t1), maxT_);
+
+		// Compare
+		__m256 comp = _mm256_cmp_ps(tmin, tmax, _CMP_LE_OQ);
+
+		// Horizontal And
+		__m256 and1 = _mm256_shuffle_ps(comp, comp, _MM_SHUFFLE(0, 0, 2, 2));
+		__m256 and2 = _mm256_and_ps(comp, and1);
+		__m256 and3 = _mm256_shuffle_ps(and2, and2, _MM_SHUFFLE(0, 0, 0, 1));
+		__m256 and4 = _mm256_and_ps(and2, and3);
+
+		bool r0 = isnan(_mm_cvtss_f32(_mm256_extractf128_ps(and4, 0))); // Low
+		bool r1 = isnan(_mm_cvtss_f32(_mm256_extractf128_ps(and4, 1))); // Hi
+
+		// assert(r0 == TestAABBIntersection(r, boxes[2 * i + 0], invDir));
+		// assert(r1 == TestAABBIntersection(r, boxes[2 * i + 1], invDir));
+
+		res |= (r0 << (2 * i + 0)) | (r1 << (2 * i + 1));
+	}
+
 	return res;
 }
 
