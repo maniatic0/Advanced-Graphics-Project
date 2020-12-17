@@ -76,6 +76,16 @@ namespace lh2core
 
 				if (cluster.IsLeaf())
 				{
+#ifdef MEASURE_BVH
+					++aabbIntersections;
+#endif
+					if (!TestAABBIntersectionBounds(r, node.bounds[childId], invDir, -kEps, hitInfo.triIntercept.t))
+					{
+						// No intersection
+						// Not sure why it is faster when repeating the test
+						continue;
+					}
+
 					assert(mesh.vcount % 3 == 0); // No weird meshes
 					const int triMax = cluster.GetPrimitiveCount() + cluster.GetFirstPrimitive();
 					tempHitInfo.Reset();
@@ -113,7 +123,7 @@ namespace lh2core
 		}
 
 #ifdef MEASURE_BVH
-		printf("BVH4 Intersect nodes=%d/%d aabbIntersects=%d (4 at the same time = %d) triangleIntersects=%d/%d\n", nodeIntersections, poolPtr, aabbIntersections, aabbIntersections / 4, triangleIntersections, mesh.vcount / 3);
+		printf("BVH4 Intersect nodes=%d/%d aabbIntersects=%d (4 at the same time + 1 extra for leaves) triangleIntersects=%d/%d\n", nodeIntersections, poolPtr, aabbIntersections, triangleIntersections, mesh.vcount / 3);
 #endif
 		return hit;
 	}
@@ -189,6 +199,16 @@ namespace lh2core
 
 				if (cluster.IsLeaf())
 				{
+#ifdef MEASURE_BVH
+					++aabbIntersections;
+#endif
+					if (!TestAABBIntersectionBounds(r, node.bounds[childId], invDir, -kEps, tD))
+					{
+						// No intersection
+						// Not sure why it is faster when repeating the test
+						continue;
+					}
+
 					assert(mesh.vcount % 3 == 0); // No weird meshes
 					const int triMax = cluster.GetPrimitiveCount() + cluster.GetFirstPrimitive();
 
@@ -206,7 +226,7 @@ namespace lh2core
 							if (!sameMesh)
 							{
 #ifdef MEASURE_BVH
-								printf("BVH4 Depth nodes=%d/%d aabbIntersects=%d (4 at the same time = %d) triangleIntersects=%d/%d\n", nodeIntersections, poolPtr, aabbIntersections, aabbIntersections / 4, triangleIntersections, mesh.vcount / 3);
+								printf("BVH4 Depth nodes=%d/%d aabbIntersects=%d (4 at the same time + 1 for leaves) triangleIntersects=%d/%d\n", nodeIntersections, poolPtr, aabbIntersections, triangleIntersections, mesh.vcount / 3);
 #endif
 								return true;
 							}
@@ -225,7 +245,7 @@ namespace lh2core
 		}
 
 #ifdef MEASURE_BVH
-		printf("BVH4 Depth nodes=%d/%d aabbIntersects=%d (4 at the same time = %d) triangleIntersects=%d/%d\n", nodeIntersections, poolPtr, aabbIntersections, aabbIntersections / 4, triangleIntersections, mesh.vcount / 3);
+		printf("BVH4 Depth nodes=%d/%d aabbIntersects=%d (4 at the same time + 1 for leaves) triangleIntersects=%d/%d\n", nodeIntersections, poolPtr, aabbIntersections, triangleIntersections, mesh.vcount / 3);
 #endif
 		return false;
 	}
