@@ -124,6 +124,42 @@ inline bool TestAABBIntersection(const Ray &r, const aabb& box, float3 invDir)
 #endif
 }
 
+inline bool TestAABBIntersectionBounds(const Ray& r, const aabb& box, float3 invDir, float minT, float maxT)
+{
+	// From https://medium.com/@bromanz/another-view-on-the-classic-ray-aabb-intersection-algorithm-for-bvh-traversal-41125138b525
+	// With Modifications from https://psgraphics.blogspot.com/2016/02/new-simple-ray-box-test-from-andrew.html
+#if 1
+	__m128 ori = _mm_setr_ps(r.origin.x, r.origin.y, r.origin.z, 0);
+	__m128 dirInv = _mm_setr_ps(invDir.x, invDir.y, invDir.z, 0);
+
+	__m128 t0 = _mm_mul_ps(_mm_sub_ps(box.bmin4, ori), dirInv);
+	__m128 t1 = _mm_mul_ps(_mm_sub_ps(box.bmax4, ori), dirInv);
+
+	__m128 tmin = _mm_max_ps(_mm_min_ps(t0, t1), _mm_set_ps1(minT));
+	__m128 tmax = _mm_min_ps(_mm_max_ps(t0, t1), _mm_set_ps1(maxT));
+
+	__m128 comp = _mm_cmple_ps(tmin, tmax);
+
+	__m128 and1 = _mm_shuffle_ps(comp, comp, _MM_SHUFFLE(0, 0, 2, 2));
+	__m128 and2 = _mm_and_ps(comp, and1);
+	__m128 and3 = _mm_shuffle_ps(and2, and2, _MM_SHUFFLE(0, 0, 0, 1));
+	__m128 and4 = _mm_max_ps(and2, and3);
+	bool result = isnan(_mm_cvtss_f32(and4));
+
+	return result;
+#else
+	float3 ori = make_float3(r.origin);
+
+	float3 t0 = (box.bmin3 - ori) * invDir;
+	float3 t1 = (box.bmax3 - ori) * invDir;
+
+	float3 tmin = fminf(t0, t1);
+	float3 tmax = fmaxf(t0, t1);
+
+	return max(tmin.x, max(tmin.y, tmin.z)) <= min(tmax.x, min(tmax.y, tmax.z));
+#endif
+}
+
 inline uchar TestAABB4Intersection(const Ray& r, const aabb boxes[4], float3 invDir)
 {
 	// Modified From https://medium.com/@bromanz/another-view-on-the-classic-ray-aabb-intersection-algorithm-for-bvh-traversal-41125138b525

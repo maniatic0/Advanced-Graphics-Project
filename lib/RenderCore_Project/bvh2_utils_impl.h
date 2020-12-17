@@ -50,6 +50,16 @@ namespace lh2core
 
 			if (node.IsLeaf())
 			{
+#ifdef MEASURE_BVH
+				++aabbIntersections;
+#endif
+				if (!TestAABBIntersectionBounds(r, node.bounds, invDir, -kEps, hitInfo.triIntercept.t))
+				{
+					// No intersection
+					// Not sure why it is faster when repeating the test
+					continue;
+				}
+
 				assert(mesh.vcount % 3 == 0); // No weird meshes
 				const int triMax = node.count + node.FirstPrimitive();
 				tempHitInfo.Reset();
