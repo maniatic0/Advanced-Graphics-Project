@@ -395,7 +395,7 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 				}
 
 
-
+				// Spawn Ray
 				dir = normalize(view.p1 + u * (view.p2 - view.p1) + v * (view.p3 - view.p1) - view.pos);
 
 				ray.SetOrigin(view.pos);
