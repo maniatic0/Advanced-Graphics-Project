@@ -79,7 +79,7 @@ namespace lh2core
 		friend class BVH4;
 	};
 
-	struct ALIGN(64) BVH4Node // Note: aligned to cache line
+	struct ALIGN(256) BVH4Node // Note: aligned to cache line
 	{
 	private:
 		aabb bounds[4];
