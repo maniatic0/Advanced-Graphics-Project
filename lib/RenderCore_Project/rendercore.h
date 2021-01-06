@@ -82,8 +82,6 @@ private:
 	/// </summary>
 	float exposure;
 
-	uint yScanline;
-
 	template <bool backCulling>
 	float4 Trace(Ray &r, const float3 &intensity, int matId = -1, int currentDepth = 0) const;
 
@@ -100,6 +98,9 @@ private:
 	/// </summary>
 	float indirectDirectMix;
 
+	/// <summary>
+	/// BVH Type used
+	/// </summary>
 	BVH_Type bvhType;
 
 	/// <summary>
@@ -196,16 +197,6 @@ private:
 	/// Chromatic Aberration Y Focal Point Offset
 	/// </summary>
 	float3 aberrationVOffset;
-
-	/// <summary>
-	/// Is the first scan loop completed?
-	/// </summary>
-	bool firstScanLoopComplete;
-
-	/// <summary>
-	/// If it is time to update the whole screen
-	/// </summary>
-	bool updateCompleteScreen;
 
 public:
 	CoreStats coreStats;							// rendering statistics
