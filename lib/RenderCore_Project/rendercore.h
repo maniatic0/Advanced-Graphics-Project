@@ -76,6 +76,9 @@ private:
 
 	float elapsedTime = 0;
 
+	thread_pool pool = 4;
+	vector<future<void>> futures;
+
 
 	/// <summary>
 	/// Scene exposure. See https://blog.demofox.org/2020/06/06/casual-shadertoy-path-tracing-2-image-improvement-and-glossy-reflections/

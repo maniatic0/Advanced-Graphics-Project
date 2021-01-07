@@ -299,18 +299,28 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 			xmax = min((tx + 1) * kPacketYTileSize, screen->width);
 
 			// Tile Processing
-			for (uint y = ymin; y < ymax; y++)
-			{
-				base = y * screen->width;
-				for (uint x = xmin; x < xmax; x++)
+			futures.push_back(pool.execute(		
+				[width = screen->width, &fscreen = fscreen](uint ymin, uint ymax, uint xmin, uint xmax) -> void
 				{
-					base2 = x + base;
-					fscreen[base2] = make_float4(0);
-				}
-			}
-
+					uint base, base2;
+					for (uint y = ymin; y < ymax; y++)
+					{
+						base = y * width;
+						for (uint x = xmin; x < xmax; x++)
+						{
+							base2 = x + base;
+							fscreen[base2] = make_float4(0);
+						}
+					}
+				}, ymin, ymax, xmin, xmax
+			));
 		}
 	}
+
+	for (auto& fut : futures) {
+		fut.get();
+	}
+	futures.clear();
 
 	// AA
 	for (size_t i = 0; i < aaLevel; i++)
