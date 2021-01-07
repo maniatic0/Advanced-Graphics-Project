@@ -78,8 +78,20 @@ private:
 
 	float elapsedTime = 0;
 
+	/// <summary>
+	/// Thread Pool for Rendering
+	/// </summary>
 	thread_pool pool;
+
+	/// <summary>
+	/// Rendering Futures
+	/// </summary>
 	vector<future<void>> futures;
+
+	/// <summary>
+	/// Render The complete Screen
+	/// </summary>
+	void RenderInternal(Renderable R);
 
 
 	/// <summary>
@@ -137,8 +149,6 @@ private:
 
 	template <bool backCulling>
 	float3 DirectLighting(const float3& p, const float3& N, int instanceId, int meshId, int triID) const;
-
-	void RenderInternal(Renderable R);
 
 	enum class DistortionType : int {
 		None = 0,
