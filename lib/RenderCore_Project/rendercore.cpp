@@ -568,7 +568,6 @@ void RenderCore::RenderInternal(Renderable R)
 	uint ymin, ymax;
 	uint xmin, xmax;
 
-	// Clear screen
 	for (uint ty = 0; ty < packetYTileNumber; ty++)
 	{
 		ymin = ty * kPacketXTileSize;
@@ -609,7 +608,6 @@ void RenderCore::RenderTileInternal(RenderableTile R)
 	uint ymin, ymax;
 	uint xmin, xmax;
 
-	// Clear screen
 	for (uint ty = 0; ty < packetYTileNumber; ty++)
 	{
 		ymin = ty * kPacketXTileSize;
