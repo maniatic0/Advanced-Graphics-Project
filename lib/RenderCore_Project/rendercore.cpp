@@ -290,7 +290,7 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 
 	// Clear screen
 	RenderInternal(
-		[&fscreen = fscreen](uint base2, uint x, uint y) -> void
+		[&fscreen = fscreen](uint base2, uint y, uint x) -> void
 		{
 			fscreen[base2] = make_float4(0);
 		}
@@ -441,7 +441,7 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 			historyMix = historyMix, gammaCorrection = gammaCorrection, useToneMapping = useToneMapping, useVignetting = useVignetting,
 			&fscreen = fscreen, &accumulationBuffer = accumulationBuffer, &kernel = kernel, &screen = screen
 		]
-		(uint base2, uint x, uint y) -> void
+		(uint base2, uint y, uint x) -> void
 		{
 			accumulationBuffer[base2] = lerp(fscreen[base2], accumulationBuffer[base2], historyMix);
 
@@ -482,7 +482,8 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 				useVignetting = useVignetting,
 				&aberrationVOffset = aberrationVOffset, &aberrationUOffset = aberrationUOffset,
 				&aberrationRadialK = aberrationRadialK, 
-				&fscreen = fscreen, &accumulationBuffer = accumulationBuffer, &screen = screen, &kernel = kernel](uint base2, uint x, uint y) -> void
+				&fscreen = fscreen, &accumulationBuffer = accumulationBuffer, &screen = screen, &kernel = kernel]
+			(uint base2, uint y, uint x) -> void
 			{
 				const float pv = ((float)y + 0.5f) * invHeight;
 				const float pu = ((float)x + 0.5f) * invWidth;
@@ -588,10 +589,39 @@ void RenderCore::RenderInternal(Renderable R)
 					for (uint x = xmin; x < xmax; x++)
 					{
 						base2 = x + base;
-						R(base2, x, y);
+						R(base2, y, x);
 					}
 				}
 			}, ymin, ymax, xmin, xmax
+			));
+		}
+	}
+
+	for (auto& fut : futures) {
+		fut.get();
+	}
+
+	futures.clear();
+}
+
+void RenderCore::RenderTileInternal(RenderableTile R)
+{
+	uint ymin, ymax;
+	uint xmin, xmax;
+
+	// Clear screen
+	for (uint ty = 0; ty < packetYTileNumber; ty++)
+	{
+		ymin = ty * kPacketXTileSize;
+		ymax = min((ty + 1) * kPacketYTileSize, screen->height);
+		for (uint tx = 0; tx < packetXTileNumber; tx++)
+		{
+			xmin = tx * kPacketXTileSize;
+			xmax = min((tx + 1) * kPacketYTileSize, screen->width);
+
+			// Tile Processing
+			futures.push_back(pool.execute(
+				R, screen->width, ymin, ymax, xmin, xmax
 			));
 		}
 	}

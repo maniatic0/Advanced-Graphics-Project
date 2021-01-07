@@ -48,7 +48,15 @@ public:
 	inline void SetInstance( const int instanceIdx, const int modelIdx, const mat4& transform ) override {}
 	inline void FinalizeInstances() override {}
 
+	/// <summary>
+	/// Renderable Function (base2, y, x)
+	/// </summary>
 	using Renderable = std::function<void(uint, uint, uint)>;
+
+	/// <summary>
+	/// Renderable Tile Function (width, ymin, ymax, xmin, xmax)
+	/// </summary>
+	using RenderableTile = std::function<void(uint, uint, uint, uint, uint)>;
 
 	// internal methods
 private:
@@ -92,6 +100,11 @@ private:
 	/// Render The complete Screen
 	/// </summary>
 	void RenderInternal(Renderable R);
+
+	/// <summary>
+	/// Render The complete Screen using Tiles
+	/// </summary>
+	void RenderTileInternal(RenderableTile R);
 
 
 	/// <summary>
