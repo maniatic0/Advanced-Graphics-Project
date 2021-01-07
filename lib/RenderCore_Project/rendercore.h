@@ -198,8 +198,28 @@ private:
 	/// </summary>
 	float3 aberrationVOffset;
 
+	/// <summary>
+	/// Number of Tiles on the X axis
+	/// </summary>
+	uint packetXTileNumber = 0;
+
+	/// <summary>
+	/// Number of Tiles on the Y axis
+	/// </summary>
+	uint packetYTileNumber = 0;
+
 public:
 	CoreStats coreStats;							// rendering statistics
+
+	/// <summary>
+	/// Packet Tile size on X
+	/// </summary>
+	constexpr static uint kPacketXTileSize = 8;
+
+	/// <summary>
+	/// Packet Tile size on Y
+	/// </summary>
+	constexpr static uint kPacketYTileSize = 8;
 };
 
 } // namespace lh2core

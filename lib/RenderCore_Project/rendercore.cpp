@@ -186,6 +186,10 @@ void RenderCore::SetTarget(GLTexture* target, const uint)
 	// dynamically allocate kernel
 	kernel = new float[static_cast<size_t>(target->width) * static_cast<size_t>(target->height)];
 	CreateGaussianKernel(target->width, target->height);
+
+	// Tile Config
+	packetXTileNumber = (target->width + kPacketXTileSize - 1) / kPacketXTileSize;
+	packetYTileNumber = (target->height + kPacketYTileSize - 1) / kPacketYTileSize;
 }
 
 //  +-----------------------------------------------------------------------------+
@@ -260,9 +264,10 @@ void RenderCore::SetTextures(const CoreTexDesc* tex, const int textureCount)
 void RenderCore::Render(const ViewPyramid& view, const Convergence converge, bool async)
 {
 	// render
-	//screen->Clear(); // TODO: un comment when we have achieved useful times
 	Timer timer;
 	timer.reset();
+
+	screen->Clear();
 
 	Ray ray;
 	float3 intensity = make_float3(1);
@@ -278,15 +283,30 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 	uint aaOffset = 0;
 
 	uint base, base2;
+	uint ymin, ymax;
+	uint xmin, xmax;
 
 	// Clear screen
-	for (uint y = 0; y < screen->height; y++)
+	for (uint ty = 0; ty < packetYTileNumber; ty++)
 	{
-		base = y * screen->width;
-		for (uint x = 0; x < screen->width; x++)
+		ymin = ty * kPacketXTileSize;
+		ymax = min((ty + 1) * kPacketYTileSize, screen->height);
+		for (uint tx = 0; tx < packetXTileNumber; tx++)
 		{
-			base2 = x + base;
-			fscreen[base2] = make_float4(0);
+			xmin = tx * kPacketXTileSize;
+			xmax = min((tx + 1) * kPacketYTileSize, screen->width);
+
+			// Tile Processing
+			for (uint y = ymin; y < ymax; y++)
+			{
+				base = y * screen->width;
+				for (uint x = xmin; x < xmax; x++)
+				{
+					base2 = x + base;
+					fscreen[base2] = make_float4(0);
+				}
+			}
+
 		}
 	}
 
