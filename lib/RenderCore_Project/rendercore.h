@@ -78,7 +78,7 @@ private:
 
 	float elapsedTime = 0;
 
-	thread_pool pool = 4;
+	thread_pool pool;
 	vector<future<void>> futures;
 
 
