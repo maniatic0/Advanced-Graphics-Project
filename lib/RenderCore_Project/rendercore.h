@@ -48,6 +48,8 @@ public:
 	inline void SetInstance( const int instanceIdx, const int modelIdx, const mat4& transform ) override {}
 	inline void FinalizeInstances() override {}
 
+	using Renderable = std::function<void(uint, uint, uint)>;
+
 	// internal methods
 private:
 
@@ -136,6 +138,8 @@ private:
 	template <bool backCulling>
 	float3 DirectLighting(const float3& p, const float3& N, int instanceId, int meshId, int triID) const;
 
+	void RenderInternal(Renderable R);
+
 	enum class DistortionType : int {
 		None = 0,
 		Barrel,
@@ -144,6 +148,9 @@ private:
 		Count
 	};
 
+	/// <summary>
+	/// Current Distortion Type
+	/// </summary>
 	DistortionType distortionType;
 
 	/// <summary>

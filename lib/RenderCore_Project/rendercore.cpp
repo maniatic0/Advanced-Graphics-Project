@@ -289,38 +289,12 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 	uint xmin, xmax;
 
 	// Clear screen
-	for (uint ty = 0; ty < packetYTileNumber; ty++)
-	{
-		ymin = ty * kPacketXTileSize;
-		ymax = min((ty + 1) * kPacketYTileSize, screen->height);
-		for (uint tx = 0; tx < packetXTileNumber; tx++)
+	RenderInternal(
+		[&fscreen = fscreen](uint base2, uint x, uint y) -> void
 		{
-			xmin = tx * kPacketXTileSize;
-			xmax = min((tx + 1) * kPacketYTileSize, screen->width);
-
-			// Tile Processing
-			futures.push_back(pool.execute(		
-				[width = screen->width, &fscreen = fscreen](uint ymin, uint ymax, uint xmin, uint xmax) -> void
-				{
-					uint base, base2;
-					for (uint y = ymin; y < ymax; y++)
-					{
-						base = y * width;
-						for (uint x = xmin; x < xmax; x++)
-						{
-							base2 = x + base;
-							fscreen[base2] = make_float4(0);
-						}
-					}
-				}, ymin, ymax, xmin, xmax
-			));
+			fscreen[base2] = make_float4(0);
 		}
-	}
-
-	for (auto& fut : futures) {
-		fut.get();
-	}
-	futures.clear();
+	);
 
 	// AA
 	for (size_t i = 0; i < aaLevel; i++)
@@ -461,139 +435,119 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 		}
 	}
 
-	// HDR to 255 colors
-	float4 tempColor;
-
 	// History mix and render if possible
-	for (uint ty = 0; ty < packetYTileNumber; ty++)
-	{
-		ymin = ty * kPacketXTileSize;
-		ymax = min((ty + 1) * kPacketYTileSize, screen->height);
-		for (uint tx = 0; tx < packetXTileNumber; tx++)
+	RenderInternal(
+		[
+			historyMix = historyMix, gammaCorrection = gammaCorrection, useToneMapping = useToneMapping, useVignetting = useVignetting,
+			&fscreen = fscreen, &accumulationBuffer = accumulationBuffer, &kernel = kernel, &screen = screen
+		]
+		(uint base2, uint x, uint y) -> void
 		{
-			xmin = tx * kPacketXTileSize;
-			xmax = min((tx + 1) * kPacketYTileSize, screen->width);
+			accumulationBuffer[base2] = lerp(fscreen[base2], accumulationBuffer[base2], historyMix);
 
-			// Tile Rendering
-			for (uint y = ymin; y < ymax; y++)
+			float4 tempColor = accumulationBuffer[base2];
+
+			//if (!useChromaticAberration)
 			{
-				base = y * screen->width;
-				for (uint x = xmin; x < xmax; x++)
+				// We are ready to render to screen if no more to do. In case we have more to do, we just overwrite
+				// Order in part from https://blog.demofox.org/2020/06/06/casual-shadertoy-path-tracing-2-image-improvement-and-glossy-reflections/
+				if (useToneMapping)
 				{
-					base2 = x + base;
-					accumulationBuffer[base2] = lerp(fscreen[base2], accumulationBuffer[base2], historyMix);
-
-					tempColor = accumulationBuffer[base2];
-
-					//if (!useChromaticAberration)
-					{
-						// We are ready to render to screen if no more to do. In case we have more to do, we just overwrite
-						// Order in part from https://blog.demofox.org/2020/06/06/casual-shadertoy-path-tracing-2-image-improvement-and-glossy-reflections/
-						if (useToneMapping)
-						{
-							tempColor = ACESFilm(tempColor);
-							tempColor.w = 1.0f;
-						}
-
-						tempColor.x = pow(tempColor.x, gammaCorrection);
-						tempColor.y = pow(tempColor.y, gammaCorrection);
-						tempColor.z = pow(tempColor.z, gammaCorrection);
-
-						if (useVignetting)
-						{
-							tempColor *= kernel[base2];
-						}
-
-						screen->Plot(x, y, float4ToUint(LinearToSRGB(tempColor)));
-					}
+					tempColor = ACESFilm(tempColor);
+					tempColor.w = 1.0f;
 				}
+
+				tempColor.x = pow(tempColor.x, gammaCorrection);
+				tempColor.y = pow(tempColor.y, gammaCorrection);
+				tempColor.z = pow(tempColor.z, gammaCorrection);
+
+				if (useVignetting)
+				{
+					tempColor *= kernel[base2];
+				}
+
+				screen->Plot(x, y, float4ToUint(LinearToSRGB(tempColor)));
 			}
 		}
-	}
+	);
 
 	if (useChromaticAberration)
 	{
 		// Chromatic aberration modified from https://www.shadertoy.com/view/wl2SDt
-		for (uint ty = 0; ty < packetYTileNumber; ty++)
-		{
-			ymin = ty * kPacketXTileSize;
-			ymax = min((ty + 1) * kPacketYTileSize, screen->height);
-			for (uint tx = 0; tx < packetXTileNumber; tx++)
+		RenderInternal(
+			[
+				invHeight = invHeight, invWidth = invWidth, aaLevel = aaLevel,
+				chromaticAberrationScale = chromaticAberrationScale, invAaLevel = invAaLevel,
+				exposure = exposure, useToneMapping = useToneMapping, gammaCorrection = gammaCorrection,
+				useVignetting = useVignetting,
+				&aberrationVOffset = aberrationVOffset, &aberrationUOffset = aberrationUOffset,
+				&aberrationRadialK = aberrationRadialK, 
+				&fscreen = fscreen, &accumulationBuffer = accumulationBuffer, &screen = screen, &kernel = kernel](uint base2, uint x, uint y) -> void
 			{
-				xmin = tx * kPacketXTileSize;
-				xmax = min((tx + 1) * kPacketYTileSize, screen->width);
+				const float pv = ((float)y + 0.5f) * invHeight;
+				const float pu = ((float)x + 0.5f) * invWidth;
 
-				// Tile Rendering
-				for (uint y = ymin; y < ymax; y++)
+				float pixelOffsetU = 0.5f;
+				float pixelOffsetV = 0.5f;
+				uint aaOffset = 0;
+
+				// AA Aberration
+				float4 tempColor = make_float4(0);
+				for (int i = 0; i < aaLevel; i++)
 				{
-					base = y * screen->width;
-					const float pv = ((float)y + 0.5f) * invHeight;
+					// AA offsets
+					aaOffset = i * 2;
+					pixelOffsetU = pixelOffSets[aaOffset + 0];
+					pixelOffsetV = pixelOffSets[aaOffset + 1];
 
-					for (uint x = xmin; x < xmax; x++)
-					{
-						base2 = x + base;
+					const float u = pu + pixelOffsetU * invWidth;
+					const float v = pv + pixelOffsetV * invHeight;
 
-						const float pu = ((float)x + 0.5f) * invWidth;
+					const float cvR = v + aberrationVOffset.x - 0.5f;
+					const float cvG = v + aberrationVOffset.y - 0.5f;
+					const float cvB = v + aberrationVOffset.z - 0.5f;
 
-						// AA Aberration
-						tempColor = make_float4(0);
-						for (int i = 0; i < aaLevel; i++)
-						{
-							// AA offsets
-							aaOffset = i * 2;
-							pixelOffsetU = pixelOffSets[aaOffset + 0];
-							pixelOffsetV = pixelOffSets[aaOffset + 1];
+					const float cuR = u + aberrationUOffset.x - 0.5f;
+					const float cuG = u + aberrationUOffset.y - 0.5f;
+					const float cuB = u + aberrationUOffset.z - 0.5f;
 
-							const float u = pu + pixelOffsetU * invWidth;
-							const float v = pv + pixelOffsetV * invHeight;
+					const float uR = u + aberrationRadialK.x * cuR * chromaticAberrationScale;
+					const float uG = u + aberrationRadialK.y * cuG * chromaticAberrationScale;
+					const float uB = u + aberrationRadialK.z * cuB * chromaticAberrationScale;
 
-							const float cvR = v + aberrationVOffset.x - 0.5f;
-							const float cvG = v + aberrationVOffset.y - 0.5f;
-							const float cvB = v + aberrationVOffset.z - 0.5f;
+					const float vR = v + aberrationRadialK.x * cvR * chromaticAberrationScale;
+					const float vG = v + aberrationRadialK.y * cvG * chromaticAberrationScale;
+					const float vB = v + aberrationRadialK.z * cvB * chromaticAberrationScale;
 
-							const float cuR = u + aberrationUOffset.x - 0.5f;
-							const float cuG = u + aberrationUOffset.y - 0.5f;
-							const float cuB = u + aberrationUOffset.z - 0.5f;
+					tempColor.w += textureFetch<true>(accumulationBuffer, screen->width, screen->height, u, v).w;
+					tempColor.x += textureFetch<true>(accumulationBuffer, screen->width, screen->height, uR, vR).x;
+					tempColor.y += textureFetch<true>(accumulationBuffer, screen->width, screen->height, uG, vG).y;
+					tempColor.z += textureFetch<true>(accumulationBuffer, screen->width, screen->height, uB, vB).z;
 
-							const float uR = u + aberrationRadialK.x * cuR * chromaticAberrationScale;
-							const float uG = u + aberrationRadialK.y * cuG * chromaticAberrationScale;
-							const float uB = u + aberrationRadialK.z * cuB * chromaticAberrationScale;
-
-							const float vR = v + aberrationRadialK.x * cvR * chromaticAberrationScale;
-							const float vG = v + aberrationRadialK.y * cvG * chromaticAberrationScale;
-							const float vB = v + aberrationRadialK.z * cvB * chromaticAberrationScale;
-
-							tempColor.w += textureFetch<true>(accumulationBuffer, screen->width, screen->height, u, v).w;
-							tempColor.x += textureFetch<true>(accumulationBuffer, screen->width, screen->height, uR, vR).x;
-							tempColor.y += textureFetch<true>(accumulationBuffer, screen->width, screen->height, uG, vG).y;
-							tempColor.z += textureFetch<true>(accumulationBuffer, screen->width, screen->height, uB, vB).z;
-
-						}
-
-						tempColor *= invAaLevel;
-
-						// Order in part from https://blog.demofox.org/2020/06/06/casual-shadertoy-path-tracing-2-image-improvement-and-glossy-reflections/
-						tempColor *= exposure;
-						if (useToneMapping)
-						{
-							tempColor = ACESFilm(tempColor);
-							tempColor.w = 1.0f;
-						}
-
-						tempColor.x = pow(tempColor.x, gammaCorrection);
-						tempColor.y = pow(tempColor.y, gammaCorrection);
-						tempColor.z = pow(tempColor.z, gammaCorrection);
-
-						if (useVignetting)
-						{
-							tempColor *= kernel[base2];
-						}
-
-						screen->Plot(x, y, float4ToUint(LinearToSRGB(tempColor)));
-					}
 				}
+
+				tempColor *= invAaLevel;
+
+				// Order in part from https://blog.demofox.org/2020/06/06/casual-shadertoy-path-tracing-2-image-improvement-and-glossy-reflections/
+				tempColor *= exposure;
+				if (useToneMapping)
+				{
+					tempColor = ACESFilm(tempColor);
+					tempColor.w = 1.0f;
+				}
+
+				tempColor.x = pow(tempColor.x, gammaCorrection);
+				tempColor.y = pow(tempColor.y, gammaCorrection);
+				tempColor.z = pow(tempColor.z, gammaCorrection);
+
+				if (useVignetting)
+				{
+					tempColor *= kernel[base2];
+				}
+
+				screen->Plot(x, y, float4ToUint(LinearToSRGB(tempColor)));
 			}
-		}
+		);
 	}
 
 	elapsedTime += timer.elapsed();
@@ -606,6 +560,47 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 	// copy pixel buffer to OpenGL render target texture
 	glBindTexture(GL_TEXTURE_2D, targetTextureID);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, screen->width, screen->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, screen->pixels);
+}
+
+void RenderCore::RenderInternal(Renderable R)
+{
+	uint ymin, ymax;
+	uint xmin, xmax;
+
+	// Clear screen
+	for (uint ty = 0; ty < packetYTileNumber; ty++)
+	{
+		ymin = ty * kPacketXTileSize;
+		ymax = min((ty + 1) * kPacketYTileSize, screen->height);
+		for (uint tx = 0; tx < packetXTileNumber; tx++)
+		{
+			xmin = tx * kPacketXTileSize;
+			xmax = min((tx + 1) * kPacketYTileSize, screen->width);
+
+			// Tile Processing
+			futures.push_back(pool.execute(
+				[width = screen->width, &R](uint ymin, uint ymax, uint xmin, uint xmax) -> void
+			{
+				uint base, base2;
+				for (uint y = ymin; y < ymax; y++)
+				{
+					base = y * width;
+					for (uint x = xmin; x < xmax; x++)
+					{
+						base2 = x + base;
+						R(base2, x, y);
+					}
+				}
+			}, ymin, ymax, xmin, xmax
+			));
+		}
+	}
+
+	for (auto& fut : futures) {
+		fut.get();
+	}
+
+	futures.clear();
 }
 
 //  +-----------------------------------------------------------------------------+
