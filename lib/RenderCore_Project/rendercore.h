@@ -174,6 +174,11 @@ private:
 	float gamma;
 
 	/// <summary>
+	/// Gamma Correction
+	/// </summary>
+	float gammaCorrection;
+
+	/// <summary>
 	/// Chromatic Aberration Scaling Constant
 	/// </summary>
 	float chromaticAberrationScale;

@@ -33,6 +33,7 @@ void RenderCore::Init()
 	distortionType = DistortionType::None;
 
 	gamma = 2.2f;
+	gammaCorrection = 1.0f / gamma;
 
 	useChromaticAberration = false;
 	aberrationUOffset = make_float3(0);
@@ -66,6 +67,7 @@ void RenderCore::Setting(const char* name, float value)
 	if (!strcmp(name, "gamma"))
 	{
 		gamma = value;
+		gammaCorrection = 1.0f / gamma;
 	}
 	else if (!strcmp(name, "exposure"))
 	{
@@ -319,119 +321,131 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 		pixelOffsetV = pixelOffSets[aaOffset + 1];
 
 		// Fill Screen
-		for (uint y = 0; y < screen->height; y++)
+		for (uint ty = 0; ty < packetYTileNumber; ty++)
 		{
-			base = y * screen->width;
-			for (uint x = 0; x < screen->width; x++)
+			ymin = ty * kPacketXTileSize;
+			ymax = min((ty + 1) * kPacketYTileSize, screen->height);
+			for (uint tx = 0; tx < packetXTileNumber; tx++)
 			{
-				base2 = x + base;
+				xmin = tx * kPacketXTileSize;
+				xmax = min((tx + 1) * kPacketYTileSize, screen->width);
 
-				u = 0;
-				v = 0;
-
-				// Distortion Effects
-				switch (distortionType)
+				// Tile Rendering
+				for(uint y = ymin; y < ymax; y++)
 				{
-				case DistortionType::None:
-				{
-					v = ((float)y + 0.5f + pixelOffsetU) * invHeight;
-					u = ((float)x + 0.5f + pixelOffsetV) * invWidth;
-				}
-				break;
-				case DistortionType::Barrel:
-				{
-
-					v = ((float)y + 0.5f + pixelOffsetU) * invHeight;
-					u = ((float)x + 0.5f + pixelOffsetV) * invWidth;
-
-					// From https://www.geeks3d.com/20140213/glsl-shader-library-fish-eye-and-dome-and-barrel-distortion-post-processing-filters/2/
-					float us = 2.0f * u - 1.0f;
-					float vs = 2.0f * v - 1.0f;
-					const float d = us * us + vs * vs;
-					if (d < 1.0)
+					base = y * screen->width;
+					for (uint x = xmin; x < xmax; x++)
 					{
-						// Only apply near the center (0.5, 0.5)
-						const float theta = atan2f(vs, us);
-						const float radius = pow(sqrtf(d), view.distortion);
-						us = radius * cosf(theta);
-						vs = radius * sinf(theta);
-						u = 0.5f * (us + 1.0f);
-						v = 0.5f * (vs + 1.0f);
+						base2 = x + base;
+
+						u = 0;
+						v = 0;
+
+						// Distortion Effects
+						switch (distortionType)
+						{
+						case DistortionType::None:
+						{
+							v = ((float)y + 0.5f + pixelOffsetU) * invHeight;
+							u = ((float)x + 0.5f + pixelOffsetV) * invWidth;
+						}
+						break;
+						case DistortionType::Barrel:
+						{
+
+							v = ((float)y + 0.5f + pixelOffsetU) * invHeight;
+							u = ((float)x + 0.5f + pixelOffsetV) * invWidth;
+
+							// From https://www.geeks3d.com/20140213/glsl-shader-library-fish-eye-and-dome-and-barrel-distortion-post-processing-filters/2/
+							float us = 2.0f * u - 1.0f;
+							float vs = 2.0f * v - 1.0f;
+							const float d = us * us + vs * vs;
+							if (d < 1.0)
+							{
+								// Only apply near the center (0.5, 0.5)
+								const float theta = atan2f(vs, us);
+								const float radius = pow(sqrtf(d), view.distortion);
+								us = radius * cosf(theta);
+								vs = radius * sinf(theta);
+								u = 0.5f * (us + 1.0f);
+								v = 0.5f * (vs + 1.0f);
+							}
+						}
+						break;
+						case DistortionType::FishEye:
+						{
+							v = ((float)y + 0.5f + pixelOffsetU) * invHeight;
+							u = ((float)x + 0.5f + pixelOffsetV) * invWidth;
+
+							// From https://www.geeks3d.com/20140213/glsl-shader-library-fish-eye-and-dome-and-barrel-distortion-post-processing-filters/
+							const float aperture = 180.0f * view.aperture;
+							const float apertureHalf = 0.5f * aperture * (PI / 180.0f);
+							const float maxFactor = sin(apertureHalf);
+
+
+							float us = 2.0f * u - 1.0f;
+							float vs = 2.0f * v - 1.0f;
+							const float d = sqrtf(us * us + vs * vs);
+							if (d < 1.0f)
+							{
+								const float d2 = d * maxFactor;
+								const float z = sqrtf(1.0f - d * d);
+								const float r = atan2(d2, z) / PI;
+								const float phi = atan2(vs, us);
+
+								u = r * cosf(phi) + 0.5f;
+								v = r * sinf(phi) + 0.5f;
+							}
+						}
+						break;
+						case DistortionType::BarrelSpecial:
+						{
+							if (view.distortion == 0)
+							{
+								v = ((float)y + 0.5f + pixelOffsetU) * invHeight;
+								u = ((float)x + 0.5f + pixelOffsetV) * invWidth;
+							}
+							else
+							{
+								// Barrel Distortion centered at 0.5, 0.5
+								const float tx = (x + pixelOffsetU) * invWidth - 0.5f;
+								const float ty = (y + pixelOffsetV) * invHeight - 0.5f;
+								const float rr = tx * tx + ty * ty;
+								const float rq = sqrtf(rr) * (1.0f + view.distortion * rr + view.distortion * rr * rr);
+								const float theta = atan2f(tx, ty);
+								const float bx = (sinf(theta) * rq + 0.5f) * scrWidth;
+								const float by = (cosf(theta) * rq + 0.5f) * scrHeight;
+								u = (bx + 0.5f) * invWidth;
+								v = (by + 0.5f) * invHeight;
+							}
+						}
+						break;
+						case DistortionType::Count:
+						default:
+							assert(false); // What are you doing here
+							break;
+						}
+
+
+						// Spawn Ray
+						dir = normalize(view.p1 + u * (view.p2 - view.p1) + v * (view.p3 - view.p1) - view.pos);
+
+						ray.SetOrigin(view.pos);
+						ray.SetDirection(dir);
+
+						switch (renderType)
+						{
+						case RenderCore::RenderType::Whitted:
+							fscreen[base2] += Trace<true>(ray, intensity, -1, 0) * invAaLevel;
+							break;
+						case RenderCore::RenderType::PathTracer:
+							fscreen[base2] += Sample<true>(ray, intensity, -1, 0) * invAaLevel;
+							break;
+						default:
+							assert(false); // What are you doing here
+							break;
+						}
 					}
-				}
-				break;
-				case DistortionType::FishEye:
-				{
-					v = ((float)y + 0.5f + pixelOffsetU) * invHeight;
-					u = ((float)x + 0.5f + pixelOffsetV) * invWidth;
-
-					// From https://www.geeks3d.com/20140213/glsl-shader-library-fish-eye-and-dome-and-barrel-distortion-post-processing-filters/
-					const float aperture = 180.0f * view.aperture;
-					const float apertureHalf = 0.5f * aperture * (PI / 180.0f);
-					const float maxFactor = sin(apertureHalf);
-
-
-					float us = 2.0f * u - 1.0f;
-					float vs = 2.0f * v - 1.0f;
-					const float d = sqrtf(us * us + vs * vs);
-					if (d < 1.0f)
-					{
-						const float d2 = d * maxFactor;
-						const float z = sqrtf(1.0f - d * d);
-						const float r = atan2(d2, z) / PI;
-						const float phi = atan2(vs, us);
-
-						u = r * cosf(phi) + 0.5f;
-						v = r * sinf(phi) + 0.5f;
-					}
-				}
-				break;
-				case DistortionType::BarrelSpecial:
-				{
-					if (view.distortion == 0)
-					{
-						v = ((float)y + 0.5f + pixelOffsetU) * invHeight;
-						u = ((float)x + 0.5f + pixelOffsetV) * invWidth;
-					}
-					else
-					{
-						// Barrel Distortion centered at 0.5, 0.5
-						const float tx = (x + pixelOffsetU) * invWidth - 0.5f;
-						const float ty = (y + pixelOffsetV) * invHeight - 0.5f;
-						const float rr = tx * tx + ty * ty;
-						const float rq = sqrtf(rr) * (1.0f + view.distortion * rr + view.distortion * rr * rr);
-						const float theta = atan2f(tx, ty);
-						const float bx = (sinf(theta) * rq + 0.5f) * scrWidth;
-						const float by = (cosf(theta) * rq + 0.5f) * scrHeight;
-						u = (bx + 0.5f) * invWidth;
-						v = (by + 0.5f) * invHeight;
-					}
-				}
-				break;
-				case DistortionType::Count:
-				default:
-					assert(false); // What are you doing here
-					break;
-				}
-
-
-				// Spawn Ray
-				dir = normalize(view.p1 + u * (view.p2 - view.p1) + v * (view.p3 - view.p1) - view.pos);
-
-				ray.SetOrigin(view.pos);
-				ray.SetDirection(dir);
-
-				switch (renderType)
-				{
-				case RenderCore::RenderType::Whitted:
-					fscreen[base2] += Trace<true>(ray, intensity, -1, 0) * invAaLevel;
-					break;
-				case RenderCore::RenderType::PathTracer:
-					fscreen[base2] += Sample<true>(ray, intensity, -1, 0) * invAaLevel;
-					break;
-				default:
-					assert(false); // What are you doing here
-					break;
 				}
 			}
 		}
@@ -439,39 +453,50 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 
 	// HDR to 255 colors
 	float4 tempColor;
-	const float gammaCorrection = 1.0f / gamma;
 
 	// History mix and render if possible
-	for (uint y = 0; y < screen->height; y++)
+	for (uint ty = 0; ty < packetYTileNumber; ty++)
 	{
-		base = y * screen->width;
-		for (uint x = 0; x < screen->width; x++)
+		ymin = ty * kPacketXTileSize;
+		ymax = min((ty + 1) * kPacketYTileSize, screen->height);
+		for (uint tx = 0; tx < packetXTileNumber; tx++)
 		{
-			base2 = x + base;
-			accumulationBuffer[base2] = lerp(fscreen[base2], accumulationBuffer[base2], historyMix);
-			
-			tempColor = accumulationBuffer[base2];
+			xmin = tx * kPacketXTileSize;
+			xmax = min((tx + 1) * kPacketYTileSize, screen->width);
 
-			//if (!useChromaticAberration)
+			// Tile Rendering
+			for (uint y = ymin; y < ymax; y++)
 			{
-				// We are ready to render to screen if no more to do. In case we have more to do, we just overwrite
-				// Order in part from https://blog.demofox.org/2020/06/06/casual-shadertoy-path-tracing-2-image-improvement-and-glossy-reflections/
-				if (useToneMapping)
+				base = y * screen->width;
+				for (uint x = xmin; x < xmax; x++)
 				{
-					tempColor = ACESFilm(tempColor);
-					tempColor.w = 1.0f;
+					base2 = x + base;
+					accumulationBuffer[base2] = lerp(fscreen[base2], accumulationBuffer[base2], historyMix);
+
+					tempColor = accumulationBuffer[base2];
+
+					//if (!useChromaticAberration)
+					{
+						// We are ready to render to screen if no more to do. In case we have more to do, we just overwrite
+						// Order in part from https://blog.demofox.org/2020/06/06/casual-shadertoy-path-tracing-2-image-improvement-and-glossy-reflections/
+						if (useToneMapping)
+						{
+							tempColor = ACESFilm(tempColor);
+							tempColor.w = 1.0f;
+						}
+
+						tempColor.x = pow(tempColor.x, gammaCorrection);
+						tempColor.y = pow(tempColor.y, gammaCorrection);
+						tempColor.z = pow(tempColor.z, gammaCorrection);
+
+						if (useVignetting)
+						{
+							tempColor *= kernel[base2];
+						}
+
+						screen->Plot(x, y, float4ToUint(LinearToSRGB(tempColor)));
+					}
 				}
-
-				tempColor.x = pow(tempColor.x, gammaCorrection);
-				tempColor.y = pow(tempColor.y, gammaCorrection);
-				tempColor.z = pow(tempColor.z, gammaCorrection);
-
-				if (useVignetting)
-				{
-					tempColor *= kernel[base2];
-				}
-
-				screen->Plot(x, y, float4ToUint(LinearToSRGB(tempColor)));
 			}
 		}
 	}
@@ -479,72 +504,84 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 	if (useChromaticAberration)
 	{
 		// Chromatic aberration modified from https://www.shadertoy.com/view/wl2SDt
-		for (uint y = 0; y < screen->height; y++)
+		for (uint ty = 0; ty < packetYTileNumber; ty++)
 		{
-			base = y * screen->width;
-			const float pv = ((float)y + 0.5f) * invHeight;
-
-			for (uint x = 0; x < screen->width; x++)
+			ymin = ty * kPacketXTileSize;
+			ymax = min((ty + 1) * kPacketYTileSize, screen->height);
+			for (uint tx = 0; tx < packetXTileNumber; tx++)
 			{
-				base2 = x + base;
+				xmin = tx * kPacketXTileSize;
+				xmax = min((tx + 1) * kPacketYTileSize, screen->width);
 
-				const float pu = ((float)x + 0.5f) * invWidth;
-
-				// AA Aberration
-				tempColor = make_float4(0);
-				for (int i = 0; i < aaLevel; i++)
+				// Tile Rendering
+				for (uint y = ymin; y < ymax; y++)
 				{
-					// AA offsets
-					aaOffset = i * 2;
-					pixelOffsetU = pixelOffSets[aaOffset + 0];
-					pixelOffsetV = pixelOffSets[aaOffset + 1];
+					base = y * screen->width;
+					const float pv = ((float)y + 0.5f) * invHeight;
 
-					const float u = pu + pixelOffsetU * invWidth;
-					const float v = pv + pixelOffsetV * invHeight;
+					for (uint x = xmin; x < xmax; x++)
+					{
+						base2 = x + base;
 
-					const float cvR = v + aberrationVOffset.x - 0.5f;
-					const float cvG = v + aberrationVOffset.y - 0.5f;
-					const float cvB = v + aberrationVOffset.z - 0.5f;
+						const float pu = ((float)x + 0.5f) * invWidth;
 
-					const float cuR = u + aberrationUOffset.x - 0.5f;
-					const float cuG = u + aberrationUOffset.y - 0.5f;
-					const float cuB = u + aberrationUOffset.z - 0.5f;
+						// AA Aberration
+						tempColor = make_float4(0);
+						for (int i = 0; i < aaLevel; i++)
+						{
+							// AA offsets
+							aaOffset = i * 2;
+							pixelOffsetU = pixelOffSets[aaOffset + 0];
+							pixelOffsetV = pixelOffSets[aaOffset + 1];
 
-					const float uR = u + aberrationRadialK.x * cuR * chromaticAberrationScale;
-					const float uG = u + aberrationRadialK.y * cuG * chromaticAberrationScale;
-					const float uB = u + aberrationRadialK.z * cuB * chromaticAberrationScale;
+							const float u = pu + pixelOffsetU * invWidth;
+							const float v = pv + pixelOffsetV * invHeight;
 
-					const float vR = v + aberrationRadialK.x * cvR * chromaticAberrationScale;
-					const float vG = v + aberrationRadialK.y * cvG * chromaticAberrationScale;
-					const float vB = v + aberrationRadialK.z * cvB * chromaticAberrationScale;
+							const float cvR = v + aberrationVOffset.x - 0.5f;
+							const float cvG = v + aberrationVOffset.y - 0.5f;
+							const float cvB = v + aberrationVOffset.z - 0.5f;
 
-					tempColor.w += textureFetch<true>(accumulationBuffer, screen->width, screen->height, u, v).w;
-					tempColor.x += textureFetch<true>(accumulationBuffer, screen->width, screen->height, uR, vR).x;
-					tempColor.y += textureFetch<true>(accumulationBuffer, screen->width, screen->height, uG, vG).y;
-					tempColor.z += textureFetch<true>(accumulationBuffer, screen->width, screen->height, uB, vB).z;
+							const float cuR = u + aberrationUOffset.x - 0.5f;
+							const float cuG = u + aberrationUOffset.y - 0.5f;
+							const float cuB = u + aberrationUOffset.z - 0.5f;
 
+							const float uR = u + aberrationRadialK.x * cuR * chromaticAberrationScale;
+							const float uG = u + aberrationRadialK.y * cuG * chromaticAberrationScale;
+							const float uB = u + aberrationRadialK.z * cuB * chromaticAberrationScale;
+
+							const float vR = v + aberrationRadialK.x * cvR * chromaticAberrationScale;
+							const float vG = v + aberrationRadialK.y * cvG * chromaticAberrationScale;
+							const float vB = v + aberrationRadialK.z * cvB * chromaticAberrationScale;
+
+							tempColor.w += textureFetch<true>(accumulationBuffer, screen->width, screen->height, u, v).w;
+							tempColor.x += textureFetch<true>(accumulationBuffer, screen->width, screen->height, uR, vR).x;
+							tempColor.y += textureFetch<true>(accumulationBuffer, screen->width, screen->height, uG, vG).y;
+							tempColor.z += textureFetch<true>(accumulationBuffer, screen->width, screen->height, uB, vB).z;
+
+						}
+
+						tempColor *= invAaLevel;
+
+						// Order in part from https://blog.demofox.org/2020/06/06/casual-shadertoy-path-tracing-2-image-improvement-and-glossy-reflections/
+						tempColor *= exposure;
+						if (useToneMapping)
+						{
+							tempColor = ACESFilm(tempColor);
+							tempColor.w = 1.0f;
+						}
+
+						tempColor.x = pow(tempColor.x, gammaCorrection);
+						tempColor.y = pow(tempColor.y, gammaCorrection);
+						tempColor.z = pow(tempColor.z, gammaCorrection);
+
+						if (useVignetting)
+						{
+							tempColor *= kernel[base2];
+						}
+
+						screen->Plot(x, y, float4ToUint(LinearToSRGB(tempColor)));
+					}
 				}
-
-				tempColor *= invAaLevel;
-
-				// Order in part from https://blog.demofox.org/2020/06/06/casual-shadertoy-path-tracing-2-image-improvement-and-glossy-reflections/
-				tempColor *= exposure;
-				if (useToneMapping)
-				{
-					tempColor = ACESFilm(tempColor);
-					tempColor.w = 1.0f;
-				}
-
-				tempColor.x = pow(tempColor.x, gammaCorrection);
-				tempColor.y = pow(tempColor.y, gammaCorrection);
-				tempColor.z = pow(tempColor.z, gammaCorrection);
-
-				if (useVignetting)
-				{
-					tempColor *= kernel[base2];
-				}
-
-				screen->Plot(x, y, float4ToUint(LinearToSRGB(tempColor)));
 			}
 		}
 	}
