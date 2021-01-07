@@ -6,6 +6,7 @@
     <ClCompile Include="general_utils.cpp" />
     <ClCompile Include="bvh4_utils.cpp" />
     <ClCompile Include="bvh2_utils.cpp" />
+    <ClCompile Include="threadpool.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="rendercore.h" />
@@ -20,5 +21,6 @@
     <ClInclude Include="bvh2_utils_impl.h" />
     <ClInclude Include="bvh2_utils.h" />
     <ClInclude Include="bvh_utils.h" />
+    <ClInclude Include="threadpool.h" />
   </ItemGroup>
 </Project>

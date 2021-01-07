@@ -164,6 +164,7 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">core_settings.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release Profile|x64'">core_settings.h</PrecompiledHeaderFile>
     </ClCompile>
+    <ClCompile Include="threadpool.cpp" />
     <ClInclude Include="bvh4_utils.h" />
     <ClInclude Include="bvh4_utils_impl.h" />
     <ClInclude Include="bvh2_utils.h" />
@@ -181,6 +182,7 @@
     </ClCompile>
     <ClInclude Include="rendercore.impl.h" />
     <ClInclude Include="scene_utils.h" />
+    <ClInclude Include="threadpool.h" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="core_settings.h" />
