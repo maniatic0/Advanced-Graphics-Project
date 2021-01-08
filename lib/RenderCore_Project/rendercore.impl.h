@@ -3,7 +3,7 @@
 namespace lh2core
 {
 	template <bool backCulling>
-	float3 RenderCore::Illuminate(const float3& p, const float3& N, int instanceId, int meshId, int triId) const
+	float3 RenderCore::Illuminate(Ray &lightRay, const float3& p, const float3& N, int instanceId, int meshId, int triId) const
 	{
 		float3 intensity = make_float3(0);
 		for (int i = 0; i < scene.directionalLights.size(); i++)
@@ -68,7 +68,6 @@ namespace lh2core
 			}
 
 			// Occlusion Tests
-			// Note this works only single threaded
 			lightRay.SetOrigin(light.position);
 			lightRay.SetDirection(lightDir * -1.0f);
 			if (TestDepthScene<backCulling>(lightRay, instanceId, meshId, triId, dist))
@@ -149,7 +148,7 @@ namespace lh2core
 	}
 
 	template <bool backCulling>
-	float3 RenderCore::DirectLighting(const float3& p, const float3& N, int instanceId, int meshId, int triID) const
+	float3 RenderCore::DirectLighting(Ray &lightRay, const float3& p, const float3& N, int instanceId, int meshId, int triID) const
 	{
 		float3 position;
 		float3 intensity = make_float3(0);
@@ -220,7 +219,7 @@ namespace lh2core
 	}
 
 	template <bool backCulling>
-	float4 RenderCore::Trace(Ray& r, const float3& intensity, int matId, int currentDepth) const
+	float4 RenderCore::Trace(Ray &r, RayMeshInterceptInfo &hitInfo, Ray& lightRay, const float3& intensity, int matId, int currentDepth) const
 	{
 		if (intensity.x + intensity.y + intensity.z < kEps)
 		{
@@ -293,7 +292,7 @@ namespace lh2core
 				r.SetOrigin(I);
 				r.SetDirection(reflect(D, N));
 
-				color += make_float3(Trace<backCulling>(r, intensityNew, matId, currentDepth + 1)) * reflection;
+				color += make_float3(Trace<backCulling>(r, hitInfo, lightRay, intensityNew, matId, currentDepth + 1)) * reflection;
 			}
 
 			if (refraction > kEps)
@@ -307,13 +306,13 @@ namespace lh2core
 					if (matId != -1 && triangle.material == matId)
 					{
 						// From glass to air
-						color += make_float3(Trace<true>(r, intensityNew, -1, currentDepth + 1)) * refraction;
+						color += make_float3(Trace<true>(r, hitInfo, lightRay, intensityNew, -1, currentDepth + 1)) * refraction;
 					}
 					else
 					{
 						// Air to glass
 						assert(matId == -1);
-						color += make_float3(Trace<false>(r, intensityNew, triangle.material, currentDepth + 1)) * refraction;
+						color += make_float3(Trace<false>(r, hitInfo, lightRay, intensityNew, triangle.material, currentDepth + 1)) * refraction;
 					}
 
 				}
@@ -329,7 +328,7 @@ namespace lh2core
 
 			if (diffuse > kEps)
 			{
-				color += diffuse * Illuminate<backCulling>(I, N, -1, hitInfo.meshId, hitInfo.triId);
+				color += diffuse * Illuminate<backCulling>(lightRay, I, N, -1, hitInfo.meshId, hitInfo.triId);
 			}
 
 			if (reflection > kEps)
@@ -337,7 +336,7 @@ namespace lh2core
 				r.SetOrigin(I);
 				r.SetDirection(reflect(D, N));
 
-				color += make_float3(Trace<backCulling>(r, intensityNew, matId, currentDepth + 1)) * reflection;
+				color += make_float3(Trace<backCulling>(r, hitInfo, lightRay, intensityNew, matId, currentDepth + 1)) * reflection;
 			}
 
 			if (refraction > kEps)
@@ -351,13 +350,13 @@ namespace lh2core
 					if (matId != -1 && triangle.material == matId)
 					{
 						// From glass to air
-						color += make_float3(Trace<true>(r, intensityNew, -1, currentDepth + 1)) * refraction;
+						color += make_float3(Trace<true>(r, hitInfo, lightRay, intensityNew, -1, currentDepth + 1)) * refraction;
 					}
 					else
 					{
 						// Air to glass
 						assert(matId == -1);
-						color += make_float3(Trace<false>(r, intensityNew, triangle.material, currentDepth + 1)) * refraction;
+						color += make_float3(Trace<false>(r, hitInfo, lightRay, intensityNew, triangle.material, currentDepth + 1)) * refraction;
 					}
 				}
 			}
@@ -369,7 +368,7 @@ namespace lh2core
 	}
 
 	template <bool backCulling>
-	float4 RenderCore::Sample(Ray& r, const float3& intensity, int matId, int currentDepth) const
+	float4 RenderCore::Sample(Ray &r, RayMeshInterceptInfo &hitInfo, Ray& lightRay, const float3& intensity, int matId, int currentDepth) const
 	{
 		if (intensity.x + intensity.y + intensity.z < kEps)
 		{
@@ -467,13 +466,13 @@ namespace lh2core
 					if (matId != -1 && triangle.material == matId)
 					{
 						// From glass to air
-						return make_float4(intensityNew, 1.0f) * LoadMaterialFloat4(material.color, uv) * Sample<true>(r, intensityNew, -1, currentDepth + 1);
+						return make_float4(intensityNew, 1.0f) * LoadMaterialFloat4(material.color, uv) * Sample<true>(r, hitInfo, lightRay, intensityNew, -1, currentDepth + 1);
 					}
 					else
 					{
 						// Air to glass
 						assert(matId == -1);
-						return make_float4(intensityNew, 1.0f) * LoadMaterialFloat4(material.color, uv) * Sample<false>(r, intensityNew, triangle.material, currentDepth + 1);
+						return make_float4(intensityNew, 1.0f) * LoadMaterialFloat4(material.color, uv) * Sample<false>(r, hitInfo, lightRay, intensityNew, triangle.material, currentDepth + 1);
 					}
 				}
 				else
@@ -485,7 +484,7 @@ namespace lh2core
 						// No roughness
 						r.SetOrigin(I);
 						r.SetDirection(reflect(D, N));
-						return make_float4(intensityNew, 1.0f) * LoadMaterialFloat4(material.color, uv) * Sample<backCulling>(r, intensityNew, matId, currentDepth + 1);
+						return make_float4(intensityNew, 1.0f) * LoadMaterialFloat4(material.color, uv) * Sample<backCulling>(r, hitInfo, lightRay, intensityNew, matId, currentDepth + 1);
 					}
 					else
 					{
@@ -493,7 +492,7 @@ namespace lh2core
 						const float3 reflected = reflect(D, N);
 						const float3 diffuse = DiffuseReflection(N, triangle);
 						r.SetDirection(normalize(lerp(reflected, diffuse, roughness * roughness))); // Recommended by https://blog.demofox.org/2020/06/06/casual-shadertoy-path-tracing-2-image-improvement-and-glossy-reflections/
-						return make_float4(intensityNew, 1.0f) * LoadMaterialFloat4(material.color, uv) * Sample<backCulling>(r, intensityNew, matId, currentDepth + 1);
+						return make_float4(intensityNew, 1.0f) * LoadMaterialFloat4(material.color, uv) * Sample<backCulling>(r, hitInfo, lightRay, intensityNew, matId, currentDepth + 1);
 					}
 				}
 			}
@@ -507,7 +506,7 @@ namespace lh2core
 					// No roughness
 					r.SetOrigin(I);
 					r.SetDirection(reflect(D, N));
-					return make_float4(intensityNew, 1.0f) * LoadMaterialFloat4(material.color, uv) * Sample<backCulling>(r, intensityNew, matId, currentDepth + 1);
+					return make_float4(intensityNew, 1.0f) * LoadMaterialFloat4(material.color, uv) * Sample<backCulling>(r, hitInfo, lightRay, intensityNew, matId, currentDepth + 1);
 				}
 				else
 				{
@@ -515,7 +514,7 @@ namespace lh2core
 					const float3 reflected = reflect(D, N);
 					const float3 diffuse = DiffuseReflection(N, triangle);
 					r.SetDirection(normalize(lerp(reflected, diffuse, roughness * roughness))); // Recommended by https://blog.demofox.org/2020/06/06/casual-shadertoy-path-tracing-2-image-improvement-and-glossy-reflections/
-					return make_float4(intensityNew, 1.0f) * LoadMaterialFloat4(material.color, uv) * Sample<backCulling>(r, intensityNew, matId, currentDepth + 1);
+					return make_float4(intensityNew, 1.0f) * LoadMaterialFloat4(material.color, uv) * Sample<backCulling>(r, hitInfo, lightRay, intensityNew, matId, currentDepth + 1);
 				}
 			}
 			break;
@@ -535,7 +534,7 @@ namespace lh2core
 				// No roughness
 				r.SetOrigin(I);
 				r.SetDirection(reflect(D, N));
-				return make_float4(intensityNew, 1.0f) * LoadMaterialFloat4(material.color, uv) * Sample<backCulling>(r, intensityNew, matId, currentDepth + 1);
+				return make_float4(intensityNew, 1.0f) * LoadMaterialFloat4(material.color, uv) * Sample<backCulling>(r, hitInfo, lightRay, intensityNew, matId, currentDepth + 1);
 			}
 			else
 			{
@@ -543,7 +542,7 @@ namespace lh2core
 				const float3 reflected = reflect(D, N);
 				const float3 diffuse = DiffuseReflection(N, triangle);
 				r.SetDirection(normalize(lerp(reflected, diffuse, roughness * roughness))); // Recommended by https://blog.demofox.org/2020/06/06/casual-shadertoy-path-tracing-2-image-improvement-and-glossy-reflections/
-				return make_float4(intensityNew, 1.0f) * LoadMaterialFloat4(material.color, uv) * Sample<backCulling>(r, intensityNew, matId, currentDepth + 1);
+				return make_float4(intensityNew, 1.0f) * LoadMaterialFloat4(material.color, uv) * Sample<backCulling>(r, hitInfo, lightRay, intensityNew, matId, currentDepth + 1);
 			}
 		}
 		break;
@@ -555,7 +554,7 @@ namespace lh2core
 			r.SetOrigin(I);
 			r.SetDirection(R);
 
-			const float3 directLight = (1.0f - indirectDirectMix) > kEps ? DirectLighting<backCulling>(I, N, -1, hitInfo.meshId, hitInfo.triId) * INVPI : make_float3(0);
+			const float3 directLight = (1.0f - indirectDirectMix) > kEps ? DirectLighting<backCulling>(lightRay, I, N, -1, hitInfo.meshId, hitInfo.triId) * INVPI : make_float3(0);
 
 			if (cosR < kEps)
 			{
@@ -563,7 +562,7 @@ namespace lh2core
 				return make_float4(intensityNew * directLight * (1.0f - indirectDirectMix), 1.0f)  * LoadMaterialFloat4(material.color, uv);
 			}
 
-			const float4 indirectLight = indirectDirectMix > kEps ? 2.0f * cosR * Sample<backCulling>(r, intensityNew, matId, currentDepth + 1) : make_float4(4); // We omit PI from indirect because it is cancelled
+			const float4 indirectLight = indirectDirectMix > kEps ? 2.0f * cosR * Sample<backCulling>(r, hitInfo, lightRay, intensityNew, matId, currentDepth + 1) : make_float4(4); // We omit PI from indirect because it is cancelled
 
 			// Direct and Indirect Lighting
 			return
@@ -634,7 +633,7 @@ namespace lh2core
 				r.SetOrigin(I);
 				r.SetDirection(R);
 
-				const float3 directLight = (1.0f - indirectDirectMix) > kEps ? DirectLighting<backCulling>(I, N, -1, hitInfo.meshId, hitInfo.triId) * INVPI : make_float3(0);
+				const float3 directLight = (1.0f - indirectDirectMix) > kEps ? DirectLighting<backCulling>(lightRay, I, N, -1, hitInfo.meshId, hitInfo.triId) * INVPI : make_float3(0);
 
 				if (cosR < kEps)
 				{
@@ -642,7 +641,7 @@ namespace lh2core
 					return make_float4(intensityNew * directLight * (1.0f - indirectDirectMix), 1.0f) * LoadMaterialFloat4(material.color, uv);
 				}
 
-				const float4 indirectLight = indirectDirectMix > kEps ? 2.0f * cosR * Sample<backCulling>(r, intensityNew, matId, currentDepth + 1) : make_float4(4); // We omit PI from indirect because it is cancelled
+				const float4 indirectLight = indirectDirectMix > kEps ? 2.0f * cosR * Sample<backCulling>(r, hitInfo, lightRay, intensityNew, matId, currentDepth + 1) : make_float4(4); // We omit PI from indirect because it is cancelled
 
 				// Direct and Indirect Lighting
 				return
@@ -663,13 +662,13 @@ namespace lh2core
 					if (matId != -1 && triangle.material == matId)
 					{
 						// From glass to air
-						return make_float4(intensityNew, 1.0f) * LoadMaterialFloat4(material.color, uv) * Sample<true>(r, intensityNew, -1, currentDepth + 1);
+						return make_float4(intensityNew, 1.0f) * LoadMaterialFloat4(material.color, uv) * Sample<true>(r, hitInfo, lightRay, intensityNew, -1, currentDepth + 1);
 					}
 					else
 					{
 						// Air to glass
 						assert(matId == -1);
-						return make_float4(intensityNew, 1.0f) * LoadMaterialFloat4(material.color, uv) * Sample<false>(r, intensityNew, triangle.material, currentDepth + 1);
+						return make_float4(intensityNew, 1.0f) * LoadMaterialFloat4(material.color, uv) * Sample<false>(r, hitInfo, lightRay, intensityNew, triangle.material, currentDepth + 1);
 					}
 				}
 				else
@@ -688,7 +687,7 @@ namespace lh2core
 					// No roughness
 					r.SetOrigin(I);
 					r.SetDirection(reflect(D, N));
-					return make_float4(intensityNew, 1.0f) * LoadMaterialFloat4(material.color, uv) * Sample<backCulling>(r, intensityNew, matId, currentDepth + 1);
+					return make_float4(intensityNew, 1.0f) * LoadMaterialFloat4(material.color, uv) * Sample<backCulling>(r, hitInfo, lightRay, intensityNew, matId, currentDepth + 1);
 				}
 				else
 				{
@@ -696,7 +695,7 @@ namespace lh2core
 					const float3 reflected = reflect(D, N);
 					const float3 diffuse = DiffuseReflection(N, triangle);
 					r.SetDirection(normalize(lerp(reflected, diffuse, roughness * roughness))); // Recommended by https://blog.demofox.org/2020/06/06/casual-shadertoy-path-tracing-2-image-improvement-and-glossy-reflections/
-					return make_float4(intensityNew, 1.0f) * LoadMaterialFloat4(material.color, uv) * Sample<backCulling>(r, intensityNew, matId, currentDepth + 1);
+					return make_float4(intensityNew, 1.0f) * LoadMaterialFloat4(material.color, uv) * Sample<backCulling>(r, hitInfo, lightRay, intensityNew, matId, currentDepth + 1);
 				}
 				
 			}

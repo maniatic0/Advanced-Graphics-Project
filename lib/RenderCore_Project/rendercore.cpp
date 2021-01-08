@@ -271,11 +271,6 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 
 	screen->Clear();
 
-	Ray ray;
-	float3 intensity = make_float3(1);
-	float3 dir;
-
-	float v, u;
 	const float scrWidth = (float)screen->width;
 	const float scrHeight = (float)screen->height;
 	const float invHeight = 1.0f / scrHeight;
@@ -283,10 +278,6 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 	float pixelOffsetU = 0.5f;
 	float pixelOffsetV = 0.5f;
 	uint aaOffset = 0;
-
-	uint base, base2;
-	uint ymin, ymax;
-	uint xmin, xmax;
 
 	// Clear screen
 	RenderInternal(
@@ -305,19 +296,31 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 		pixelOffsetV = pixelOffSets[aaOffset + 1];
 
 		// Fill Screen
-		for (uint ty = 0; ty < packetYTileNumber; ty++)
-		{
-			ymin = ty * kPacketXTileSize;
-			ymax = min((ty + 1) * kPacketYTileSize, screen->height);
-			for (uint tx = 0; tx < packetXTileNumber; tx++)
+		RenderTileInternal(
+			[
+				pixelOffsetU = pixelOffsetU, pixelOffsetV = pixelOffsetV,
+				distortionType = distortionType, invHeight = invHeight, invWidth = invWidth,
+				scrWidth = scrWidth, scrHeight = scrHeight, renderType = renderType, invAaLevel = invAaLevel,
+				&view = view, core = this,
+				&fscreen = fscreen
+			]
+			(uint width, uint ymin, uint ymax, uint xmin, uint xmax) -> void
 			{
-				xmin = tx * kPacketXTileSize;
-				xmax = min((tx + 1) * kPacketYTileSize, screen->width);
+				uint base, base2;
 
 				// Tile Rendering
-				for(uint y = ymin; y < ymax; y++)
+				RayMeshInterceptInfo hit;
+				Ray lightRay;
+
+				Ray ray;
+				float3 intensity = make_float3(1);
+				float3 dir;
+
+				float v, u;
+
+				for (uint y = ymin; y < ymax; y++)
 				{
-					base = y * screen->width;
+					base = y * width;
 					for (uint x = xmin; x < xmax; x++)
 					{
 						base2 = x + base;
@@ -420,10 +423,10 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 						switch (renderType)
 						{
 						case RenderCore::RenderType::Whitted:
-							fscreen[base2] += Trace<true>(ray, intensity, -1, 0) * invAaLevel;
+							fscreen[base2] += core->Trace<true>(ray, hit, lightRay, intensity, -1, 0) * invAaLevel;
 							break;
 						case RenderCore::RenderType::PathTracer:
-							fscreen[base2] += Sample<true>(ray, intensity, -1, 0) * invAaLevel;
+							fscreen[base2] += core->Sample<true>(ray, hit, lightRay, intensity, -1, 0) * invAaLevel;
 							break;
 						default:
 							assert(false); // What are you doing here
@@ -432,7 +435,7 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 					}
 				}
 			}
-		}
+		);
 	}
 
 	// History mix and render if possible
@@ -619,7 +622,11 @@ void RenderCore::RenderTileInternal(RenderableTile R)
 
 			// Tile Processing
 			futures.push_back(pool.execute(
-				R, screen->width, ymin, ymax, xmin, xmax
+				[&R=R]
+				(uint width, uint ymin, uint ymax, uint xmin, uint xmax) -> void 
+				{ 
+					R(width, ymin, ymax, xmin, xmax); 
+				}, screen->width, ymin, ymax, xmin, xmax
 			));
 		}
 	}

@@ -58,6 +58,12 @@ public:
 	/// </summary>
 	using RenderableTile = std::function<void(uint, uint, uint, uint, uint)>;
 
+	template <bool backCulling>
+	float4 Trace(Ray& r, RayMeshInterceptInfo& hitInfo, Ray& lightRay, const float3& intensity, int matId = -1, int currentDepth = 0) const;
+
+	template <bool backCulling>
+	float4 Sample(Ray& r, RayMeshInterceptInfo& hitInfo, Ray& lightRay, const float3& intensity, int matId = -1, int currentDepth = 0) const;
+
 	// internal methods
 private:
 
@@ -106,21 +112,15 @@ private:
 	/// </summary>
 	void RenderTileInternal(RenderableTile R);
 
-
 	/// <summary>
 	/// Scene exposure. See https://blog.demofox.org/2020/06/06/casual-shadertoy-path-tracing-2-image-improvement-and-glossy-reflections/
 	/// </summary>
 	float exposure;
 
-	template <bool backCulling>
-	float4 Trace(Ray &r, const float3 &intensity, int matId = -1, int currentDepth = 0) const;
-
 	void RenderCore::CreateGaussianKernel(uint width, uint height);
 
 	float4 LoadMaterialFloat4(const CoreMaterial::Vec3Value& val, const float2& uv) const;
 
-	template <bool backCulling>
-	float4 Sample(Ray& r, const float3& intensity, int matId = -1, int currentDepth = 0) const;
 	float3 DiffuseReflection(const float3& N, const CoreTri& triangle) const;
 
 	/// <summary>
@@ -132,16 +132,6 @@ private:
 	/// BVH Type used
 	/// </summary>
 	BVH_Type bvhType;
-
-	/// <summary>
-	/// Note this trick only works single threaded. We would need threadlocal stuff
-	/// </summary>
-	mutable RayMeshInterceptInfo hitInfo;
-
-	/// <summary>
-	/// Note this trick only works single threaded. We would need threadlocal stuff
-	/// </summary>
-	mutable Ray lightRay;
 
 	template <bool backCulling>
 	[[nodiscard]]
@@ -158,10 +148,10 @@ private:
 	}
 
 	template <bool backCulling>
-	float3 Illuminate(const float3& p, const float3& N, int instanceId, int meshId, int triID) const;
+	float3 Illuminate(Ray &lightRay, const float3& p, const float3& N, int instanceId, int meshId, int triID) const;
 
 	template <bool backCulling>
-	float3 DirectLighting(const float3& p, const float3& N, int instanceId, int meshId, int triID) const;
+	float3 DirectLighting(Ray &lightRay, const float3& p, const float3& N, int instanceId, int meshId, int triID) const;
 
 	enum class DistortionType : int {
 		None = 0,
