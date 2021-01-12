@@ -100,10 +100,15 @@ public:
 struct Frustum {
 public:
 	/// <summary>
+	/// Number of Planes that form the Frustum
+	/// </summary>
+	static constexpr int kNumberOfPlanes = 4;
+
+	/// <summary>
 	///	Normals that describe the four planes of the frustum
 	/// First 3 elements describe the normal vector, 4th element is b_i
 	/// </summary>
-	float4 normals[4];
+	float4 normals[kNumberOfPlanes];
 };
 
 struct ALIGN(16) RayPacket {
@@ -203,7 +208,7 @@ public:
 	inline Frustum CreateFrustum(uint corners[4]) {
 		Frustum f;
 
-		for (int i = 0; i < 4; ++i)
+		for (int i = 0; i < Frustum::kNumberOfPlanes; ++i)
 		{
 			const float4& di = direction[corners[i]];
 			const float4& di2 = direction[corners[(i + 1) % 4]];
@@ -582,7 +587,7 @@ inline bool TestFrustumAABBIntersection(const Frustum& f, const aabb& box) {
 	bmin.w = 1;
 	bmax.w = 1;
 
-	for (size_t i = 0; i < 4; i++)
+	for (size_t i = 0; i < Frustum::kNumberOfPlanes; i++)
 	{
 		const bool test1 = dot(f.normals[i], bmin) > 0;
 		const bool test2 = dot(f.normals[i], bmax) > 0;
@@ -604,7 +609,7 @@ inline bool TestFrustumAABBTriangle(const Frustum& f, const float4& v0, const fl
 	v12.w = 1;
 	v22.w = 1;
 
-	for (size_t i = 0; i < 4; i++)
+	for (size_t i = 0; i < Frustum::kNumberOfPlanes; i++)
 	{
 		const bool test1 = dot(f.normals[i], v02) > 0;
 		const bool test2 = dot(f.normals[i], v12) > 0;
