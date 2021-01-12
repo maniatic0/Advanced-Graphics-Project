@@ -97,6 +97,15 @@ public:
 	}
 };
 
+struct Frustum {
+public:
+	/// <summary>
+	///	Normals that describe the four planes of the frustum
+	/// First 3 elements describe the normal vector, 4th element is b_i
+	/// </summary>
+	float4 normals[4];
+};
+
 struct ALIGN(16) RayPacket {
 public:
 	/// <summary>
@@ -113,6 +122,8 @@ public:
 	/// Directions
 	/// </summary>
 	float4 direction[kPacketSize];
+
+	uint maxActive;
 
 	/// <summary>
 	/// Copy Ray
@@ -184,6 +195,21 @@ public:
 		{
 			invDir[i] = 1.0f / direction[i];
 		}
+	}
+
+	inline Frustum CreateFrustum(uint corners[4]) {
+		Frustum f;
+
+		for (int i = 0; i < 4; ++i)
+		{
+			float4& di = direction[corners[i]];
+			float4& di2 = direction[corners[(i + 1) % 4]];
+
+			f.normals[i] = cross(di, di2);
+			f.normals[i].w = -dot(f.normals[i], origin[corners[i]]);
+		}
+
+		return f;
 	}
 };
 
@@ -545,6 +571,43 @@ bool depthRayMesh(const Ray& r, const Mesh& m, const int meshId, const int triId
 template <bool backCulling>
 [[nodiscard]]
 bool depthRayScene(const Ray& r, const vector<Mesh>& meshes, const int instId, const int meshId, const int triId, const float tD);
+
+inline bool TestFrustumAABBIntersection(const Frustum& f, const aabb& box) {
+	float4 bmin = make_float4(box.bmin3);
+	float4 bmax = make_float4(box.bmin3);
+
+	bmin.w = 1;
+	bmax.w = 1;
+
+	for (size_t i = 0; i < 4; i++)
+	{
+		float test1 = dot(f.normals[i], bmin);
+		float test2 = dot(f.normals[i], bmax);
+
+		if (test1 > 0 && test2 > 0) return false;
+	}
+	return true;
+}
+
+inline bool TestFrustumAABBTriangle(const Frustum& f, const float4& v0, const float4& v1, const float4& v2) {
+	float4 v02, v12, v22;
+	v02 = v0;
+	v12 = v1;
+	v22 = v2;
+	v02.w = 1;
+	v12.w = 1;
+	v22.w = 1;
+
+	for (size_t i = 0; i < 4; i++)
+	{
+		float test1 = dot(f.normals[i], v02);
+		float test2 = dot(f.normals[i], v12);
+		float test3 = dot(f.normals[i], v22);
+
+		if (test1 > 0 && test2 > 0 && test3 > 0) return false;
+	}
+	return true;
+}
 
 }
 

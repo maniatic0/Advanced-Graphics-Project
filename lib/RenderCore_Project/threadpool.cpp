@@ -1,5 +1,6 @@
 /*
-    Source for threadpool code: https://github.com/fbastos1/thread_pool_cpp17
+    Implementation of a threadpool class that handles threads.
+    Source: https://github.com/fbastos1/thread_pool_cpp17
 */
 
 #include "core_settings.h"

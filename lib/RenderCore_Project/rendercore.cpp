@@ -593,7 +593,15 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 				}
 			}
 
-			core->IntersectScene<true>(packet, hit);
+			uint corners[4] = {
+				(ymin - ymin) * tileWidth + (xmin - xmin),
+				(ymin - ymin) * tileWidth + (xmax - xmin),
+				(ymax - ymin) * tileWidth + (xmax - xmin),
+				(ymax - ymin) * tileWidth + (xmin - xmin)
+			};
+			Frustum f = packet.CreateFrustum(corners);
+			packet.maxActive = totalTileSize;
+			core->IntersectScene<true>(packet, f, hit);
 
 			// Packet stuff
 			switch (renderType)

@@ -102,7 +102,7 @@ namespace lh2core
 		}
 
 		template <bool backCulling>
-		void IntersectRayBVH(const RayPacket& p, RayMeshInterceptInfo hitInfo[RayPacket::kPacketSize]);
+		void IntersectRayBVH(const RayPacket& p, const Frustum& f, RayMeshInterceptInfo hitInfo[RayPacket::kPacketSize]);
 
 		template <bool backCulling>
 		[[nodiscard]]

@@ -133,7 +133,7 @@ namespace lh2core
 	}
 
 	template <bool backCulling>
-	void BVH4::IntersectRayBVH(const RayPacket& p, RayMeshInterceptInfo hit[RayPacket::kPacketSize])
+	void BVH4::IntersectRayBVH(const RayPacket& p, const Frustum& f, RayMeshInterceptInfo hit[RayPacket::kPacketSize])
 	{
 		// TODO: Have proper packet interception
 		Ray r;

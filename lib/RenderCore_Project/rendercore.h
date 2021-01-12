@@ -72,9 +72,9 @@ public:
 	}
 
 	template <bool backCulling>
-	inline void IntersectScene(const RayPacket& p, RayMeshInterceptInfo hit[RayPacket::kPacketSize]) const
+	inline void IntersectScene(const RayPacket& p, const Frustum& f, RayMeshInterceptInfo hit[RayPacket::kPacketSize]) const
 	{
-		return interceptRayScene<backCulling>(p, scene.meshBVH, hit);
+		return interceptRayScene<backCulling>(p, f, scene.meshBVH, hit);
 	}
 
 	template <bool backCulling>

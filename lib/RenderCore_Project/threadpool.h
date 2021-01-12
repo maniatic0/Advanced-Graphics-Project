@@ -1,5 +1,6 @@
 /*
-    Source for threadpool code: https://github.com/fbastos1/thread_pool_cpp17
+    Threadpool class that handles threads.
+    Source: https://github.com/fbastos1/thread_pool_cpp17
 */
 
 #pragma once
