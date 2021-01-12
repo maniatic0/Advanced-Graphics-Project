@@ -106,6 +106,12 @@ namespace lh2core
 			return std::visit([&r, &hitInfo](auto&& ptr) -> bool { assert(ptr != nullptr);  return ptr->IntersectRayBVH<backCulling>(r, hitInfo); }, bvhPtr);
 		}
 
+		template<bool backCulling>
+		inline void IntersectRayBVH(const RayPacket& p, RayMeshInterceptInfo hitInfo[RayPacket::kPacketSize]) const
+		{
+			std::visit([&p, &hitInfo](auto&& ptr) -> void { assert(ptr != nullptr); ptr->IntersectRayBVH<backCulling>(p, hitInfo); }, bvhPtr);
+		}
+
 		template <bool backCulling>
 		[[nodiscard]]
 		inline bool DepthRayBVH(const Ray& r, const int meshId, const int triId, const float tD) const
@@ -134,6 +140,16 @@ namespace lh2core
 			}
 		}
 		return hit;
+	}
+
+	template <bool backCulling>
+	void interceptRayScene(const RayPacket& p, const vector<BVH>& meshes, RayMeshInterceptInfo hitInfo[RayPacket::kPacketSize])
+	{
+		for (size_t i = 0; i < meshes.size(); i++)
+		{
+			const BVH& m = meshes[i];
+			m.IntersectRayBVH<backCulling>(p, hitInfo);
+		}
 	}
 
 	template <bool backCulling>

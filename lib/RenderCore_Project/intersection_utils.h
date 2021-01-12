@@ -97,6 +97,96 @@ public:
 	}
 };
 
+struct ALIGN(16) RayPacket {
+public:
+	/// <summary>
+	/// Number of Rays in Packet
+	/// </summary>
+	static constexpr uint kPacketSize = 64;
+
+	/// <summary>
+	/// Origins
+	/// </summary>
+	float4 origin[kPacketSize];
+
+	/// <summary>
+	/// Directions
+	/// </summary>
+	float4 direction[kPacketSize];
+
+	/// <summary>
+	/// Copy Ray
+	/// </summary>
+	/// <returns>New Copied Ray</returns>
+	inline RayPacket Copy() const
+	{
+		RayPacket temp;
+		memcpy(temp.origin, origin, kPacketSize * sizeof(float4));
+		memcpy(temp.direction, direction, kPacketSize * sizeof(float4));
+		
+		return temp;
+	}
+
+	inline RayPacket()
+	{
+		for (size_t i = 0; i < kPacketSize; i++)
+		{
+			origin[i] = make_float4(0);
+			direction[i] = make_float4(1, 0, 0, 0);
+		}
+	}
+
+	inline void SetOrigin(const float4 &ori, int index)
+	{
+		origin[index] = ori;
+	}
+	inline void SetOrigin(const float3 & ori, int index)
+	{
+		origin[index] = make_float4(ori);
+	}
+
+	inline void SetDirection(const float4 &dir, int index)
+	{
+		assert(almost_equal(1, length(dir))); // "Unormalized Vector"
+		direction[index] = dir;
+	}
+	inline void SetDirection(const float3 &dir, int index)
+	{
+		assert(almost_equal(1, length(dir))); // "Unormalized Vector"
+		direction[index] = make_float4(dir);
+	}
+
+	inline void SetRay(const Ray &r, int index)
+	{
+		SetOrigin(r.origin, index);
+		SetDirection(r.direction, index);
+	}
+
+	inline void GetRay(Ray& r, int index) const
+	{
+		r.origin = origin[index];
+		r.direction = direction[index];
+	}
+
+	/// <summary>
+	/// Evaluate the ray for certain t
+	/// </summary>
+	/// <param name="t">Parameter</param>
+	/// <param name="index">Ray Index</param>
+	/// <returns>Position</returns>
+	inline float4 Evaluate(const float t, int index) const
+	{
+		return origin[index] + (t * direction[index]);
+	}
+
+	inline void InverseDirection(float4 invDir[kPacketSize]) const {
+		for (size_t i = 0; i < kPacketSize; i++)
+		{
+			invDir[i] = 1.0f / direction[i];
+		}
+	}
+};
+
 inline bool TestAABBIntersection(const Ray &r, const aabb& box, float3 invDir)
 {
 	// From https://medium.com/@bromanz/another-view-on-the-classic-ray-aabb-intersection-algorithm-for-bvh-traversal-41125138b525
@@ -333,6 +423,11 @@ public:
 		triIntercept.Reset();
 		meshId = -1;
 		triId = -1;
+	}
+
+	operator bool() const
+	{
+		return meshId != -1;
 	}
 
 	// No copy by accident

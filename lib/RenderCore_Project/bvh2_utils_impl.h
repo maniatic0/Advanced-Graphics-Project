@@ -114,6 +114,18 @@ namespace lh2core
 	}
 
 	template <bool backCulling>
+	void BVH2::IntersectRayBVH(const RayPacket& p, RayMeshInterceptInfo hit[RayPacket::kPacketSize])
+	{
+		// TODO: Have proper packet interception
+		Ray r;
+		for (size_t i = 0; i < RayPacket::kPacketSize; i++)
+		{
+			p.GetRay(r, i);
+			IntersectRayBVH<backCulling>(r, hit[i]);
+		}
+	}
+
+	template <bool backCulling>
 	[[nodiscard]]
 	bool BVH2::DepthRayBVHInternal(const Ray& r, const int meshId, const int triId, const float tD, const int nodeId) const
 	{
@@ -245,6 +257,16 @@ namespace lh2core
 			}
 		}
 		return hit;
+	}
+
+	template <bool backCulling>
+	void interceptRayScene(const RayPacket& p, const vector<BVH2>& meshes, RayMeshInterceptInfo hitInfo[RayPacket::kPacketSize])
+	{
+		for (size_t i = 0; i < meshes.size(); i++)
+		{
+			const BVH2& m = meshes[i];
+			m.interceptRayScene<backCulling>(p, hitInfo);
+		}
 	}
 
 	template <bool backCulling>

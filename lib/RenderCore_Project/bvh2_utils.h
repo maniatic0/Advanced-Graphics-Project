@@ -102,6 +102,9 @@ namespace lh2core
 		}
 
 		template <bool backCulling>
+		void IntersectRayBVH(const RayPacket& p, RayMeshInterceptInfo hitInfo[RayPacket::kPacketSize]);
+
+		template <bool backCulling>
 		[[nodiscard]]
 		inline bool DepthRayBVH(const Ray& r, const int meshId, const int triId, const float tD) const
 		{
@@ -114,6 +117,9 @@ namespace lh2core
 	template <bool backCulling>
 	[[nodiscard]]
 	bool interceptRayScene(const Ray& v, const vector<BVH2>& meshes, RayMeshInterceptInfo& hitInfo);
+
+	template <bool backCulling>
+	void interceptRayScene(const RayPacket& p, const vector<BVH2>& meshes, RayMeshInterceptInfo hitInfo[RayPacket::kPacketSize]);
 
 	template <bool backCulling>
 	[[nodiscard]]

@@ -85,6 +85,10 @@ void RenderCore::Setting(const char* name, float value)
 	{
 		bvhType = (BVH_Type)clamp((int)value, 0, (int)BVH_Type::Count - 1);
 	}
+	else if (!strcmp(name, "tile_packets"))
+	{
+		useTilePackets = (bool)value;
+	}
 	else if (!strcmp(name, "indirect_direct_mix"))
 	{
 		indirectDirectMix = clamp(value, 0.0f, 1.0f);
@@ -287,23 +291,28 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 		}
 	);
 
-	// AA
-	for (size_t i = 0; i < aaLevel; i++)
-	{
-		// AA offsets
-		aaOffset = ((i + offsetIter) % pixelOffsetsSize) * 2;
-		pixelOffsetU = pixelOffSets[aaOffset + 0];
-		pixelOffsetV = pixelOffSets[aaOffset + 1];
 
-		// Fill Screen
-		RenderTileInternal(
-			[
-				pixelOffsetU = pixelOffsetU, pixelOffsetV = pixelOffsetV,
-				distortionType = distortionType, invHeight = invHeight, invWidth = invWidth,
-				scrWidth = scrWidth, scrHeight = scrHeight, renderType = renderType, invAaLevel = invAaLevel,
-				&view = view, core = this,
-				&fscreen = fscreen
-			]
+	if (!useTilePackets)
+	{
+		// No packets for primary rays
+
+		// AA
+		for (size_t i = 0; i < aaLevel; i++)
+		{
+			// AA offsets
+			aaOffset = ((i + offsetIter) % pixelOffsetsSize) * 2;
+			pixelOffsetU = pixelOffSets[aaOffset + 0];
+			pixelOffsetV = pixelOffSets[aaOffset + 1];
+
+			// Fill Screen
+			RenderTileInternal(
+				[
+					pixelOffsetU = pixelOffsetU, pixelOffsetV = pixelOffsetV,
+					distortionType = distortionType, invHeight = invHeight, invWidth = invWidth,
+					scrWidth = scrWidth, scrHeight = scrHeight, renderType = renderType, invAaLevel = invAaLevel,
+					&view = view, core = this,
+					&fscreen = fscreen
+				]
 			(uint width, uint ymin, uint ymax, uint xmin, uint xmax) -> void
 			{
 				uint base, base2;
@@ -435,8 +444,187 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 					}
 				}
 			}
+			);
+		}
+	}
+	else
+	{
+	// AA
+	for (size_t i = 0; i < aaLevel; i++)
+	{
+		// AA offsets
+		aaOffset = ((i + offsetIter) % pixelOffsetsSize) * 2;
+		pixelOffsetU = pixelOffSets[aaOffset + 0];
+		pixelOffsetV = pixelOffSets[aaOffset + 1];
+
+		// Fill Screen
+		RenderTileInternal(
+			[
+				pixelOffsetU = pixelOffsetU, pixelOffsetV = pixelOffsetV,
+				distortionType = distortionType, invHeight = invHeight, invWidth = invWidth,
+				scrWidth = scrWidth, scrHeight = scrHeight, renderType = renderType, invAaLevel = invAaLevel,
+				&view = view, core = this,
+				&fscreen = fscreen
+			]
+		(uint width, uint ymin, uint ymax, uint xmin, uint xmax) -> void
+		{
+			uint base, base2, baseTile, baseTile2;
+
+			// Tile Rendering
+			RayPacket packet;
+			RayMeshInterceptInfo hit[RayPacket::kPacketSize];
+			int bases[RayPacket::kPacketSize];
+			Ray lightRay;
+
+			Ray ray;
+			float3 intensity = make_float3(1);
+			float3 dir;
+
+			float v, u;
+
+			const uint tileWidth = xmax - xmin;
+
+			for (uint y = ymin; y < ymax; y++)
+			{
+				base = y * width;
+				baseTile = (y - ymin) * tileWidth;
+				for (uint x = xmin; x < xmax; x++)
+				{
+					base2 = x + base;
+					baseTile2 = (x - xmin) + baseTile;
+					assert(0 <= baseTile2 && baseTile2 < RayPacket::kPacketSize);
+					bases[baseTile2] = base2;
+
+
+					u = 0;
+					v = 0;
+
+					// Distortion Effects
+					switch (distortionType)
+					{
+					case DistortionType::None:
+					{
+						v = ((float)y + 0.5f + pixelOffsetU) * invHeight;
+						u = ((float)x + 0.5f + pixelOffsetV) * invWidth;
+					}
+					break;
+					case DistortionType::Barrel:
+					{
+
+						v = ((float)y + 0.5f + pixelOffsetU) * invHeight;
+						u = ((float)x + 0.5f + pixelOffsetV) * invWidth;
+
+						// From https://www.geeks3d.com/20140213/glsl-shader-library-fish-eye-and-dome-and-barrel-distortion-post-processing-filters/2/
+						float us = 2.0f * u - 1.0f;
+						float vs = 2.0f * v - 1.0f;
+						const float d = us * us + vs * vs;
+						if (d < 1.0)
+						{
+							// Only apply near the center (0.5, 0.5)
+							const float theta = atan2f(vs, us);
+							const float radius = pow(sqrtf(d), view.distortion);
+							us = radius * cosf(theta);
+							vs = radius * sinf(theta);
+							u = 0.5f * (us + 1.0f);
+							v = 0.5f * (vs + 1.0f);
+						}
+					}
+					break;
+					case DistortionType::FishEye:
+					{
+						v = ((float)y + 0.5f + pixelOffsetU) * invHeight;
+						u = ((float)x + 0.5f + pixelOffsetV) * invWidth;
+
+						// From https://www.geeks3d.com/20140213/glsl-shader-library-fish-eye-and-dome-and-barrel-distortion-post-processing-filters/
+						const float aperture = 180.0f * view.aperture;
+						const float apertureHalf = 0.5f * aperture * (PI / 180.0f);
+						const float maxFactor = sin(apertureHalf);
+
+
+						float us = 2.0f * u - 1.0f;
+						float vs = 2.0f * v - 1.0f;
+						const float d = sqrtf(us * us + vs * vs);
+						if (d < 1.0f)
+						{
+							const float d2 = d * maxFactor;
+							const float z = sqrtf(1.0f - d * d);
+							const float r = atan2(d2, z) / PI;
+							const float phi = atan2(vs, us);
+
+							u = r * cosf(phi) + 0.5f;
+							v = r * sinf(phi) + 0.5f;
+						}
+					}
+					break;
+					case DistortionType::BarrelSpecial:
+					{
+						if (view.distortion == 0)
+						{
+							v = ((float)y + 0.5f + pixelOffsetU) * invHeight;
+							u = ((float)x + 0.5f + pixelOffsetV) * invWidth;
+						}
+						else
+						{
+							// Barrel Distortion centered at 0.5, 0.5
+							const float tx = (x + pixelOffsetU) * invWidth - 0.5f;
+							const float ty = (y + pixelOffsetV) * invHeight - 0.5f;
+							const float rr = tx * tx + ty * ty;
+							const float rq = sqrtf(rr) * (1.0f + view.distortion * rr + view.distortion * rr * rr);
+							const float theta = atan2f(tx, ty);
+							const float bx = (sinf(theta) * rq + 0.5f) * scrWidth;
+							const float by = (cosf(theta) * rq + 0.5f) * scrHeight;
+							u = (bx + 0.5f) * invWidth;
+							v = (by + 0.5f) * invHeight;
+						}
+					}
+					break;
+					case DistortionType::Count:
+					default:
+						assert(false); // What are you doing here
+						break;
+					}
+
+
+					// Spawn Ray
+					dir = normalize(view.p1 + u * (view.p2 - view.p1) + v * (view.p3 - view.p1) - view.pos);
+
+					packet.SetOrigin(view.pos, baseTile2);
+					packet.SetDirection(dir, baseTile2);
+				}
+			}
+
+			core->IntersectScene<true>(packet, hit);
+
+			// Packet stuff
+			switch (renderType)
+			{
+			case RenderCore::RenderType::Whitted:
+				{
+					for (size_t i = 0; i < RayPacket::kPacketSize; i++)
+					{
+						packet.GetRay(ray, i);
+						fscreen[bases[i]] += core->Trace<true, true>(ray, hit[i], lightRay, intensity, -1, 0) * invAaLevel;
+					}
+				}
+				break;
+			case RenderCore::RenderType::PathTracer:
+				{
+					for (size_t i = 0; i < RayPacket::kPacketSize; i++)
+					{
+						packet.GetRay(ray, i);
+						fscreen[bases[i]] += core->Sample<true, true>(ray, hit[i], lightRay, intensity, -1, 0) * invAaLevel;
+					}
+				}
+				break;
+			default:
+				assert(false); // What are you doing here
+				break;
+			}
+		}
 		);
 	}
+	}
+	
 
 	// History mix and render if possible
 	RenderInternal(

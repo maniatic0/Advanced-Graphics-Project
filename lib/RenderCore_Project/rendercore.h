@@ -58,11 +58,31 @@ public:
 	/// </summary>
 	using RenderableTile = std::function<void(uint, uint, uint, uint, uint)>;
 
-	template <bool backCulling>
+	template <bool backCulling, bool skipFirstCheck = false>
 	float4 Trace(Ray& r, RayMeshInterceptInfo& hitInfo, Ray& lightRay, const float3& intensity, int matId = -1, int currentDepth = 0) const;
 
-	template <bool backCulling>
+	template <bool backCulling, bool skipFirstCheck = false>
 	float4 Sample(Ray& r, RayMeshInterceptInfo& hitInfo, Ray& lightRay, const float3& intensity, int matId = -1, int currentDepth = 0) const;
+
+	template <bool backCulling>
+	[[nodiscard]]
+	inline bool IntersectScene(const Ray& v, RayMeshInterceptInfo& hit) const
+	{
+		return interceptRayScene<backCulling>(v, scene.meshBVH, hit);
+	}
+
+	template <bool backCulling>
+	inline void IntersectScene(const RayPacket& p, RayMeshInterceptInfo hit[RayPacket::kPacketSize]) const
+	{
+		return interceptRayScene<backCulling>(p, scene.meshBVH, hit);
+	}
+
+	template <bool backCulling>
+	[[nodiscard]]
+	inline bool TestDepthScene(const Ray& v, const int instId, const int meshId, const int triId, const float tD) const
+	{
+		return depthRayScene<backCulling>(v, scene.meshBVH, instId, meshId, triId, tD);
+	}
 
 	// internal methods
 private:
@@ -95,7 +115,7 @@ private:
 	/// <summary>
 	/// Thread Pool for Rendering
 	/// </summary>
-	thread_pool pool;
+	thread_pool pool = 1;
 
 	/// <summary>
 	/// Rendering Futures
@@ -132,20 +152,6 @@ private:
 	/// BVH Type used
 	/// </summary>
 	BVH_Type bvhType;
-
-	template <bool backCulling>
-	[[nodiscard]]
-	inline bool IntersectScene(const Ray& v, RayMeshInterceptInfo& hit) const
-	{
-		return interceptRayScene<backCulling>(v, scene.meshBVH, hit);
-	}
-
-	template <bool backCulling>
-	[[nodiscard]]
-	inline bool TestDepthScene(const Ray& v, const int instId, const int meshId, const int triId, const float tD) const
-	{
-		return depthRayScene<backCulling>(v, scene.meshBVH, instId, meshId, triId, tD);
-	}
 
 	template <bool backCulling>
 	float3 Illuminate(Ray &lightRay, const float3& p, const float3& N, int instanceId, int meshId, int triID) const;
@@ -236,6 +242,11 @@ private:
 	/// </summary>
 	uint packetYTileNumber = 0;
 
+	/// <summary>
+	/// Use tiles as packets for primary rays
+	/// </summary>
+	bool useTilePackets = false;
+
 public:
 	CoreStats coreStats;							// rendering statistics
 
@@ -248,6 +259,8 @@ public:
 	/// Packet Tile size on Y
 	/// </summary>
 	constexpr static uint kPacketYTileSize = 8;
+
+	static_assert(kPacketYTileSize* kPacketXTileSize == RayPacket::kPacketSize);
 };
 
 } // namespace lh2core

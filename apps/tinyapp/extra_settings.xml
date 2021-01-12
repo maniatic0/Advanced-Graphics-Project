@@ -1,7 +1,8 @@
 <settings>
     <bvh_type>1</bvh_type>
+    <tile_packets>1</tile_packets>
     <render_type>0</render_type>
-    <max_depth>1</max_depth>
+    <max_depth>10</max_depth>
     <indirect_direct_mix>0.8</indirect_direct_mix>
     <aa_level>1</aa_level>
     <aa_mix>0.95</aa_mix>

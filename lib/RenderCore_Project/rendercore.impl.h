@@ -218,7 +218,7 @@ namespace lh2core
 		return intensity;
 	}
 
-	template <bool backCulling>
+	template <bool backCulling, bool skipFirstCheck>
 	float4 RenderCore::Trace(Ray &r, RayMeshInterceptInfo &hitInfo, Ray& lightRay, const float3& intensity, int matId, int currentDepth) const
 	{
 		if (intensity.x + intensity.y + intensity.z < kEps)
@@ -232,10 +232,20 @@ namespace lh2core
 			return make_float4(0);
 		}
 
-		// This works only single threaded
-		if (!IntersectScene<backCulling>(r, hitInfo))
+		if constexpr (!skipFirstCheck)
 		{
-			return make_float4(0);
+			// we skip for the case that the primary ray was calculated in a packet
+			if (!IntersectScene<backCulling>(r, hitInfo))
+			{
+				return make_float4(0);
+			}
+		}
+		else
+		{
+			if (!hitInfo)
+			{
+				return make_float4(0);
+			}
 		}
 
 		// New info
@@ -367,7 +377,7 @@ namespace lh2core
 		return make_float4(intensityNew * color, 1.0f) * LoadMaterialFloat4(material.color, uv);
 	}
 
-	template <bool backCulling>
+	template <bool backCulling, bool skipFirstCheck>
 	float4 RenderCore::Sample(Ray &r, RayMeshInterceptInfo &hitInfo, Ray& lightRay, const float3& intensity, int matId, int currentDepth) const
 	{
 		if (intensity.x + intensity.y + intensity.z < kEps)
@@ -381,10 +391,20 @@ namespace lh2core
 			return make_float4(0);
 		}
 
-		// This works only single threaded
-		if (!IntersectScene<backCulling>(r, hitInfo))
+		if constexpr (!skipFirstCheck)
 		{
-			return make_float4(0);
+			// we skip for the case that the primary ray was calculated in a packet
+			if (!IntersectScene<backCulling>(r, hitInfo))
+			{
+				return make_float4(0);
+			}
+		}
+		else
+		{
+			if (!hitInfo)
+			{
+				return make_float4(0);
+			}
 		}
 
 		// New info
