@@ -115,7 +115,7 @@ private:
 	/// <summary>
 	/// Thread Pool for Rendering
 	/// </summary>
-	thread_pool pool = 1;
+	thread_pool pool;
 
 	/// <summary>
 	/// Rendering Futures

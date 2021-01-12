@@ -483,6 +483,8 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 			float v, u;
 
 			const uint tileWidth = xmax - xmin;
+			const uint totalTileSize = tileWidth * (ymax - ymin);
+			assert(totalTileSize <= RayPacket::kPacketSize);
 
 			for (uint y = ymin; y < ymax; y++)
 			{
@@ -600,7 +602,7 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 			{
 			case RenderCore::RenderType::Whitted:
 				{
-					for (size_t i = 0; i < RayPacket::kPacketSize; i++)
+					for (size_t i = 0; i < totalTileSize; i++)
 					{
 						packet.GetRay(ray, i);
 						fscreen[bases[i]] += core->Trace<true, true>(ray, hit[i], lightRay, intensity, -1, 0) * invAaLevel;
@@ -609,7 +611,7 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 				break;
 			case RenderCore::RenderType::PathTracer:
 				{
-					for (size_t i = 0; i < RayPacket::kPacketSize; i++)
+					for (size_t i = 0; i < totalTileSize; i++)
 					{
 						packet.GetRay(ray, i);
 						fscreen[bases[i]] += core->Sample<true, true>(ray, hit[i], lightRay, intensity, -1, 0) * invAaLevel;
