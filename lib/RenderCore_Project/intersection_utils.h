@@ -123,6 +123,9 @@ public:
 	/// </summary>
 	float4 direction[kPacketSize];
 
+	/// <summary>
+	/// Max number of active rays
+	/// </summary>
 	uint maxActive;
 
 	/// <summary>
@@ -191,7 +194,7 @@ public:
 	}
 
 	inline void InverseDirection(float4 invDir[kPacketSize]) const {
-		for (size_t i = 0; i < kPacketSize; i++)
+		for (size_t i = 0; i < maxActive; i++)
 		{
 			invDir[i] = 1.0f / direction[i];
 		}
@@ -202,11 +205,11 @@ public:
 
 		for (int i = 0; i < 4; ++i)
 		{
-			float4& di = direction[corners[i]];
-			float4& di2 = direction[corners[(i + 1) % 4]];
+			const float4& di = direction[corners[i]];
+			const float4& di2 = direction[corners[(i + 1) % 4]];
 
-			f.normals[i] = cross(di, di2);
-			f.normals[i].w = -dot(f.normals[i], origin[corners[i]]);
+			f.normals[i] = cross(di, di2); // calculate n_i
+			f.normals[i].w = -dot(f.normals[i], origin[corners[i]]); // Calculate b_i and save it at the end of the frustum normal
 		}
 
 		return f;
@@ -581,10 +584,13 @@ inline bool TestFrustumAABBIntersection(const Frustum& f, const aabb& box) {
 
 	for (size_t i = 0; i < 4; i++)
 	{
-		float test1 = dot(f.normals[i], bmin);
-		float test2 = dot(f.normals[i], bmax);
+		const bool test1 = dot(f.normals[i], bmin) > 0;
+		const bool test2 = dot(f.normals[i], bmax) > 0;
 
-		if (test1 > 0 && test2 > 0) return false;
+		if (test1 && test2)
+		{
+			return false;
+		}
 	}
 	return true;
 }
@@ -600,11 +606,14 @@ inline bool TestFrustumAABBTriangle(const Frustum& f, const float4& v0, const fl
 
 	for (size_t i = 0; i < 4; i++)
 	{
-		float test1 = dot(f.normals[i], v02);
-		float test2 = dot(f.normals[i], v12);
-		float test3 = dot(f.normals[i], v22);
+		const bool test1 = dot(f.normals[i], v02) > 0;
+		const bool test2 = dot(f.normals[i], v12) > 0;
+		const bool test3 = dot(f.normals[i], v22) > 0;
 
-		if (test1 > 0 && test2 > 0 && test3 > 0) return false;
+		if (test1 && test2 && test3)
+		{
+			return false;
+		}
 	}
 	return true;
 }
