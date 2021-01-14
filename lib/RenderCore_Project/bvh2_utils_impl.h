@@ -125,6 +125,100 @@ namespace lh2core
 		}
 	}
 
+	template<bool backCulling>
+	[[nodiscard]]
+	bool BVH2::IntersectRayBVHInternal(const RayPacket& p, const Frustum& f, RayMeshInterceptInfo& hitInfo, const int nodeId) const
+	{
+		assert(poolSize > 0);
+		assert(1 <= nodeId && nodeId < poolSize);
+		assert(mesh.IsValid());
+		assert(mesh.vcount / 3 <= INT_MAX);
+
+		int stack[64]; // if we have more than 64 levels in a tree, we have more than 4GB of triangles and we are going to have a bad time
+		int stackCurr = 0;
+		stack[stackCurr] = nodeId;
+
+		// Algo Info
+		RayTriangleInterceptInfo tempHitInfo;
+		bool hit = false;
+		int vPos;
+		int tIndex;
+
+		int splitAxis;
+
+		bool rayMasks[p.kPacketSize];
+		Ray r;
+		float3 invDir;
+		int isDirNeg[3];
+
+		BVHNode& node = pool[stack[stackCurr--]]; // Get from stack and pop
+
+		while (true)
+		{
+			bool anyHit = false;
+			if (TestFrustumAABBIntersection(f, node.bounds))
+			{
+				for (int i = 0; i < p.kPacketSize; ++i)
+				{
+
+					p.GetRay(r, i);
+
+					invDir = make_float3(r.InverseDirection());
+
+					// Trick from http://www.pbr-book.org/3ed-2018/Primitives_and_Intersection_Acceleration/Bounding_Volume_Hierarchies.html#BVHAccel::splitMethod
+					isDirNeg[0] = r.direction.x > 0;
+					isDirNeg[1] = r.direction.y > 0;
+					isDirNeg[2] = r.direction.z > 0;
+
+					rayMasks[i] = TestAABBIntersection(r, node.bounds, invDir);
+
+					if (TestAABBIntersection(r, node.bounds, invDir))
+					{
+						anyHit = true;
+						if (!node.IsLeaf()) break;
+					}
+				}
+			}
+
+			if (anyHit)
+			{
+				if (!node.IsLeaf())
+				{
+					stack[++stackCurr] = node.RightChild();
+					node = node.LeftChild();
+				}
+				else
+				{
+					const int triMax = node.count + node.FirstPrimitive();
+					tempHitInfo.Reset();
+
+					for (int i = node.FirstPrimitive(); i < triMax; i++)
+					{
+						tIndex = indices[i];
+						vPos = tIndex * 3;
+						
+						if (TestFrustumAABBTriangle(f, mesh.vertices[vPos + 0], mesh.vertices[vPos + 1], mesh.vertices[vPos + 2]))
+						{
+							for (int j = 0; j < p.kPacketSize; j++)
+							{
+								if (rayMasks[j])
+								{
+									interceptRayTriangle<backCulling>(r, mesh.vertices[vPos + 0], mesh.vertices[vPos + 1], mesh.vertices[vPos + 2], tempHitInfo);
+								}
+							}
+						}
+					}
+				}
+			}
+			if (stackCurr < 0)
+			{
+				break;
+			}
+			node = pool[stack[stackCurr--]]; // Get from stack and pop
+		}
+		return hit;
+	}
+
 	template <bool backCulling>
 	[[nodiscard]]
 	bool BVH2::DepthRayBVHInternal(const Ray& r, const int meshId, const int triId, const float tD, const int nodeId) const

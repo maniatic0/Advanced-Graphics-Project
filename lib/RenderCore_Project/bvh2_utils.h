@@ -52,6 +52,9 @@ namespace lh2core
 		[[nodiscard]]
 		bool DepthRayBVHInternal(const Ray& r, const int meshId, const int triId, const float tD, const int nodeId) const;
 
+		template<bool backCulling>
+		[[nodiscard]]
+		bool IntersectRayBVHInternal(const RayPacket& p, const Frustum& f, RayMeshInterceptInfo& hit, const int nodeId) const;
 
 		unique_ptr<uint[]> indices;
 		unique_ptr<aabb[]> primitiveBounds;
