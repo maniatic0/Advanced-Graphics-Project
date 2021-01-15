@@ -113,21 +113,9 @@ namespace lh2core
 		return hit;
 	}
 
-	template <bool backCulling>
-	void BVH2::IntersectRayBVH(const RayPacket& p, const Frustum& f, RayMeshInterceptInfo hit[RayPacket::kPacketSize])
-	{
-		// TODO: Have proper packet interception
-		Ray r;
-		for (size_t i = 0; i < RayPacket::kPacketSize; i++)
-		{
-			p.GetRay(r, i);
-			IntersectRayBVH<backCulling>(r, hit[i]);
-		}
-	}
-
 	template<bool backCulling>
 	[[nodiscard]]
-	bool BVH2::IntersectRayBVHInternal(const RayPacket& p, const Frustum& f, RayMeshInterceptInfo& hitInfo, const int nodeId) const
+	void BVH2::IntersectRayBVHInternal(const RayPacket& p, const Frustum& f, RayMeshInterceptInfo hitInfo[RayPacket::kPacketSize], const int nodeId) const
 	{
 		assert(poolSize > 0);
 		assert(1 <= nodeId && nodeId < poolSize);
@@ -139,72 +127,62 @@ namespace lh2core
 		stack[stackCurr] = nodeId;
 
 		// Algo Info
-		RayTriangleInterceptInfo tempHitInfo;
-		bool hit = false;
 		int vPos;
 		int tIndex;
-
-		int splitAxis;
 
 		bool rayMasks[p.kPacketSize];
 		Ray r;
 		float3 invDir;
 		int isDirNeg[3];
+		uint ia;
 
-		BVHNode& node = pool[stack[stackCurr--]]; // Get from stack and pop
+		RayTriangleInterceptInfo tempHitInfo;
+
+		int indices[p.kPacketSize];
+		for (int i = 0; i < p.kPacketSize; ++i)
+		{
+			indices[i] = i;
+		}
+
+		int currNode = stack[stackCurr--];
 
 		while (true)
 		{
-			bool anyHit = false;
-			if (TestFrustumAABBIntersection(f, node.bounds))
+			// TODO needs to be stored per node in stack
+			ia = PartRays(p, f, pool[currNode].bounds, indices, ia);
+
+			if (!pool[currNode].IsLeaf())
 			{
-				for (int i = 0; i < p.kPacketSize; ++i)
-				{
-
-					p.GetRay(r, i);
-
-					invDir = make_float3(r.InverseDirection());
-
-					// Trick from http://www.pbr-book.org/3ed-2018/Primitives_and_Intersection_Acceleration/Bounding_Volume_Hierarchies.html#BVHAccel::splitMethod
-					isDirNeg[0] = r.direction.x > 0;
-					isDirNeg[1] = r.direction.y > 0;
-					isDirNeg[2] = r.direction.z > 0;
-
-					rayMasks[i] = TestAABBIntersection(r, node.bounds, invDir);
-
-					if (TestAABBIntersection(r, node.bounds, invDir))
-					{
-						anyHit = true;
-						if (!node.IsLeaf()) break;
-					}
-				}
+				stack[++stackCurr] = pool[currNode].RightChild();
+				currNode = pool[currNode].LeftChild();
 			}
-
-			if (anyHit)
+			else
 			{
-				if (!node.IsLeaf())
-				{
-					stack[++stackCurr] = node.RightChild();
-					node = node.LeftChild();
-				}
-				else
-				{
-					const int triMax = node.count + node.FirstPrimitive();
-					tempHitInfo.Reset();
+				const int triMax = pool[currNode].count + pool[currNode].FirstPrimitive();
 
-					for (int i = node.FirstPrimitive(); i < triMax; i++)
-					{
-						tIndex = indices[i];
-						vPos = tIndex * 3;
+				for (int i = pool[currNode].FirstPrimitive(); i < triMax; i++)
+				{
+					tIndex = indices[i];
+					vPos = tIndex * 3;
 						
-						if (TestFrustumAABBTriangle(f, mesh.vertices[vPos + 0], mesh.vertices[vPos + 1], mesh.vertices[vPos + 2]))
+					if (TestFrustumAABBTriangle(f, mesh.vertices[vPos + 0], mesh.vertices[vPos + 1], mesh.vertices[vPos + 2]))
+					{
+						for (int j = 0; j < ia; j++)
 						{
-							for (int j = 0; j < p.kPacketSize; j++)
+							p.GetRay(r, indices[j]);
+
+							invDir = make_float3(r.InverseDirection());
+
+							// Trick from http://www.pbr-book.org/3ed-2018/Primitives_and_Intersection_Acceleration/Bounding_Volume_Hierarchies.html#BVHAccel::splitMethod
+							isDirNeg[0] = r.direction.x > 0;
+							isDirNeg[1] = r.direction.y > 0;
+							isDirNeg[2] = r.direction.z > 0;
+								
+							if (interceptRayTriangle<backCulling>(r, mesh.vertices[vPos + 0], mesh.vertices[vPos + 1], mesh.vertices[vPos + 2], tempHitInfo))
 							{
-								if (rayMasks[j])
-								{
-									interceptRayTriangle<backCulling>(r, mesh.vertices[vPos + 0], mesh.vertices[vPos + 1], mesh.vertices[vPos + 2], tempHitInfo);
-								}
+								hitInfo[indices[j]].meshId = mesh.meshID;
+								tempHitInfo.CopyTo(hitInfo[indices[j]].triIntercept);
+								hitInfo[indices[j]].triId = tIndex;
 							}
 						}
 					}
@@ -214,9 +192,8 @@ namespace lh2core
 			{
 				break;
 			}
-			node = pool[stack[stackCurr--]]; // Get from stack and pop
+			currNode = stack[stackCurr--]; // Get from stack and pop
 		}
-		return hit;
 	}
 
 	template <bool backCulling>

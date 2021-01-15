@@ -54,7 +54,7 @@ namespace lh2core
 
 		template<bool backCulling>
 		[[nodiscard]]
-		bool IntersectRayBVHInternal(const RayPacket& p, const Frustum& f, RayMeshInterceptInfo& hit, const int nodeId) const;
+		void IntersectRayBVHInternal(const RayPacket& p, const Frustum& f, RayMeshInterceptInfo hitInfo[RayPacket::kPacketSize], const int nodeId) const;
 
 		unique_ptr<uint[]> indices;
 		unique_ptr<aabb[]> primitiveBounds;
@@ -69,6 +69,9 @@ namespace lh2core
 		void Subdivide(int nodeId);
 		int Partition(BVHNode* node, int splitAxis);
 		int PartitionBucket(BVHNode* node, int bucketId, const aabb &centroidBounds, int splitAxis);
+
+		uint PartRays(const RayPacket& p, const Frustum& f, aabb box, int indices[], int ia) const;
+
 
 	public:
 
@@ -104,8 +107,12 @@ namespace lh2core
 			return IntersectRayBVHInternal<backCulling>(r, hit, rootIndex);
 		}
 
-		template <bool backCulling>
-		void IntersectRayBVH(const RayPacket& p, const Frustum& f, RayMeshInterceptInfo hitInfo[RayPacket::kPacketSize]);
+		template<bool backCulling>
+		[[nodiscard]]
+		inline void IntersectRayBVH(const RayPacket& p, const Frustum& f, RayMeshInterceptInfo hitInfo[RayPacket::kPacketSize]) const
+		{
+			IntersectRayBVHInternal<backCulling>(p, f, hitInfo, rootIndex);
+		}
 
 		template <bool backCulling>
 		[[nodiscard]]

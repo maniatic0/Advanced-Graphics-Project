@@ -304,4 +304,31 @@ namespace lh2core
 		return -1;
 	}
 
+	uint BVH2::PartRays(const RayPacket& p, const Frustum& f, aabb box, int indices[], int ia) const
+	{
+		if (!TestFrustumAABBIntersection(f, box)) return p.kPacketSize;
+
+		uint ie = 0;
+		Ray r;
+		float3 invDir;
+		int isDirNeg[3];
+
+		for (int i = 0; i < ia; ++i)
+		{
+			p.GetRay(r, indices[i]);
+
+			invDir = make_float3(r.InverseDirection());
+
+			// Trick from http://www.pbr-book.org/3ed-2018/Primitives_and_Intersection_Acceleration/Bounding_Volume_Hierarchies.html#BVHAccel::splitMethod
+			isDirNeg[0] = r.direction.x > 0;
+			isDirNeg[1] = r.direction.y > 0;
+			isDirNeg[2] = r.direction.z > 0;
+
+			if (TestAABBIntersection(r, box, invDir))
+			{
+				swap(indices[ie++], indices[i]);
+			}
+		}
+		return ie;
+	}
 }
