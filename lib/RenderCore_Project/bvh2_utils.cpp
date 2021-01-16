@@ -304,7 +304,7 @@ namespace lh2core
 		return -1;
 	}
 
-	uint BVH2::PartRays(const RayPacket& p, const Frustum& f, aabb box, int indices[], int ia) const
+	uint BVH2::PartRays(const RayPacket& p, const Frustum& f, aabb box, int rayIndices[], int ia) const
 	{
 		if (!TestFrustumAABBIntersection(f, box)) return p.kPacketSize;
 
@@ -315,7 +315,7 @@ namespace lh2core
 
 		for (int i = 0; i < ia; ++i)
 		{
-			p.GetRay(r, indices[i]);
+			p.GetRay(r, rayIndices[i]);
 
 			invDir = make_float3(r.InverseDirection());
 
@@ -326,7 +326,7 @@ namespace lh2core
 
 			if (TestAABBIntersection(r, box, invDir))
 			{
-				swap(indices[ie++], indices[i]);
+				swap(rayIndices[ie++], rayIndices[i]);
 			}
 		}
 		return ie;

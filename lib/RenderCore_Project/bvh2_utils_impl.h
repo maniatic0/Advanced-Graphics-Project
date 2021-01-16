@@ -138,10 +138,10 @@ namespace lh2core
 
 		RayTriangleInterceptInfo tempHitInfo;
 
-		int indices[p.kPacketSize];
+		int rayIndices[p.kPacketSize];
 		for (int i = 0; i < p.kPacketSize; ++i)
 		{
-			indices[i] = i;
+			rayIndices[i] = i;
 		}
 
 		int currNode = stack[stackCurr--];
@@ -149,12 +149,12 @@ namespace lh2core
 		while (true)
 		{
 			// TODO needs to be stored per node in stack
-			ia = PartRays(p, f, pool[currNode].bounds, indices, ia);
+			ia = PartRays(p, f, pool[currNode].bounds, rayIndices, ia);
 
 			if (!pool[currNode].IsLeaf())
 			{
 				stack[++stackCurr] = pool[currNode].RightChild();
-				currNode = pool[currNode].LeftChild();
+				stack[++stackCurr] = pool[currNode].LeftChild();
 			}
 			else
 			{
@@ -167,9 +167,9 @@ namespace lh2core
 						
 					if (TestFrustumAABBTriangle(f, mesh.vertices[vPos + 0], mesh.vertices[vPos + 1], mesh.vertices[vPos + 2]))
 					{
-						for (int j = 0; j < ia; j++)
+						for (int j = 0; j < ia; ++j)
 						{
-							p.GetRay(r, indices[j]);
+							p.GetRay(r, rayIndices[j]);
 
 							invDir = make_float3(r.InverseDirection());
 
@@ -180,9 +180,12 @@ namespace lh2core
 								
 							if (interceptRayTriangle<backCulling>(r, mesh.vertices[vPos + 0], mesh.vertices[vPos + 1], mesh.vertices[vPos + 2], tempHitInfo))
 							{
-								hitInfo[indices[j]].meshId = mesh.meshID;
-								tempHitInfo.CopyTo(hitInfo[indices[j]].triIntercept);
-								hitInfo[indices[j]].triId = tIndex;
+								if (tempHitInfo < hitInfo[rayIndices[j]].triIntercept)
+								{
+									hitInfo[rayIndices[j]].meshId = mesh.meshID;
+									tempHitInfo.CopyTo(hitInfo[rayIndices[j]].triIntercept);
+									hitInfo[rayIndices[j]].triId = tIndex;
+								}
 							}
 						}
 					}
