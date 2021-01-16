@@ -306,7 +306,21 @@ namespace lh2core
 
 	uint BVH2::PartRays(const RayPacket& p, const Frustum& f, aabb box, int rayIndices[], int ia) const
 	{
-		if (!TestFrustumAABBIntersection(f, box)) return -1;
+		if (!TestFrustumAABBIntersection(f, box)) 
+		{ 
+#ifndef NDEBUG
+			// Test if all are really failed
+			Ray r;
+			float3 invDir;
+			for (int i = 0; i < ia; ++i)
+			{
+				p.GetRay(r, rayIndices[i]);
+				invDir = make_float3(r.InverseDirection());
+				assert(!TestAABBIntersection(r, box, invDir));
+			}
+#endif
+			return (uint)-1; 
+		}
 
 		uint ie = 0;
 		Ray r;

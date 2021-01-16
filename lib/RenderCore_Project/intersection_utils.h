@@ -139,16 +139,18 @@ public:
 	/// <returns>New Copied Ray</returns>
 	inline RayPacket Copy() const
 	{
-		RayPacket temp;
+		RayPacket temp(maxActive);
 		memcpy(temp.origin, origin, kPacketSize * sizeof(float4));
 		memcpy(temp.direction, direction, kPacketSize * sizeof(float4));
 		
 		return temp;
 	}
 
-	inline RayPacket()
+	inline RayPacket(uint maxRayActive)
 	{
-		for (size_t i = 0; i < kPacketSize; i++)
+		assert(0 <= maxRayActive && maxRayActive <= kPacketSize);
+		maxActive = maxRayActive;
+		for (size_t i = 0; i < maxActive; i++)
 		{
 			origin[i] = make_float4(0);
 			direction[i] = make_float4(1, 0, 0, 0);
@@ -157,32 +159,38 @@ public:
 
 	inline void SetOrigin(const float4 &ori, int index)
 	{
+		assert(0 <= (uint)index && (uint)index <= maxActive);
 		origin[index] = ori;
 	}
 	inline void SetOrigin(const float3 & ori, int index)
 	{
+		assert(0 <= (uint)index && (uint)index <= maxActive);
 		origin[index] = make_float4(ori);
 	}
 
 	inline void SetDirection(const float4 &dir, int index)
 	{
+		assert(0 <= (uint)index && (uint)index <= maxActive);
 		assert(almost_equal(1, length(dir))); // "Unormalized Vector"
 		direction[index] = dir;
 	}
 	inline void SetDirection(const float3 &dir, int index)
 	{
+		assert(0 <= (uint)index && (uint)index <= maxActive);
 		assert(almost_equal(1, length(dir))); // "Unormalized Vector"
 		direction[index] = make_float4(dir);
 	}
 
 	inline void SetRay(const Ray &r, int index)
 	{
+		assert(0 <= (uint)index && (uint)index <= maxActive);
 		SetOrigin(r.origin, index);
 		SetDirection(r.direction, index);
 	}
 
 	inline void GetRay(Ray& r, int index) const
 	{
+		assert(0 <= (uint)index && (uint)index <= maxActive);
 		r.origin = origin[index];
 		r.direction = direction[index];
 	}
@@ -195,7 +203,14 @@ public:
 	/// <returns>Position</returns>
 	inline float4 Evaluate(const float t, int index) const
 	{
+		assert(0 <= (uint)index && (uint)index <= maxActive);
 		return origin[index] + (t * direction[index]);
+	}
+
+	inline float4 InverseDirection(int index) const
+	{
+		assert(0 <= (uint)index && (uint)index <= maxActive);
+		return  1.0f / direction[index];
 	}
 
 	inline void InverseDirection(float4 invDir[kPacketSize]) const {
@@ -206,6 +221,13 @@ public:
 	}
 
 	inline Frustum CreateFrustum(uint corners[4]) {
+
+#ifndef NDEBUG
+		for (int i = 0; i < 4; ++i)
+		{
+			assert(0 <= corners[i] && corners[i] <= maxActive);
+		}
+#endif
 		Frustum f;
 
 		for (int i = 0; i < Frustum::kNumberOfPlanes; ++i)
@@ -581,18 +603,28 @@ template <bool backCulling>
 bool depthRayScene(const Ray& r, const vector<Mesh>& meshes, const int instId, const int meshId, const int triId, const float tD);
 
 inline bool TestFrustumAABBIntersection(const Frustum& f, const aabb& box) {
-	float4 bmin = make_float4(box.bmin3);
-	float4 bmax = make_float4(box.bmin3);
 
-	bmin.w = 1;
-	bmax.w = 1;
+	const float4 c000 = make_float4(box.bmin3.x, box.bmin3.y, box.bmin3.z, 1);
+	const float4 c001 = make_float4(box.bmin3.x, box.bmin3.y, box.bmax3.z, 1);
+	const float4 c010 = make_float4(box.bmin3.x, box.bmax3.y, box.bmin3.z, 1);
+	const float4 c011 = make_float4(box.bmin3.x, box.bmax3.y, box.bmax3.z, 1);
+	const float4 c100 = make_float4(box.bmax3.x, box.bmin3.y, box.bmin3.z, 1);
+	const float4 c101 = make_float4(box.bmax3.x, box.bmin3.y, box.bmax3.z, 1);
+	const float4 c110 = make_float4(box.bmax3.x, box.bmax3.y, box.bmin3.z, 1);
+	const float4 c111 = make_float4(box.bmax3.x, box.bmax3.y, box.bmax3.z, 1);
 
 	for (size_t i = 0; i < Frustum::kNumberOfPlanes; i++)
 	{
-		const bool test1 = dot(f.normals[i], bmin) > 0;
-		const bool test2 = dot(f.normals[i], bmax) > 0;
+		const bool test0 = dot(f.normals[i], c000) > 0;
+		const bool test1 = dot(f.normals[i], c001) > 0;
+		const bool test2 = dot(f.normals[i], c010) > 0;
+		const bool test3 = dot(f.normals[i], c011) > 0;
+		const bool test4 = dot(f.normals[i], c100) > 0;
+		const bool test5 = dot(f.normals[i], c101) > 0;
+		const bool test6 = dot(f.normals[i], c110) > 0;
+		const bool test7 = dot(f.normals[i], c111) > 0;
 
-		if (test1 && test2)
+		if (test0 && test1 && test2 && test3 && test4 && test5 && test6 && test7)
 		{
 			return false;
 		}

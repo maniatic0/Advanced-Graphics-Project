@@ -140,7 +140,7 @@ namespace lh2core
 		RayTriangleInterceptInfo tempHitInfo;
 
 		int rayIndices[p.kPacketSize];
-		for (int i = 0; i < p.maxActive; ++i)
+		for (int i = 0; i < (int)p.maxActive; ++i)
 		{
 			rayIndices[i] = i;
 		}
@@ -177,7 +177,7 @@ namespace lh2core
 						
 					if (TestFrustumAABBTriangle(f, mesh.vertices[vPos + 0], mesh.vertices[vPos + 1], mesh.vertices[vPos + 2]))
 					{
-						for (int j = 0; j < ia; ++j)
+						for (int j = 0; j < (int)ia; ++j)
 						{
 							p.GetRay(r, rayIndices[j]);
 
