@@ -597,9 +597,9 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 
 			uint corners[4] = {
 				(ymin - ymin) * tileWidth + (xmin - xmin),	// Top Left
-				(ymin - ymin) * tileWidth + (xmax - xmin),	// Top Right
-				(ymax - ymin) * tileWidth + (xmax - xmin),	// Bottom Right
-				(ymax - ymin) * tileWidth + (xmin - xmin)	// Bottom Left
+				(ymin - ymin) * tileWidth + (xmax-1 - xmin),	// Top Right
+				(ymax-1 - ymin) * tileWidth + (xmax-1 - xmin),	// Bottom Right
+				(ymax-1 - ymin) * tileWidth + (xmin - xmin)	// Bottom Left
 			};
 			const Frustum f = packet.CreateFrustum(corners);
 			packet.maxActive = totalTileSize;

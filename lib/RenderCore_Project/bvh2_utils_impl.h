@@ -124,9 +124,9 @@ namespace lh2core
 
 		StackNode stack[64]; // if we have more than 64 levels in a tree, we have more than 4GB of triangles and we are going to have a bad time
 		int stackCurr = 0;
+		uint ia = p.maxActive;
 
-		StackNode root;
-		root.nodeId = nodeId;
+		StackNode root(nodeId, ia);
 		stack[stackCurr] = root;
 
 		// Algo Info
@@ -136,12 +136,11 @@ namespace lh2core
 		Ray r;
 		float3 invDir;
 		int isDirNeg[3];
-		uint ia = 0;
 
 		RayTriangleInterceptInfo tempHitInfo;
 
 		int rayIndices[p.kPacketSize];
-		for (int i = 0; i < p.kPacketSize; ++i)
+		for (int i = 0; i < p.maxActive; ++i)
 		{
 			rayIndices[i] = i;
 		}
@@ -152,11 +151,20 @@ namespace lh2core
 		{
 
 			ia = PartRays(p, f, pool[currNode.nodeId].bounds, rayIndices, currNode.ia);
+			if (ia == (uint)-1)
+			{
+				if (stackCurr < 0)
+				{
+					break;
+				}
+				currNode = stack[stackCurr--]; // Get from stack and pop
+				continue;
+			}
 
 			if (!pool[currNode.nodeId].IsLeaf())
 			{
-				stack[++stackCurr] = StackNode(pool[currNode.nodeId].LeftChild(), ia);
 				stack[++stackCurr] = StackNode(pool[currNode.nodeId].RightChild(), ia);
+				stack[++stackCurr] = StackNode(pool[currNode.nodeId].LeftChild(), ia);
 			}
 			else
 			{
@@ -180,6 +188,7 @@ namespace lh2core
 							isDirNeg[1] = r.direction.y > 0;
 							isDirNeg[2] = r.direction.z > 0;
 								
+							tempHitInfo.Reset();
 							if (interceptRayTriangle<backCulling>(r, mesh.vertices[vPos + 0], mesh.vertices[vPos + 1], mesh.vertices[vPos + 2], tempHitInfo))
 							{
 								if (tempHitInfo < hitInfo[rayIndices[j]].triIntercept)

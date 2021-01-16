@@ -45,7 +45,7 @@ namespace lh2core
 		int nodeId;
 		int ia;
 
-		StackNode() : nodeId(0), ia(0) {};
+		StackNode() : nodeId(-1), ia(-1) {};
 
 		StackNode(int nodeId_, int ia_)
 		{
