@@ -84,8 +84,6 @@ namespace lh2core
 		int Partition(BVHNode* node, int splitAxis);
 		int PartitionBucket(BVHNode* node, int bucketId, const aabb &centroidBounds, int splitAxis);
 
-		uint PartRays(const RayPacket& p, const Frustum& f, aabb box, int indices[], int ia) const;
-
 
 	public:
 
@@ -137,6 +135,8 @@ namespace lh2core
 
 		friend class BVH4;
 	};
+
+	uint PartRays(const RayPacket& p, const Frustum& f, const aabb& box, int indices[], int ia);
 
 	template <bool backCulling>
 	[[nodiscard]]

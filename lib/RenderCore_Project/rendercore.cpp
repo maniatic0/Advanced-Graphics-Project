@@ -604,7 +604,6 @@ void RenderCore::Render(const ViewPyramid& view, const Convergence converge, boo
 				(ymax-1 - ymin) * tileWidth + (xmin - xmin)	// Bottom Left
 			};
 			const Frustum f = packet.CreateFrustum(corners);
-			packet.maxActive = totalTileSize;
 			core->IntersectScene<true>(packet, f, hit);
 
 			// Packet stuff
@@ -815,10 +814,12 @@ void RenderCore::RenderTileInternal(RenderableTile R)
 	{
 		ymin = ty * kPacketXTileSize;
 		ymax = min((ty + 1) * kPacketYTileSize, screen->height);
+		assert(0 <= ymin && ymin < ymax);
 		for (uint tx = 0; tx < packetXTileNumber; tx++)
 		{
 			xmin = tx * kPacketXTileSize;
-			xmax = min((tx + 1) * kPacketYTileSize, screen->width);
+			xmax = min((tx + 1) * kPacketXTileSize, screen->width);
+			assert(0 <= xmin && xmin < xmax);
 
 			// Tile Processing
 			futures.push_back(pool.execute(

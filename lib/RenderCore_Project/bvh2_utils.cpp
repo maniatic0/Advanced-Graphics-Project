@@ -304,7 +304,7 @@ namespace lh2core
 		return -1;
 	}
 
-	uint BVH2::PartRays(const RayPacket& p, const Frustum& f, aabb box, int rayIndices[], int ia) const
+	uint PartRays(const RayPacket& p, const Frustum& f, const aabb &box, int rayIndices[], int ia)
 	{
 		if (!TestFrustumAABBIntersection(f, box)) 
 		{ 
