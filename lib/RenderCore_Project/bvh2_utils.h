@@ -40,6 +40,20 @@ namespace lh2core
 		int count = 0;
 	};
 
+	struct StackNode {
+	public:
+		int nodeId;
+		int ia;
+
+		StackNode() : nodeId(0), ia(0) {};
+
+		StackNode(int nodeId_, int ia_)
+		{
+			nodeId = nodeId_;
+			ia = ia_;
+		}
+	};
+
 	class BVH2
 	{
 	private:

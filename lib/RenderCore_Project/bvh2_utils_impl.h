@@ -122,19 +122,21 @@ namespace lh2core
 		assert(mesh.IsValid());
 		assert(mesh.vcount / 3 <= INT_MAX);
 
-		int stack[64]; // if we have more than 64 levels in a tree, we have more than 4GB of triangles and we are going to have a bad time
+		StackNode stack[64]; // if we have more than 64 levels in a tree, we have more than 4GB of triangles and we are going to have a bad time
 		int stackCurr = 0;
-		stack[stackCurr] = nodeId;
+
+		StackNode root;
+		root.nodeId = nodeId;
+		stack[stackCurr] = root;
 
 		// Algo Info
 		int vPos;
 		int tIndex;
 
-		bool rayMasks[p.kPacketSize];
 		Ray r;
 		float3 invDir;
 		int isDirNeg[3];
-		uint ia;
+		uint ia = 0;
 
 		RayTriangleInterceptInfo tempHitInfo;
 
@@ -144,23 +146,23 @@ namespace lh2core
 			rayIndices[i] = i;
 		}
 
-		int currNode = stack[stackCurr--];
+		StackNode currNode = stack[stackCurr--];
 
 		while (true)
 		{
-			// TODO needs to be stored per node in stack
-			ia = PartRays(p, f, pool[currNode].bounds, rayIndices, ia);
 
-			if (!pool[currNode].IsLeaf())
+			ia = PartRays(p, f, pool[currNode.nodeId].bounds, rayIndices, currNode.ia);
+
+			if (!pool[currNode.nodeId].IsLeaf())
 			{
-				stack[++stackCurr] = pool[currNode].RightChild();
-				stack[++stackCurr] = pool[currNode].LeftChild();
+				stack[++stackCurr] = StackNode(pool[currNode.nodeId].LeftChild(), ia);
+				stack[++stackCurr] = StackNode(pool[currNode.nodeId].RightChild(), ia);
 			}
 			else
 			{
-				const int triMax = pool[currNode].count + pool[currNode].FirstPrimitive();
+				const int triMax = pool[currNode.nodeId].count + pool[currNode.nodeId].FirstPrimitive();
 
-				for (int i = pool[currNode].FirstPrimitive(); i < triMax; i++)
+				for (int i = pool[currNode.nodeId].FirstPrimitive(); i < triMax; i++)
 				{
 					tIndex = indices[i];
 					vPos = tIndex * 3;
