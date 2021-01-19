@@ -309,6 +309,7 @@ namespace lh2core
 		if (!TestFrustumAABBIntersection(f, box)) 
 		{ 
 #ifndef NDEBUG
+#ifdef BVH2_TEST_FRUSTUM_AABB_CULLING
 			// Test if all are really failed
 			Ray r;
 			float3 invDir;
@@ -318,6 +319,7 @@ namespace lh2core
 				invDir = make_float3(r.InverseDirection());
 				assert(!TestAABBIntersection(r, box, invDir));
 			}
+#endif
 #endif
 			return (uint)-1; 
 		}

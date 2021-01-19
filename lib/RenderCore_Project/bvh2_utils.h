@@ -2,6 +2,8 @@
 
 namespace lh2core
 {
+#define BVH2_TEST_FRUSTUM_AABB_CULLING 1
+#define BVH2_TEST_FRUSTUM_TRIANGLE_CULLING 1
 	struct ALIGN(64) BVHNode // Note: aligned to cache line
 	{
 	private:
@@ -83,7 +85,6 @@ namespace lh2core
 		void Subdivide(int nodeId);
 		int Partition(BVHNode* node, int splitAxis);
 		int PartitionBucket(BVHNode* node, int bucketId, const aabb &centroidBounds, int splitAxis);
-
 
 	public:
 

@@ -221,17 +221,12 @@ public:
 	}
 
 	inline Frustum CreateFrustum(uint corners[4]) {
-
-#ifndef NDEBUG
-		for (int i = 0; i < 4; ++i)
-		{
-			assert(0 <= corners[i] && corners[i] <= maxActive);
-		}
-#endif
 		Frustum f;
 
 		for (int i = 0; i < Frustum::kNumberOfPlanes; ++i)
 		{
+			assert(0 <= corners[i] && corners[i] <= maxActive);
+			assert(0 <= corners[(i + 1) % 4] && corners[(i + 1) % 4] <= maxActive);
 			const float4& di = direction[corners[i]];
 			const float4& di2 = direction[corners[(i + 1) % 4]];
 
@@ -602,6 +597,8 @@ template <bool backCulling>
 [[nodiscard]]
 bool depthRayScene(const Ray& r, const vector<Mesh>& meshes, const int instId, const int meshId, const int triId, const float tD);
 
+constexpr float kFrustumCullingTestEps = 0.1f;
+
 inline bool TestFrustumAABBIntersection(const Frustum& f, const aabb& box) {
 
 	const float4 c000 = make_float4(box.bmin3.x, box.bmin3.y, box.bmin3.z, 1);
@@ -615,14 +612,14 @@ inline bool TestFrustumAABBIntersection(const Frustum& f, const aabb& box) {
 
 	for (size_t i = 0; i < Frustum::kNumberOfPlanes; i++)
 	{
-		const bool test0 = dot(f.normals[i], c000) > 0;
-		const bool test1 = dot(f.normals[i], c001) > 0;
-		const bool test2 = dot(f.normals[i], c010) > 0;
-		const bool test3 = dot(f.normals[i], c011) > 0;
-		const bool test4 = dot(f.normals[i], c100) > 0;
-		const bool test5 = dot(f.normals[i], c101) > 0;
-		const bool test6 = dot(f.normals[i], c110) > 0;
-		const bool test7 = dot(f.normals[i], c111) > 0;
+		const bool test0 = dot(f.normals[i], c000) > kFrustumCullingTestEps;
+		const bool test1 = dot(f.normals[i], c001) > kFrustumCullingTestEps;
+		const bool test2 = dot(f.normals[i], c010) > kFrustumCullingTestEps;
+		const bool test3 = dot(f.normals[i], c011) > kFrustumCullingTestEps;
+		const bool test4 = dot(f.normals[i], c100) > kFrustumCullingTestEps;
+		const bool test5 = dot(f.normals[i], c101) > kFrustumCullingTestEps;
+		const bool test6 = dot(f.normals[i], c110) > kFrustumCullingTestEps;
+		const bool test7 = dot(f.normals[i], c111) > kFrustumCullingTestEps;
 
 		if (test0 && test1 && test2 && test3 && test4 && test5 && test6 && test7)
 		{
@@ -632,7 +629,7 @@ inline bool TestFrustumAABBIntersection(const Frustum& f, const aabb& box) {
 	return true;
 }
 
-inline bool TestFrustumAABBTriangle(const Frustum& f, const float4& v0, const float4& v1, const float4& v2) {
+inline bool TestFrustumTriangle(const Frustum& f, const float4& v0, const float4& v1, const float4& v2) {
 	float4 v02, v12, v22;
 	v02 = v0;
 	v12 = v1;
@@ -643,9 +640,9 @@ inline bool TestFrustumAABBTriangle(const Frustum& f, const float4& v0, const fl
 
 	for (size_t i = 0; i < Frustum::kNumberOfPlanes; i++)
 	{
-		const bool test1 = dot(f.normals[i], v02) > 0;
-		const bool test2 = dot(f.normals[i], v12) > 0;
-		const bool test3 = dot(f.normals[i], v22) > 0;
+		const bool test1 = dot(f.normals[i], v02) > kFrustumCullingTestEps;
+		const bool test2 = dot(f.normals[i], v12) > kFrustumCullingTestEps;
+		const bool test3 = dot(f.normals[i], v22) > kFrustumCullingTestEps;
 
 		if (test1 && test2 && test3)
 		{

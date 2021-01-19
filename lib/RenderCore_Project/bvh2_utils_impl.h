@@ -175,7 +175,7 @@ namespace lh2core
 					tIndex = indices[i];
 					vPos = tIndex * 3;
 						
-					if (TestFrustumAABBTriangle(f, mesh.vertices[vPos + 0], mesh.vertices[vPos + 1], mesh.vertices[vPos + 2]))
+					if (TestFrustumTriangle(f, mesh.vertices[vPos + 0], mesh.vertices[vPos + 1], mesh.vertices[vPos + 2]))
 					{
 						for (int j = 0; j < (int)ia; ++j)
 						{
@@ -200,6 +200,28 @@ namespace lh2core
 							}
 						}
 					}
+#ifndef NDEBUG
+#ifdef BVH2_TEST_FRUSTUM_TRIANGLE_CULLING
+					else
+					{
+						// Make sure we culled correctly
+						for (int j = 0; j < (int)ia; ++j)
+						{
+							p.GetRay(r, rayIndices[j]);
+
+							invDir = make_float3(r.InverseDirection());
+
+							// Trick from http://www.pbr-book.org/3ed-2018/Primitives_and_Intersection_Acceleration/Bounding_Volume_Hierarchies.html#BVHAccel::splitMethod
+							isDirNeg[0] = r.direction.x > 0;
+							isDirNeg[1] = r.direction.y > 0;
+							isDirNeg[2] = r.direction.z > 0;
+
+							tempHitInfo.Reset();
+							assert(!interceptRayTriangle<backCulling>(r, mesh.vertices[vPos + 0], mesh.vertices[vPos + 1], mesh.vertices[vPos + 2], tempHitInfo));
+						}
+					}
+#endif
+#endif
 				}
 			}
 			if (stackCurr < 0)
