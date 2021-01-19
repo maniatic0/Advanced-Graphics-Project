@@ -600,7 +600,7 @@ bool depthRayScene(const Ray& r, const vector<Mesh>& meshes, const int instId, c
 constexpr float kFrustumCullingTestEps = 0.1f;
 
 inline bool TestFrustumAABBIntersection(const Frustum& f, const aabb& box) {
-
+#ifdef USE_FRUSTUM_SSE
 	const float4 c000 = make_float4(box.bmin3.x, box.bmin3.y, box.bmin3.z, 1);
 	const float4 c001 = make_float4(box.bmin3.x, box.bmin3.y, box.bmax3.z, 1);
 	const float4 c010 = make_float4(box.bmin3.x, box.bmax3.y, box.bmin3.z, 1);
@@ -627,6 +627,88 @@ inline bool TestFrustumAABBIntersection(const Frustum& f, const aabb& box) {
 		}
 	}
 	return true;
+#else
+#ifndef NDEBUG
+	bool properResult = true;
+	{
+		const float4 c000 = make_float4(box.bmin3.x, box.bmin3.y, box.bmin3.z, 1);
+		const float4 c001 = make_float4(box.bmin3.x, box.bmin3.y, box.bmax3.z, 1);
+		const float4 c010 = make_float4(box.bmin3.x, box.bmax3.y, box.bmin3.z, 1);
+		const float4 c011 = make_float4(box.bmin3.x, box.bmax3.y, box.bmax3.z, 1);
+		const float4 c100 = make_float4(box.bmax3.x, box.bmin3.y, box.bmin3.z, 1);
+		const float4 c101 = make_float4(box.bmax3.x, box.bmin3.y, box.bmax3.z, 1);
+		const float4 c110 = make_float4(box.bmax3.x, box.bmax3.y, box.bmin3.z, 1);
+		const float4 c111 = make_float4(box.bmax3.x, box.bmax3.y, box.bmax3.z, 1);
+
+		for (size_t i = 0; i < Frustum::kNumberOfPlanes; i++)
+		{
+			const bool test0 = dot(f.normals[i], c000) > kFrustumCullingTestEps;
+			const bool test1 = dot(f.normals[i], c001) > kFrustumCullingTestEps;
+			const bool test2 = dot(f.normals[i], c010) > kFrustumCullingTestEps;
+			const bool test3 = dot(f.normals[i], c011) > kFrustumCullingTestEps;
+			const bool test4 = dot(f.normals[i], c100) > kFrustumCullingTestEps;
+			const bool test5 = dot(f.normals[i], c101) > kFrustumCullingTestEps;
+			const bool test6 = dot(f.normals[i], c110) > kFrustumCullingTestEps;
+			const bool test7 = dot(f.normals[i], c111) > kFrustumCullingTestEps;
+
+			if (test0 && test1 && test2 && test3 && test4 && test5 && test6 && test7)
+			{
+				properResult = false;
+				break;
+			}
+		}
+	}
+#endif
+
+	const __m128  frustumCullingTestEps = _mm_set_ps1(kFrustumCullingTestEps);
+
+	const __m128 c000 = _mm_setr_ps(box.bmin3.x, box.bmin3.y, box.bmin3.z, 1);
+	const __m128 c001 = _mm_setr_ps(box.bmin3.x, box.bmin3.y, box.bmax3.z, 1);
+	const __m128 c010 = _mm_setr_ps(box.bmin3.x, box.bmax3.y, box.bmin3.z, 1);
+	const __m128 c011 = _mm_setr_ps(box.bmin3.x, box.bmax3.y, box.bmax3.z, 1);
+	const __m128 c100 = _mm_setr_ps(box.bmax3.x, box.bmin3.y, box.bmin3.z, 1);
+	const __m128 c101 = _mm_setr_ps(box.bmax3.x, box.bmin3.y, box.bmax3.z, 1);
+	const __m128 c110 = _mm_setr_ps(box.bmax3.x, box.bmax3.y, box.bmin3.z, 1);
+	const __m128 c111 = _mm_setr_ps(box.bmax3.x, box.bmax3.y, box.bmax3.z, 1);
+
+	for (size_t i = 0; i < Frustum::kNumberOfPlanes; i++)
+	{
+		const __m128 normal = _mm_setr_ps(f.normals[i].x, f.normals[i].y, f.normals[i].z, f.normals[i].w);
+
+		const __m128 dot0 = _mm_dp_ps(normal, c000, 0xFF);
+		__m128 res = _mm_cmpgt_ps(dot0, frustumCullingTestEps);
+
+		const __m128 dot1 = _mm_dp_ps(normal, c001, 0xFF);
+		res = _mm_and_ps(res, _mm_cmpgt_ps(dot1, frustumCullingTestEps));
+
+		const __m128 dot2 = _mm_dp_ps(normal, c010, 0xFF);
+		res = _mm_and_ps(res, _mm_cmpgt_ps(dot2, frustumCullingTestEps));
+
+		const __m128 dot3 = _mm_dp_ps(normal, c011, 0xFF);
+		res = _mm_and_ps(res, _mm_cmpgt_ps(dot3, frustumCullingTestEps));
+
+		const __m128 dot4 = _mm_dp_ps(normal, c100, 0xFF);
+		res = _mm_and_ps(res, _mm_cmpgt_ps(dot4, frustumCullingTestEps));
+
+		const __m128 dot5 = _mm_dp_ps(normal, c101, 0xFF);
+		res = _mm_and_ps(res, _mm_cmpgt_ps(dot5, frustumCullingTestEps));
+
+		const __m128 dot6 = _mm_dp_ps(normal, c110, 0xFF);
+		res = _mm_and_ps(res, _mm_cmpgt_ps(dot6, frustumCullingTestEps));
+
+		const __m128 dot7 = _mm_dp_ps(normal, c111, 0xFF);
+		res = _mm_and_ps(res, _mm_cmpgt_ps(dot7, frustumCullingTestEps));
+
+		if (_mm_movemask_ps(res) != 0)
+		{
+			assert(!properResult);
+			return false;
+		}
+	}
+	assert(properResult);
+	return true;
+#endif
+	
 }
 
 inline bool TestFrustumTriangle(const Frustum& f, const float4& v0, const float4& v1, const float4& v2) {
