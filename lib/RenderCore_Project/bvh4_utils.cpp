@@ -248,6 +248,5 @@ namespace lh2core
 
 			++poolPtr;
 		}
-		
 	}
 }

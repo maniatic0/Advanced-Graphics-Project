@@ -238,7 +238,7 @@ public:
 	}
 };
 
-inline bool TestAABBIntersection(const Ray &r, const aabb& box, float3 invDir)
+inline bool TestAABBIntersection(const Ray &r, const aabb& box, const float3 invDir)
 {
 	// From https://medium.com/@bromanz/another-view-on-the-classic-ray-aabb-intersection-algorithm-for-bvh-traversal-41125138b525
 #if 1
@@ -265,7 +265,50 @@ inline bool TestAABBIntersection(const Ray &r, const aabb& box, float3 invDir)
 #endif
 }
 
-inline bool TestAABBIntersectionBounds(const Ray& r, const aabb& box, float3 invDir, float minT, float maxT)
+inline float TestAABBIntersectionDistance(const Ray& r, const aabb& box, const float3 invDir)
+{
+	// From https://medium.com/@bromanz/another-view-on-the-classic-ray-aabb-intersection-algorithm-for-bvh-traversal-41125138b525
+#if 1
+	__m128 ori = _mm_setr_ps(r.origin.x, r.origin.y, r.origin.z, 0);
+	__m128 dirInv = _mm_setr_ps(invDir.x, invDir.y, invDir.z, 0);
+
+	__m128 t0 = _mm_mul_ps(_mm_sub_ps(box.bmin4, ori), dirInv);
+	__m128 t1 = _mm_mul_ps(_mm_sub_ps(box.bmax4, ori), dirInv);
+
+	__m128 tmin = _mm_min_ps(t0, t1);
+	__m128 tmax = _mm_max_ps(t0, t1);
+
+	float high = min_component3(tmax);
+	float low = max_component3(tmin);
+
+	if (low <= high)
+	{
+		return low;
+	}
+
+	return -1.0;
+#else
+	float3 ori = make_float3(r.origin);
+
+	float3 t0 = (box.bmin3 - ori) * invDir;
+	float3 t1 = (box.bmax3 - ori) * invDir;
+
+	float3 tmin = fminf(t0, t1);
+	float3 tmax = fmaxf(t0, t1);
+
+	float high = min(tmax.x, min(tmax.y, tmax.z));
+	float low = max(tmin.x, max(tmin.y, tmin.z));
+
+	if (low <= high)
+	{
+		return low;
+	}
+
+	return -1.0;
+#endif
+}
+
+inline bool TestAABBIntersectionBounds(const Ray& r, const aabb& box, const float3 invDir, const float minT, const float maxT)
 {
 	// From https://medium.com/@bromanz/another-view-on-the-classic-ray-aabb-intersection-algorithm-for-bvh-traversal-41125138b525
 	// With Modifications from https://psgraphics.blogspot.com/2016/02/new-simple-ray-box-test-from-andrew.html
@@ -284,19 +327,22 @@ inline bool TestAABBIntersectionBounds(const Ray& r, const aabb& box, float3 inv
 	return result;
 }
 
-inline uchar TestAABB4Intersection(const Ray& r, const aabb boxes[4], float3 invDir)
+inline uchar TestAABB4Intersection(const Ray& r, const aabb boxes[4], const float3 invDir)
 {
 	// Modified From https://medium.com/@bromanz/another-view-on-the-classic-ray-aabb-intersection-algorithm-for-bvh-traversal-41125138b525
 
 	uchar res = 0;
 
-	__m256 ori = _mm256_setr_ps(r.origin.x, r.origin.y, r.origin.z, 0, r.origin.x, r.origin.y, r.origin.z, 0);
-	__m256 dirInv = _mm256_setr_ps(invDir.x, invDir.y, invDir.z, 0, invDir.x, invDir.y, invDir.z, 0);
+	const __m256  ori = _mm256_setr_ps(r.origin.x, r.origin.y, r.origin.z, 0, r.origin.x, r.origin.y, r.origin.z, 0);
+	const __m256  dirInv = _mm256_setr_ps(invDir.x, invDir.y, invDir.z, 0, invDir.x, invDir.y, invDir.z, 0);
 
 	for (int i = 0; i < 2; i++)
 	{
-		__m256 t0 = _mm256_mul_ps(_mm256_sub_ps(_mm256_setr_m128(boxes[2 * i + 0].bmin4, boxes[2 * i + 1].bmin4), ori), dirInv);
-		__m256 t1 = _mm256_mul_ps(_mm256_sub_ps(_mm256_setr_m128(boxes[2 * i + 0].bmax4, boxes[2 * i + 1].bmax4), ori), dirInv);
+		const int baseIndex0 = 2 * i + 0;
+		const int baseIndex1 = baseIndex0 + 1;
+
+		const __m256 t0 = _mm256_mul_ps(_mm256_sub_ps(_mm256_setr_m128(boxes[baseIndex0].bmin4, boxes[baseIndex1].bmin4), ori), dirInv);
+		const __m256 t1 = _mm256_mul_ps(_mm256_sub_ps(_mm256_setr_m128(boxes[baseIndex0].bmax4, boxes[baseIndex1].bmax4), ori), dirInv);
 
 		__m256 tmin = _mm256_min_ps(t0, t1);
 		__m256 tmax = _mm256_max_ps(t0, t1);
@@ -310,7 +356,7 @@ inline uchar TestAABB4Intersection(const Ray& r, const aabb boxes[4], float3 inv
 		tmax = _mm256_min_ps(tmax, _mm256_shuffle_ps(tmax, tmax, _MM_SHUFFLE(2, 1, 0, 2)));
 		tmax = _mm256_min_ps(tmax, _mm256_shuffle_ps(tmax, tmax, _MM_SHUFFLE(1, 0, 2, 2)));
 
-		__m256 comp = _mm256_cmp_ps(tmin, tmax, _CMP_LE_OQ);
+		const __m256 comp = _mm256_cmp_ps(tmin, tmax, _CMP_LE_OQ);
 		const int mask = _mm256_movemask_ps(comp);
 
 		const bool r0 = (mask & 0x7) == 0x7;
@@ -325,22 +371,73 @@ inline uchar TestAABB4Intersection(const Ray& r, const aabb boxes[4], float3 inv
 	return res;
 }
 
-inline uchar TestAABB4IntersectionBounds(const Ray& r, const aabb boxes[4], float3 invDir, float minT, float maxT)
+inline uchar TestAABB4IntersectionDistance(const Ray& r, const aabb boxes[4], const float3 invDir, float distances[4])
 {
 	// Modified From https://medium.com/@bromanz/another-view-on-the-classic-ray-aabb-intersection-algorithm-for-bvh-traversal-41125138b525
 
 	uchar res = 0;
 
-	__m256 ori = _mm256_setr_ps(r.origin.x, r.origin.y, r.origin.z, 0, r.origin.x, r.origin.y, r.origin.z, 0);
-	__m256 dirInv = _mm256_setr_ps(invDir.x, invDir.y, invDir.z, 0, invDir.x, invDir.y, invDir.z, 0);
-
-	__m256 maxT_ = _mm256_set1_ps(maxT);
-	__m256 minT_ = _mm256_set1_ps(minT);
+	const __m256  ori = _mm256_setr_ps(r.origin.x, r.origin.y, r.origin.z, 0, r.origin.x, r.origin.y, r.origin.z, 0);
+	const __m256  dirInv = _mm256_setr_ps(invDir.x, invDir.y, invDir.z, 0, invDir.x, invDir.y, invDir.z, 0);
 
 	for (int i = 0; i < 2; i++)
 	{
-		__m256 t0 = _mm256_mul_ps(_mm256_sub_ps(_mm256_setr_m128(boxes[2 * i + 0].bmin4, boxes[2 * i + 1].bmin4), ori), dirInv);
-		__m256 t1 = _mm256_mul_ps(_mm256_sub_ps(_mm256_setr_m128(boxes[2 * i + 0].bmax4, boxes[2 * i + 1].bmax4), ori), dirInv);
+		const int baseIndex0 = 2 * i + 0;
+		const int baseIndex1 = baseIndex0 + 1;
+		
+		const __m256 t0 = _mm256_mul_ps(_mm256_sub_ps(_mm256_setr_m128(boxes[baseIndex0].bmin4, boxes[baseIndex1].bmin4), ori), dirInv);
+		const __m256 t1 = _mm256_mul_ps(_mm256_sub_ps(_mm256_setr_m128(boxes[baseIndex0].bmax4, boxes[baseIndex1].bmax4), ori), dirInv);
+
+		__m256 tmin = _mm256_min_ps(t0, t1);
+		__m256 tmax = _mm256_max_ps(t0, t1);
+
+		// Modified from https://stackoverflow.com/a/17639457
+		// Horizontal max. Note that the last component is trash
+		tmin = _mm256_max_ps(tmin, _mm256_shuffle_ps(tmin, tmin, _MM_SHUFFLE(2, 1, 0, 2)));
+		tmin = _mm256_max_ps(tmin, _mm256_shuffle_ps(tmin, tmin, _MM_SHUFFLE(1, 0, 2, 2)));
+
+		// Horizontal min. Note that the last component is trash
+		tmax = _mm256_min_ps(tmax, _mm256_shuffle_ps(tmax, tmax, _MM_SHUFFLE(2, 1, 0, 2)));
+		tmax = _mm256_min_ps(tmax, _mm256_shuffle_ps(tmax, tmax, _MM_SHUFFLE(1, 0, 2, 2)));
+
+		const __m256 comp = _mm256_cmp_ps(tmin, tmax, _CMP_LE_OQ);
+		const int mask = _mm256_movemask_ps(comp);
+
+		const bool r0 = (mask & 0x7) == 0x7;
+		const bool r1 = (mask & 0x70) == 0x70;
+
+		// assert(r0 == TestAABBIntersection(r, boxes[2 * i + 0], invDir));
+		// assert(r1 == TestAABBIntersection(r, boxes[2 * i + 1], invDir));
+
+		res |= (r0 << (2 * i + 0)) | (r1 << (2 * i + 1));
+
+		// Note that they might contain trash, check mask
+		distances[baseIndex0] = _mm_cvtss_f32(_mm256_extractf128_ps(tmin, 0));
+		distances[baseIndex1] = _mm_cvtss_f32(_mm256_extractf128_ps(tmin, 1));
+	}
+
+	return res;
+}
+
+inline uchar TestAABB4IntersectionBounds(const Ray& r, const aabb boxes[4], const float3 invDir, const float minT, const float maxT)
+{
+	// Modified From https://medium.com/@bromanz/another-view-on-the-classic-ray-aabb-intersection-algorithm-for-bvh-traversal-41125138b525
+
+	uchar res = 0;
+
+	const __m256 ori = _mm256_setr_ps(r.origin.x, r.origin.y, r.origin.z, 0, r.origin.x, r.origin.y, r.origin.z, 0);
+	const __m256  dirInv = _mm256_setr_ps(invDir.x, invDir.y, invDir.z, 0, invDir.x, invDir.y, invDir.z, 0);
+
+	const __m256  maxT_ = _mm256_set1_ps(maxT);
+	const __m256  minT_ = _mm256_set1_ps(minT);
+
+	for (int i = 0; i < 2; i++)
+	{
+		const int baseIndex0 = 2 * i + 0;
+		const int baseIndex1 = baseIndex0 + 1;
+
+		const __m256 t0 = _mm256_mul_ps(_mm256_sub_ps(_mm256_setr_m128(boxes[baseIndex0].bmin4, boxes[baseIndex1].bmin4), ori), dirInv);
+		const __m256 t1 = _mm256_mul_ps(_mm256_sub_ps(_mm256_setr_m128(boxes[baseIndex0].bmax4, boxes[baseIndex1].bmax4), ori), dirInv);
 
 		__m256 tmin = _mm256_max_ps(_mm256_min_ps(t0, t1), minT_);
 		__m256 tmax = _mm256_min_ps(_mm256_max_ps(t0, t1), maxT_);
@@ -355,6 +452,59 @@ inline uchar TestAABB4IntersectionBounds(const Ray& r, const aabb boxes[4], floa
 
 		// assert(r0 == TestAABBIntersectionBounds(r, boxes[2 * i + 0], invDir, minT, maxT));
 		// assert(r1 == TestAABBIntersectionBounds(r, boxes[2 * i + 1], invDir, minT, maxT));
+
+		res |= (r0 << (2 * i + 0)) | (r1 << (2 * i + 1));
+	}
+
+	return res;
+}
+
+inline uchar Test4AABBIntersection(const aabb& box, const Ray rays[4], const float3 invDir[4])
+{
+	// Modified From https://medium.com/@bromanz/another-view-on-the-classic-ray-aabb-intersection-algorithm-for-bvh-traversal-41125138b525
+
+	uchar res = 0;
+
+	const __m256 boxMin = _mm256_setr_m128(box.bmin4, box.bmin4);
+	const __m256 boxMax = _mm256_setr_m128(box.bmin4, box.bmin4);
+
+	for (int i = 0; i < 2; i++)
+	{
+		const int baseIndex0 = 2 * i + 0;
+		const int baseIndex1 = baseIndex0 + 1;
+
+		const Ray& ra0 = rays[baseIndex0];
+		const Ray& ra1 = rays[baseIndex1];
+
+		const float3& inv0 = invDir[baseIndex0];
+		const float3& inv1 = invDir[baseIndex1];
+
+		const __m256 ori = _mm256_setr_ps(ra0.origin.x, ra0.origin.y, ra0.origin.z, 0, ra1.origin.x, ra1.origin.y, ra1.origin.z, 0);
+		const __m256 dirInv = _mm256_setr_ps(inv0.x, inv0.y, inv0.z, 0, inv1.x, inv1.y, inv1.z, 0);
+
+		const __m256 t0 = _mm256_mul_ps(_mm256_sub_ps(boxMin, ori), dirInv);
+		const __m256 t1 = _mm256_mul_ps(_mm256_sub_ps(boxMax, ori), dirInv);
+
+		__m256 tmin = _mm256_min_ps(t0, t1);
+		__m256 tmax = _mm256_max_ps(t0, t1);
+
+		// Modified from https://stackoverflow.com/a/17639457
+		// Horizontal max. Note that the last component is trash
+		tmin = _mm256_max_ps(tmin, _mm256_shuffle_ps(tmin, tmin, _MM_SHUFFLE(2, 1, 0, 2)));
+		tmin = _mm256_max_ps(tmin, _mm256_shuffle_ps(tmin, tmin, _MM_SHUFFLE(1, 0, 2, 2)));
+
+		// Horizontal min. Note that the last component is trash
+		tmax = _mm256_min_ps(tmax, _mm256_shuffle_ps(tmax, tmax, _MM_SHUFFLE(2, 1, 0, 2)));
+		tmax = _mm256_min_ps(tmax, _mm256_shuffle_ps(tmax, tmax, _MM_SHUFFLE(1, 0, 2, 2)));
+
+		const __m256 comp = _mm256_cmp_ps(tmin, tmax, _CMP_LE_OQ);
+		const int mask = _mm256_movemask_ps(comp);
+
+		const bool r0 = (mask & 0x7) == 0x7;
+		const bool r1 = (mask & 0x70) == 0x70;
+
+		// assert(r0 == TestAABBIntersection(r, boxes[2 * i + 0], invDir));
+		// assert(r1 == TestAABBIntersection(r, boxes[2 * i + 1], invDir));
 
 		res |= (r0 << (2 * i + 0)) | (r1 << (2 * i + 1));
 	}
@@ -600,7 +750,8 @@ bool depthRayScene(const Ray& r, const vector<Mesh>& meshes, const int instId, c
 constexpr float kFrustumCullingTestEps = 0.1f;
 
 inline bool TestFrustumAABBIntersection(const Frustum& f, const aabb& box) {
-#ifdef USE_FRUSTUM_SSE
+//#define USE_FRUSTUM_SSE
+#ifndef USE_FRUSTUM_SSE // Normal Code
 	const float4 c000 = make_float4(box.bmin3.x, box.bmin3.y, box.bmin3.z, 1);
 	const float4 c001 = make_float4(box.bmin3.x, box.bmin3.y, box.bmax3.z, 1);
 	const float4 c010 = make_float4(box.bmin3.x, box.bmax3.y, box.bmin3.z, 1);

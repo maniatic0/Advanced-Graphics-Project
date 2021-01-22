@@ -135,6 +135,33 @@ namespace lh2core
 	template <bool backCulling>
 	void BVH4::IntersectRayBVH(const RayPacket& p, const Frustum& f, RayMeshInterceptInfo hit[RayPacket::kPacketSize])
 	{
+		struct StackNode {
+			int nodeId;
+			int childId;
+		};
+
+		struct StackElement {
+			StackNode node;
+			int rayId;
+			float t;
+		};
+
+		float4 invDirs[RayPacket::kPacketSize];
+		p.InverseDirection(invDirs);
+		const int maxActive = p.maxActive;
+
+
+		StackElement stack[RayPacket::kPacketSize * 32 * 4]; // In theory all the rays could put their kids here. So a BVH of depth 32 times 4 kids per level
+
+		int stackPointer = 0;
+		int activeRID = 0;
+
+		for (int i = 0; i < maxActive; i++)
+		{
+			stack[stackPointer++] = { {rootIndex , rootClusterIndex}, i, hit[i].triIntercept.t };
+		}
+
+
 		// TODO: Have proper packet interception
 		Ray r;
 		for (size_t i = 0; i < RayPacket::kPacketSize; i++)
