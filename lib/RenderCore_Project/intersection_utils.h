@@ -195,6 +195,21 @@ public:
 		r.direction = direction[index];
 	}
 
+	inline void GetRays(Ray rays[kPacketSize]) const {
+		for (uint i = 0; i < maxActive; i++)
+		{
+			GetRay(rays[i], i);
+		}
+	}
+
+	inline void GetSigns(uchar signs[kPacketSize]) const {
+		for (uint i = 0; i < maxActive; i++)
+		{
+			const float4& dir = direction[i];
+			signs[i] = ((dir.x >= 0) << 0) | ((dir.y >= 0) << 1) | ((dir.z >= 0) << 2);
+		}
+	}
+
 	/// <summary>
 	/// Evaluate the ray for certain t
 	/// </summary>
@@ -217,6 +232,13 @@ public:
 		for (size_t i = 0; i < maxActive; i++)
 		{
 			invDir[i] = 1.0f / direction[i];
+		}
+	}
+
+	inline void InverseDirection(float3 invDir[kPacketSize]) const {
+		for (size_t i = 0; i < maxActive; i++)
+		{
+			invDir[i] = make_float3(1.0f / direction[i]);
 		}
 	}
 
@@ -459,14 +481,14 @@ inline uchar TestAABB4IntersectionBounds(const Ray& r, const aabb boxes[4], cons
 	return res;
 }
 
-inline uchar Test4AABBIntersection(const aabb& box, const Ray rays[4], const float4 invDir[4])
+inline uchar Test4AABBIntersection(const aabb& box, const Ray rays[4], const float3 invDir[4])
 {
 	// Modified From https://medium.com/@bromanz/another-view-on-the-classic-ray-aabb-intersection-algorithm-for-bvh-traversal-41125138b525
 
 	uchar res = 0;
 
 	const __m256 boxMin = _mm256_setr_m128(box.bmin4, box.bmin4);
-	const __m256 boxMax = _mm256_setr_m128(box.bmin4, box.bmin4);
+	const __m256 boxMax = _mm256_setr_m128(box.bmax4, box.bmax4);
 
 	for (int i = 0; i < 2; i++)
 	{
@@ -476,8 +498,8 @@ inline uchar Test4AABBIntersection(const aabb& box, const Ray rays[4], const flo
 		const Ray& ra0 = rays[baseIndex0];
 		const Ray& ra1 = rays[baseIndex1];
 
-		const float4& inv0 = invDir[baseIndex0];
-		const float4& inv1 = invDir[baseIndex1];
+		const float3& inv0 = invDir[baseIndex0];
+		const float3& inv1 = invDir[baseIndex1];
 
 		const __m256 ori = _mm256_setr_ps(ra0.origin.x, ra0.origin.y, ra0.origin.z, 0, ra1.origin.x, ra1.origin.y, ra1.origin.z, 0);
 		const __m256 dirInv = _mm256_setr_ps(inv0.x, inv0.y, inv0.z, 0, inv1.x, inv1.y, inv1.z, 0);
@@ -503,8 +525,8 @@ inline uchar Test4AABBIntersection(const aabb& box, const Ray rays[4], const flo
 		const bool r0 = (mask & 0x7) == 0x7;
 		const bool r1 = (mask & 0x70) == 0x70;
 
-		// assert(r0 == TestAABBIntersection(r, boxes[2 * i + 0], invDir));
-		// assert(r1 == TestAABBIntersection(r, boxes[2 * i + 1], invDir));
+		assert(r0 == TestAABBIntersection(ra0, box, inv0));
+		assert(r1 == TestAABBIntersection(ra1, box, inv1));
 
 		res |= (r0 << (2 * i + 0)) | (r1 << (2 * i + 1));
 	}

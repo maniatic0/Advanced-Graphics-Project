@@ -7,6 +7,8 @@ namespace lh2core
 	uchar BVH4::orderLUT[8][136];
 	uchar BVH4::compactLUT[24][16];
 	uchar BVH4::bitCountLUT[16];
+	uchar BVH4::bitFirstLUT[16];
+	
 
 	uchar BVH4::orderToIndex(const uchar order) {
 		uchar idx;
@@ -23,9 +25,27 @@ namespace lh2core
 	void BVH4::PrepareBVH4Tables()
 	{
 		// Fill bit count for 4 childs
+		// Fill first bit set for 4 bits
 		for (int i = 0; i < 16; i++)
 		{
 			bitCountLUT[i] = (i & 1) + ((i >> 1) & 1) + ((i >> 2) & 1) + ((i >> 3) & 1);
+
+			if (i & (1 << 0))
+			{
+				bitFirstLUT[i] = 0;
+			}
+			else if (i & (1 << 1))
+			{
+				bitFirstLUT[i] = 1;
+			}
+			else if (i & (1 << 2))
+			{
+				bitFirstLUT[i] = 2;
+			}
+			else if (i & (1 << 3))
+			{
+				bitFirstLUT[i] = 3;
+			}
 		}
 
 

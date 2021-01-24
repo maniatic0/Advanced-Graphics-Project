@@ -133,7 +133,7 @@ namespace lh2core
 	}
 
 	template <bool backCulling>
-	void BVH4::IntersectRayBVH(const RayPacket& pR, const Frustum& f, RayMeshInterceptInfo hit[RayPacket::kPacketSize])
+	void BVH4::IntersectRayBVH(const RayPacket& pR, const Frustum& f, RayMeshInterceptInfo hit[RayPacket::kPacketSize]) const
 	{
 		// Note that this could be replaced with an int offset to the base root
 		struct StackNode {
@@ -147,10 +147,15 @@ namespace lh2core
 			float t;
 		};
 
-		// TODO: fill array of rays
 		Ray rays[RayPacket::kPacketSize];
-		float4 invDirs[RayPacket::kPacketSize];
+		pR.GetRays(rays);
+
+		float3 invDirs[RayPacket::kPacketSize];
 		pR.InverseDirection(invDirs);
+
+		uchar signs[RayPacket::kPacketSize];
+		pR.GetSigns(signs);
+
 		const int maxActive = pR.maxActive;
 		const int maxActiveDiv4 = (maxActive + 4 - 1) / 4;
 
@@ -160,12 +165,32 @@ namespace lh2core
 		StackNode node;
 		int stackPointer = 0;
 		int activeRID = 0;
+		int savedRID = 0;
+		int o = -1;
+		int order = 0;
 		float t = 0;
+		uchar activeMask = 0;
+		uchar hitMsk = 0;
+		float t4[4]{ -1, -1, -1, -1 };
+		int cnt = -1;
+
+		BVH4Node* nodeInfo = nullptr;
+		BVH4NodeCluster* nodeClusterInfo = nullptr;
+		aabb* nodeBounds = nullptr;
+		Ray* intRay = nullptr;
+		float3* intInvDir = nullptr;
+		uchar* sign = nullptr;
+
+		// Leaves intersection info
+		RayTriangleInterceptInfo tempHitInfo;
+		RayMeshInterceptInfo *hitInfo = nullptr;
+		int vPos;
+		int tIndex;
 
 		// This is not written but it is probably what happens
 		for (int i = 0; i < maxActive; i++)
 		{
-			stack[stackPointer++] = { {rootIndex , rootClusterIndex}, i, hit[i].triIntercept.t + kEps };
+			stack[stackPointer++] = { {rootIndex , rootClusterIndex}, i, hit[i].triIntercept.t - kEps };
 		}
 
 		// This is not written but it is probably what happens
@@ -174,15 +199,130 @@ namespace lh2core
 		while (true)
 		{
 		LINE_5:
-			;;;
+			// Node Stuff
+			assert(nodeInfo != nullptr);
+			assert(nodeClusterInfo != nullptr);
+			assert(nodeBounds != nullptr);
+			// Ray Stuff
+			assert(intRay != nullptr);
+			assert(intInvDir != nullptr);
+			assert(sign != nullptr);
+			assert(hitInfo != nullptr);
+			if (!nodeClusterInfo->IsLeaf())
+			{
+				hitMsk = TestAABB4IntersectionDistance(*intRay, pool[nodeClusterInfo->GetChildrenCluster()].bounds, *intInvDir, t4);
+				activeMask = hitMsk & nodeClusterInfo->GetActiveChildren();
+				if (activeMask == 0)
+				{
+					goto LINE_42;
+				}
+				savedRID = activeRID;
+				const uchar orderIdx = orderLUT[*sign][nodeClusterInfo->GetPerm()];
+				order = compactLUT[orderIdx][activeMask];
+				o = 0;
+				for (cnt = bitCountLUT[activeMask] - 1; cnt >= 0; cnt--)
+				{
+					o = GetChildOrderMask(order, cnt);
+					if ((hitMsk & (1 << o)) != 0)
+					{
+						goto LINE_31;
+					}
 
+					for (int p = activeRID / 4; p < maxActiveDiv4; p++)
+					{
+						assert(0 <= 4 * p && 4 * p + 3 < RayPacket::kPacketSize);
+						const uint mask = Test4AABBIntersection(*nodeBounds, &rays[4 * p], &invDirs[4 * p]);
+						if (mask != 0)
+						{
+							assert(0 <= mask && mask < 16);
+							activeRID = 4 * p + bitFirstLUT[mask];
+							assert(0 <= activeRID && activeRID < RayPacket::kPacketSize);
+
+							if (activeRID >= maxActive)
+							{
+								break;
+							}
+
+							assert(0 <= activeRID && activeRID < maxActive);
+							intRay = &rays[activeRID];
+							intInvDir = &invDirs[activeRID];
+							sign = &signs[activeRID];
+							hitInfo = &hit[activeRID];
+
+							goto LINE_31;
+						}
+					}
+				}
+				goto LINE_42;
+			LINE_31:
+				for (int i = 0; i < cnt; i++)
+				{
+					const int so = GetChildOrderMask(order, i);
+					stack[stackPointer++] = { {nodeClusterInfo->GetChildrenCluster(), so}, i, t4[so] };
+				}
+
+				// Node Stuff
+				node.nodeId = nodeClusterInfo->GetChildrenCluster();
+				assert(0 <= node.nodeId && node.nodeId < poolSize);
+				nodeInfo = &pool[node.nodeId];
+
+				node.childId = o;
+				assert(0 <= node.childId && node.childId < 4);
+				nodeClusterInfo = &nodeInfo->children[node.childId];
+				nodeBounds = &nodeInfo->bounds[node.childId];
+
+				continue;
+			}
+			else
+			{
+				// Leaf Intersection
+				// Check if it actually useful to test all triangles
+				if (TestAABBIntersectionBounds(*intRay, *nodeBounds, *intInvDir, -kEps, hitInfo->triIntercept.t))
+				{
+					assert(mesh.vcount % 3 == 0); // No weird meshes
+					const int triMax = nodeClusterInfo->GetPrimitiveCount() + nodeClusterInfo->GetFirstPrimitive();
+					tempHitInfo.Reset();
+
+					for (int i = nodeClusterInfo->GetFirstPrimitive(); i < triMax; i++)
+					{
+						tIndex = indices[i];
+						vPos = tIndex * 3;
+
+						if (interceptRayTriangle<backCulling>(*intRay, mesh.vertices[vPos + 0], mesh.vertices[vPos + 1], mesh.vertices[vPos + 2], tempHitInfo))
+						{
+							if (tempHitInfo < hitInfo->triIntercept)
+							{
+								hitInfo->meshId = mesh.meshID;
+								tempHitInfo.CopyTo(hitInfo->triIntercept);
+								hitInfo->triId = tIndex;
+							}
+						}
+					}
+				}
+			}
 		LINE_42:
 			while (--stackPointer >= 0)
 			{
 				assert(stackPointer >= 0);
 				const StackElement& elem = stack[stackPointer];
+
+				// Node Stuff
 				node = elem.node;
+				assert(0 <= node.nodeId && node.nodeId < poolSize);
+				nodeInfo = &pool[node.nodeId];
+				assert(0 <= node.childId && node.childId < 4);
+				nodeClusterInfo = &nodeInfo->children[node.childId];
+				nodeBounds = &nodeInfo->bounds[node.childId];
+				
+				// Ray Stuff
 				activeRID = elem.rayId;
+				assert(0 <= activeRID && activeRID < maxActive);
+				intRay = &rays[activeRID];
+				intInvDir = &invDirs[activeRID];
+				sign = &signs[activeRID];
+				hitInfo = &hit[activeRID];
+
+				// Distance
 				t = elem.t;
 
 				// This might be dangerous
@@ -194,9 +334,27 @@ namespace lh2core
 
 				for (int p = activeRID/4; p < maxActiveDiv4; p++)
 				{
-					assert(0 <= node.nodeId && node.nodeId < poolSize);
-					assert(0 <= node.childId && node.childId < 4);
-					const uint mask = Test4AABBIntersection(pool[node.nodeId].bounds[node.childId], &rays[4 * p], &invDirs[4 * p]);
+					assert(0 <= 4 * p && 4 * p + 3 < RayPacket::kPacketSize);
+					const uint mask = Test4AABBIntersection(*nodeBounds, &rays[4 * p], &invDirs[4 * p]);
+					if (mask != 0)
+					{
+						assert(0 <= mask && mask < 16);
+						activeRID = 4 * p + bitFirstLUT[mask];
+						assert(0 <= activeRID && activeRID < RayPacket::kPacketSize);
+
+						if (activeRID >= maxActive)
+						{
+							break;
+						}
+
+						assert(0 <= activeRID && activeRID < maxActive);
+						intRay = &rays[activeRID];
+						intInvDir = &invDirs[activeRID];
+						sign = &signs[activeRID];
+						hitInfo = &hit[activeRID];
+
+						goto LINE_5;
+					}
 				}
 			}
 			break;
@@ -204,12 +362,14 @@ namespace lh2core
 
 
 		// TODO: Have proper packet interception
+		/*
 		Ray r;
 		for (size_t i = 0; i < RayPacket::kPacketSize; i++)
 		{
 			pR.GetRay(r, i);
 			IntersectRayBVH<backCulling>(r, hit[i]);
 		}
+		*/
 	}
 
 	template <bool backCulling>

@@ -126,6 +126,7 @@ namespace lh2core
 		static uchar orderLUT[8][136];
 		static uchar compactLUT[24][16];
 		static uchar bitCountLUT[16];
+		static uchar bitFirstLUT[16];
 
 		// helper LUT
 		static constexpr uchar shiftLUT[4] = { 6, 4, 2, 0 };
@@ -166,7 +167,7 @@ namespace lh2core
 		bool IntersectRayBVH(const Ray& r, RayMeshInterceptInfo& hit) const;
 
 		template <bool backCulling>
-		void IntersectRayBVH(const RayPacket& p, const Frustum& f, RayMeshInterceptInfo hitInfo[RayPacket::kPacketSize]);
+		void IntersectRayBVH(const RayPacket& p, const Frustum& f, RayMeshInterceptInfo hitInfo[RayPacket::kPacketSize]) const;
 
 		template <bool backCulling>
 		[[nodiscard]]
@@ -174,6 +175,13 @@ namespace lh2core
 
 
 		static void PrepareBVH4Tables();
+
+		static inline int GetChildOrderMask(int orderMask, int index)
+		{
+			assert(0 <= index && index < 4);
+			// low bits are the last nodes
+			return (int)((orderMask >> 2 * index) & 0x03);
+		}
 	};
 
 	template <bool backCulling>
