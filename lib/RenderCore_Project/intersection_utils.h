@@ -459,7 +459,7 @@ inline uchar TestAABB4IntersectionBounds(const Ray& r, const aabb boxes[4], cons
 	return res;
 }
 
-inline uchar Test4AABBIntersection(const aabb& box, const Ray rays[4], const float3 invDir[4])
+inline uchar Test4AABBIntersection(const aabb& box, const Ray rays[4], const float4 invDir[4])
 {
 	// Modified From https://medium.com/@bromanz/another-view-on-the-classic-ray-aabb-intersection-algorithm-for-bvh-traversal-41125138b525
 
@@ -476,8 +476,8 @@ inline uchar Test4AABBIntersection(const aabb& box, const Ray rays[4], const flo
 		const Ray& ra0 = rays[baseIndex0];
 		const Ray& ra1 = rays[baseIndex1];
 
-		const float3& inv0 = invDir[baseIndex0];
-		const float3& inv1 = invDir[baseIndex1];
+		const float4& inv0 = invDir[baseIndex0];
+		const float4& inv1 = invDir[baseIndex1];
 
 		const __m256 ori = _mm256_setr_ps(ra0.origin.x, ra0.origin.y, ra0.origin.z, 0, ra1.origin.x, ra1.origin.y, ra1.origin.z, 0);
 		const __m256 dirInv = _mm256_setr_ps(inv0.x, inv0.y, inv0.z, 0, inv1.x, inv1.y, inv1.z, 0);

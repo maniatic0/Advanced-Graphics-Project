@@ -133,8 +133,9 @@ namespace lh2core
 	}
 
 	template <bool backCulling>
-	void BVH4::IntersectRayBVH(const RayPacket& p, const Frustum& f, RayMeshInterceptInfo hit[RayPacket::kPacketSize])
+	void BVH4::IntersectRayBVH(const RayPacket& pR, const Frustum& f, RayMeshInterceptInfo hit[RayPacket::kPacketSize])
 	{
+		// Note that this could be replaced with an int offset to the base root
 		struct StackNode {
 			int nodeId;
 			int childId;
@@ -146,19 +147,59 @@ namespace lh2core
 			float t;
 		};
 
+		// TODO: fill array of rays
+		Ray rays[RayPacket::kPacketSize];
 		float4 invDirs[RayPacket::kPacketSize];
-		p.InverseDirection(invDirs);
-		const int maxActive = p.maxActive;
+		pR.InverseDirection(invDirs);
+		const int maxActive = pR.maxActive;
+		const int maxActiveDiv4 = (maxActive + 4 - 1) / 4;
 
 
-		StackElement stack[RayPacket::kPacketSize * 32 * 4]; // In theory all the rays could put their kids here. So a BVH of depth 32 times 4 kids per level
+		StackElement stack[RayPacket::kPacketSize * 32 * 4]; // In theory all the rays could put their kids here. So a BVH of depth 32, times 4 kids per level
 
+		StackNode node;
 		int stackPointer = 0;
 		int activeRID = 0;
+		float t = 0;
 
+		// This is not written but it is probably what happens
 		for (int i = 0; i < maxActive; i++)
 		{
-			stack[stackPointer++] = { {rootIndex , rootClusterIndex}, i, hit[i].triIntercept.t };
+			stack[stackPointer++] = { {rootIndex , rootClusterIndex}, i, hit[i].triIntercept.t + kEps };
+		}
+
+		// This is not written but it is probably what happens
+		goto LINE_42;
+
+		while (true)
+		{
+		LINE_5:
+			;;;
+
+		LINE_42:
+			while (--stackPointer >= 0)
+			{
+				assert(stackPointer >= 0);
+				const StackElement& elem = stack[stackPointer];
+				node = elem.node;
+				activeRID = elem.rayId;
+				t = elem.t;
+
+				// This might be dangerous
+				if (*reinterpret_cast<uint *>(&t) < *reinterpret_cast<uint *>(&hit[activeRID].triIntercept.t))
+				{
+					assert(t < hit[activeRID].triIntercept.t); // Just to be sure
+					goto LINE_5;
+				}
+
+				for (int p = activeRID/4; p < maxActiveDiv4; p++)
+				{
+					assert(0 <= node.nodeId && node.nodeId < poolSize);
+					assert(0 <= node.childId && node.childId < 4);
+					const uint mask = Test4AABBIntersection(pool[node.nodeId].bounds[node.childId], &rays[4 * p], &invDirs[4 * p]);
+				}
+			}
+			break;
 		}
 
 
@@ -166,7 +207,7 @@ namespace lh2core
 		Ray r;
 		for (size_t i = 0; i < RayPacket::kPacketSize; i++)
 		{
-			p.GetRay(r, i);
+			pR.GetRay(r, i);
 			IntersectRayBVH<backCulling>(r, hit[i]);
 		}
 	}
