@@ -263,7 +263,7 @@ namespace lh2core
 					assert((hitMsk & (1 << so)) != 0);
 					assert(t4[so] >= 0);
 					assert(0 <= stackPointer && stackPointer < stackSize);
-					stack[stackPointer++] = { {nodeClusterInfo->GetChildrenCluster(), so}, i, t4[so] };
+					stack[stackPointer++] = { {nodeClusterInfo->GetChildrenCluster(), so}, savedRID, t4[so] };
 				}
 
 				// Node Stuff
