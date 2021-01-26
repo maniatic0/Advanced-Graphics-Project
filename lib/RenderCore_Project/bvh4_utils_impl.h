@@ -159,8 +159,8 @@ namespace lh2core
 		const int maxActive = pR.maxActive;
 		const int maxActiveDiv4 = (maxActive + 4 - 1) / 4;
 
-
-		StackElement stack[RayPacket::kPacketSize * 32 * 4]; // In theory all the rays could put their kids here. So a BVH of depth 32, times 4 kids per level
+		constexpr size_t stackSize = RayPacket::kPacketSize * 32 * 4; // In theory all the rays could put their kids here. So a BVH of depth 32, times 4 kids per level
+		StackElement stack[stackSize]; 
 
 		StackNode node;
 		int stackPointer = 0;
@@ -190,7 +190,9 @@ namespace lh2core
 		// This is not written but it is probably what happens
 		for (int i = 0; i < maxActive; i++)
 		{
-			stack[stackPointer++] = { {rootIndex , rootClusterIndex}, i, hit[i].triIntercept.t - kEps };
+			assert(hit[i].triIntercept.t >= 0);
+			assert(stackPointer < stackSize);
+			stack[stackPointer++] = { {rootIndex , rootClusterIndex}, i, hit[i].triIntercept.t};
 		}
 
 		// This is not written but it is probably what happens
@@ -258,6 +260,9 @@ namespace lh2core
 				for (int i = 0; i < cnt; i++)
 				{
 					const int so = GetChildOrderMask(order, i);
+					assert((hitMsk & (1 << so)) != 0);
+					assert(t4[so] >= 0);
+					assert(0 <= stackPointer && stackPointer < stackSize);
 					stack[stackPointer++] = { {nodeClusterInfo->GetChildrenCluster(), so}, i, t4[so] };
 				}
 
@@ -266,6 +271,7 @@ namespace lh2core
 				assert(0 <= node.nodeId && node.nodeId < poolSize);
 				nodeInfo = &pool[node.nodeId];
 
+				assert(o == GetChildOrderMask(order, cnt));
 				node.childId = o;
 				assert(0 <= node.childId && node.childId < 4);
 				nodeClusterInfo = &nodeInfo->children[node.childId];
@@ -324,6 +330,7 @@ namespace lh2core
 
 				// Distance
 				t = elem.t;
+				assert(t >= 0);
 
 				// This might be dangerous
 				if (*reinterpret_cast<uint *>(&t) < *reinterpret_cast<uint *>(&hit[activeRID].triIntercept.t))
@@ -331,6 +338,7 @@ namespace lh2core
 					assert(t < hit[activeRID].triIntercept.t); // Just to be sure
 					goto LINE_5;
 				}
+				assert(!(t < hit[activeRID].triIntercept.t)); // Just to be sure
 
 				for (int p = activeRID/4; p < maxActiveDiv4; p++)
 				{
@@ -359,17 +367,6 @@ namespace lh2core
 			}
 			break;
 		}
-
-
-		// TODO: Have proper packet interception
-		/*
-		Ray r;
-		for (size_t i = 0; i < RayPacket::kPacketSize; i++)
-		{
-			pR.GetRay(r, i);
-			IntersectRayBVH<backCulling>(r, hit[i]);
-		}
-		*/
 	}
 
 	template <bool backCulling>

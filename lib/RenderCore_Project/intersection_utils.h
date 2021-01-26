@@ -434,8 +434,10 @@ inline uchar TestAABB4IntersectionDistance(const Ray& r, const aabb boxes[4], co
 		res |= (r0 << (2 * i + 0)) | (r1 << (2 * i + 1));
 
 		// Note that they might contain trash, check mask
-		distances[baseIndex0] = _mm_cvtss_f32(_mm256_extractf128_ps(tmin, 0));
-		distances[baseIndex1] = _mm_cvtss_f32(_mm256_extractf128_ps(tmin, 1));
+		distances[baseIndex0] = max(_mm_cvtss_f32(_mm256_extractf128_ps(tmin, 0)), 0.0f); // Max, if negative you are inside
+		distances[baseIndex1] = max(_mm_cvtss_f32(_mm256_extractf128_ps(tmin, 1)), 0.0f);
+		assert((r0 && distances[baseIndex0] >= 0) || !r0);
+		assert((r1 && distances[baseIndex1] >= 0) || !r1);
 	}
 
 	return res;
