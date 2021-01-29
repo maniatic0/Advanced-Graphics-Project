@@ -179,6 +179,7 @@ namespace lh2core
 		static inline int GetChildOrderMask(int orderMask, int index)
 		{
 			assert(0 <= index && index < 4);
+			assert(0 <= ((int)((orderMask >> 2 * index) & 0x03)) && ((int)((orderMask >> 2 * index) & 0x03)) < 4);
 			// low bits are the last nodes
 			return (int)((orderMask >> 2 * index) & 0x03);
 		}

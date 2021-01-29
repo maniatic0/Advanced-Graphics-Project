@@ -536,6 +536,65 @@ inline uchar Test4AABBIntersection(const aabb& box, const Ray rays[4], const flo
 	return res;
 }
 
+inline uchar Test4AABBIntersectionDistance(const aabb& box, const Ray rays[4], const float3 invDir[4], float distances[4])
+{
+	// Modified From https://medium.com/@bromanz/another-view-on-the-classic-ray-aabb-intersection-algorithm-for-bvh-traversal-41125138b525
+
+	uchar res = 0;
+
+	const __m256 boxMin = _mm256_setr_m128(box.bmin4, box.bmin4);
+	const __m256 boxMax = _mm256_setr_m128(box.bmax4, box.bmax4);
+
+	for (int i = 0; i < 2; i++)
+	{
+		const int baseIndex0 = 2 * i + 0;
+		const int baseIndex1 = baseIndex0 + 1;
+
+		const Ray& ra0 = rays[baseIndex0];
+		const Ray& ra1 = rays[baseIndex1];
+
+		const float3& inv0 = invDir[baseIndex0];
+		const float3& inv1 = invDir[baseIndex1];
+
+		const __m256 ori = _mm256_setr_ps(ra0.origin.x, ra0.origin.y, ra0.origin.z, 0, ra1.origin.x, ra1.origin.y, ra1.origin.z, 0);
+		const __m256 dirInv = _mm256_setr_ps(inv0.x, inv0.y, inv0.z, 0, inv1.x, inv1.y, inv1.z, 0);
+
+		const __m256 t0 = _mm256_mul_ps(_mm256_sub_ps(boxMin, ori), dirInv);
+		const __m256 t1 = _mm256_mul_ps(_mm256_sub_ps(boxMax, ori), dirInv);
+
+		__m256 tmin = _mm256_min_ps(t0, t1);
+		__m256 tmax = _mm256_max_ps(t0, t1);
+
+		// Modified from https://stackoverflow.com/a/17639457
+		// Horizontal max. Note that the last component is trash
+		tmin = _mm256_max_ps(tmin, _mm256_shuffle_ps(tmin, tmin, _MM_SHUFFLE(2, 1, 0, 2)));
+		tmin = _mm256_max_ps(tmin, _mm256_shuffle_ps(tmin, tmin, _MM_SHUFFLE(1, 0, 2, 2)));
+
+		// Horizontal min. Note that the last component is trash
+		tmax = _mm256_min_ps(tmax, _mm256_shuffle_ps(tmax, tmax, _MM_SHUFFLE(2, 1, 0, 2)));
+		tmax = _mm256_min_ps(tmax, _mm256_shuffle_ps(tmax, tmax, _MM_SHUFFLE(1, 0, 2, 2)));
+
+		const __m256 comp = _mm256_cmp_ps(tmin, tmax, _CMP_LE_OQ);
+		const int mask = _mm256_movemask_ps(comp);
+
+		const bool r0 = (mask & 0x7) == 0x7;
+		const bool r1 = (mask & 0x70) == 0x70;
+
+		assert(r0 == TestAABBIntersection(ra0, box, inv0));
+		assert(r1 == TestAABBIntersection(ra1, box, inv1));
+
+		res |= (r0 << (2 * i + 0)) | (r1 << (2 * i + 1));
+
+		// Note that they might contain trash, check mask
+		distances[baseIndex0] = max(_mm_cvtss_f32(_mm256_extractf128_ps(tmin, 0)), 0.0f); // Max, if negative you are inside
+		distances[baseIndex1] = max(_mm_cvtss_f32(_mm256_extractf128_ps(tmin, 1)), 0.0f);
+		assert((r0 && distances[baseIndex0] >= 0) || !r0);
+		assert((r1 && distances[baseIndex1] >= 0) || !r1);
+	}
+
+	return res;
+}
+
 
 /// <summary>
 /// Ray Triangle Interception Information

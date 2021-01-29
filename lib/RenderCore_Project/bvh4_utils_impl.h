@@ -158,6 +158,7 @@ namespace lh2core
 
 		const int maxActive = pR.maxActive;
 		const int maxActiveDiv4 = (maxActive + 4 - 1) / 4;
+		constexpr int maxPacketDiv4 = (RayPacket::kPacketSize + 4 - 1) / 4;
 
 		constexpr size_t stackSize = RayPacket::kPacketSize * 32 * 4; // In theory all the rays could put their kids here. So a BVH of depth 32, times 4 kids per level
 		StackElement stack[stackSize]; 
@@ -188,16 +189,31 @@ namespace lh2core
 		int tIndex;
 
 		// This is not written but it is probably what happens
-		for (int i = 0; i < maxActive; i++)
+		for (int p = 0; p < maxActiveDiv4; p++)
 		{
-			assert(hit[i].triIntercept.t >= 0);
-			assert(stackPointer < stackSize);
-			stack[stackPointer++] = { {rootIndex , rootClusterIndex}, i, hit[i].triIntercept.t};
+			const int p4 = 4 * p;
+			assert(0 <= p4 && p4 + 3 < RayPacket::kPacketSize);
+			const uint mask = Test4AABBIntersectionDistance(root->bounds[rootClusterIndex], &rays[p4], &invDirs[p4], t4);
+			if (mask != 0)
+			{
+				assert(0 <= mask && mask < 16);
+
+				for (int i = 0; i < 4; i++)
+				{
+					if ((mask & (1 << i)) != 0)
+					{
+						assert(hit[p4 + i].triIntercept.t >= 0);
+						assert(stackPointer < stackSize);
+						stack[stackPointer++] = { {rootIndex , rootClusterIndex}, p4 + i, t4[i]};
+					}
+				}
+			}
 		}
 
 		// This is not written but it is probably what happens
 		goto LINE_42;
 
+		// TODO: Check pixels that return black
 		while (true)
 		{
 		LINE_5:
@@ -232,12 +248,13 @@ namespace lh2core
 
 					for (int p = activeRID / 4; p < maxActiveDiv4; p++)
 					{
-						assert(0 <= 4 * p && 4 * p + 3 < RayPacket::kPacketSize);
-						const uint mask = Test4AABBIntersection(*nodeBounds, &rays[4 * p], &invDirs[4 * p]);
+						const int p4 = 4 * p;
+						assert(0 <= p4 && p4 + 3 < RayPacket::kPacketSize);
+						const uint mask = Test4AABBIntersection(*nodeBounds, &rays[p4], &invDirs[p4]);
 						if (mask != 0)
 						{
 							assert(0 <= mask && mask < 16);
-							activeRID = 4 * p + bitFirstLUT[mask];
+							activeRID = p4 + bitFirstLUT[mask];
 							assert(0 <= activeRID && activeRID < RayPacket::kPacketSize);
 
 							if (activeRID >= maxActive)
@@ -340,14 +357,15 @@ namespace lh2core
 				}
 				assert(!(t < hit[activeRID].triIntercept.t)); // Just to be sure
 
-				for (int p = activeRID/4; p < maxActiveDiv4; p++)
+				for (int p = activeRID / 4; p < maxActiveDiv4; p++)
 				{
-					assert(0 <= 4 * p && 4 * p + 3 < RayPacket::kPacketSize);
-					const uint mask = Test4AABBIntersection(*nodeBounds, &rays[4 * p], &invDirs[4 * p]);
+					const int p4 = 4 * p;
+					assert(0 <= p4 && p4 + 3 < RayPacket::kPacketSize);
+					const uint mask = Test4AABBIntersection(*nodeBounds, &rays[p4], &invDirs[p4]);
 					if (mask != 0)
 					{
 						assert(0 <= mask && mask < 16);
-						activeRID = 4 * p + bitFirstLUT[mask];
+						activeRID = p4 + bitFirstLUT[mask];
 						assert(0 <= activeRID && activeRID < RayPacket::kPacketSize);
 
 						if (activeRID >= maxActive)
