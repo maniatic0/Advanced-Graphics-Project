@@ -819,7 +819,7 @@ bool depthRayScene(const Ray& r, const vector<Mesh>& meshes, const int instId, c
 constexpr float kFrustumCullingTestEps = 0.1f;
 
 inline bool TestFrustumAABBIntersection(const Frustum& f, const aabb& box) {
-// #define USE_FRUSTUM_SSE
+#define USE_FRUSTUM_SSE
 #ifndef USE_FRUSTUM_SSE // Normal Code
 
 	for (size_t i = 0; i < Frustum::kNumberOfPlanes; i++)
@@ -892,45 +892,39 @@ inline bool TestFrustumAABBIntersection(const Frustum& f, const aabb& box) {
 #endif
 
 	const __m128  frustumCullingTestEps = _mm_set_ps1(kFrustumCullingTestEps);
+	const __m128  zero = _mm_set_ps1(0);
 
-	const __m128 c000 = _mm_setr_ps(box.bmin3.x, box.bmin3.y, box.bmin3.z, 1);
-	const __m128 c001 = _mm_setr_ps(box.bmin3.x, box.bmin3.y, box.bmax3.z, 1);
-	const __m128 c010 = _mm_setr_ps(box.bmin3.x, box.bmax3.y, box.bmin3.z, 1);
-	const __m128 c011 = _mm_setr_ps(box.bmin3.x, box.bmax3.y, box.bmax3.z, 1);
-	const __m128 c100 = _mm_setr_ps(box.bmax3.x, box.bmin3.y, box.bmin3.z, 1);
-	const __m128 c101 = _mm_setr_ps(box.bmax3.x, box.bmin3.y, box.bmax3.z, 1);
-	const __m128 c110 = _mm_setr_ps(box.bmax3.x, box.bmax3.y, box.bmin3.z, 1);
-	const __m128 c111 = _mm_setr_ps(box.bmax3.x, box.bmax3.y, box.bmax3.z, 1);
+	__m128 res;
+	__m128 selector;
+	__m128 corner;
+
+	// Dot Product registers
+	__m128 mulRes, shufReg, sumsReg;
+
+	const __m128 mini = _mm_setr_ps(box.bmin3.x, box.bmin3.y, box.bmin3.z, 1);
+	const __m128 maxi = _mm_setr_ps(box.bmax3.x, box.bmax3.y, box.bmax3.z, 1);
 
 	for (size_t i = 0; i < Frustum::kNumberOfPlanes; i++)
 	{
 		const __m128 normal = _mm_setr_ps(f.normals[i].x, f.normals[i].y, f.normals[i].z, f.normals[i].w);
 
-		const __m128 dot0 = _mm_dp_ps(normal, c000, 0xFF);
-		__m128 res = _mm_cmpgt_ps(dot0, frustumCullingTestEps);
+		selector = _mm_cmpgt_ps(normal, zero);
+		corner = _mm_blendv_ps(maxi, mini, selector);
 
-		const __m128 dot1 = _mm_dp_ps(normal, c001, 0xFF);
-		res = _mm_and_ps(res, _mm_cmpgt_ps(dot1, frustumCullingTestEps));
+		{
+			// Dot Product
+			// From https://stackoverflow.com/a/42924346
+			mulRes = _mm_mul_ps(corner, normal);
 
-		const __m128 dot2 = _mm_dp_ps(normal, c010, 0xFF);
-		res = _mm_and_ps(res, _mm_cmpgt_ps(dot2, frustumCullingTestEps));
+			// Calculates the sum of SSE Register - https://stackoverflow.com/a/35270026/195787
+			shufReg = _mm_movehdup_ps(mulRes);        // Broadcast elements 3,1 to 2,0
+			sumsReg = _mm_add_ps(mulRes, shufReg);
+			shufReg = _mm_movehl_ps(shufReg, sumsReg); // High Half -> Low Half
+			sumsReg = _mm_add_ss(sumsReg, shufReg); // Result in the lower part of the SSE Register
+		}
+		res = _mm_cmpgt_ps(sumsReg, frustumCullingTestEps);
 
-		const __m128 dot3 = _mm_dp_ps(normal, c011, 0xFF);
-		res = _mm_and_ps(res, _mm_cmpgt_ps(dot3, frustumCullingTestEps));
-
-		const __m128 dot4 = _mm_dp_ps(normal, c100, 0xFF);
-		res = _mm_and_ps(res, _mm_cmpgt_ps(dot4, frustumCullingTestEps));
-
-		const __m128 dot5 = _mm_dp_ps(normal, c101, 0xFF);
-		res = _mm_and_ps(res, _mm_cmpgt_ps(dot5, frustumCullingTestEps));
-
-		const __m128 dot6 = _mm_dp_ps(normal, c110, 0xFF);
-		res = _mm_and_ps(res, _mm_cmpgt_ps(dot6, frustumCullingTestEps));
-
-		const __m128 dot7 = _mm_dp_ps(normal, c111, 0xFF);
-		res = _mm_and_ps(res, _mm_cmpgt_ps(dot7, frustumCullingTestEps));
-
-		if (_mm_movemask_ps(res) != 0)
+		if ((_mm_movemask_ps(res) & 1) != 0)
 		{
 			assert(!properResult);
 			return false;
@@ -943,7 +937,7 @@ inline bool TestFrustumAABBIntersection(const Frustum& f, const aabb& box) {
 }
 
 inline bool TestFrustumTriangle(const Frustum& f, const float4& v0, const float4& v1, const float4& v2) {
-#define FrustumTriangleSSI
+//#define FrustumTriangleSSI
 #ifndef FrustumTriangleSSI
 
 	float4 v02, v12, v22;
@@ -957,7 +951,7 @@ inline bool TestFrustumTriangle(const Frustum& f, const float4& v0, const float4
 	for (size_t i = 0; i < Frustum::kNumberOfPlanes; i++)
 	{
 		
-	const bool test1 = dot(f.normals[i], v02) > kFrustumCullingTestEps;
+		const bool test1 = dot(f.normals[i], v02) > kFrustumCullingTestEps;
 		const bool test2 = dot(f.normals[i], v12) > kFrustumCullingTestEps;
 		const bool test3 = dot(f.normals[i], v22) > kFrustumCullingTestEps;
 
@@ -976,20 +970,55 @@ inline bool TestFrustumTriangle(const Frustum& f, const float4& v0, const float4
 	const __m128 v01 = _mm_setr_ps(v1.x, v1.y, v1.z, 1);
 	const __m128 v02 = _mm_setr_ps(v2.x, v2.y, v2.z, 1);
 
+	// Dot Product registers
+	__m128 mulRes, shufReg, sumsReg;
+
+	__m128 res;
+
 	for (size_t i = 0; i < Frustum::kNumberOfPlanes; i++)
 	{
 		const __m128 normal = _mm_setr_ps(f.normals[i].x, f.normals[i].y, f.normals[i].z, f.normals[i].w);
 
-		const __m128 dot0 = _mm_dp_ps(normal, v00, 0xFF);
-		__m128 res = _mm_cmpgt_ps(dot0, frustumCullingTestEps);
+		{
+			// Dot Product
+			// From https://stackoverflow.com/a/42924346
+			mulRes = _mm_mul_ps(v00, normal);
 
-		const __m128 dot1 = _mm_dp_ps(normal, v01, 0xFF);
-		res = _mm_and_ps(res, _mm_cmpgt_ps(dot1, frustumCullingTestEps));
+			// Calculates the sum of SSE Register - https://stackoverflow.com/a/35270026/195787
+			shufReg = _mm_movehdup_ps(mulRes);        // Broadcast elements 3,1 to 2,0
+			sumsReg = _mm_add_ps(mulRes, shufReg);
+			shufReg = _mm_movehl_ps(shufReg, sumsReg); // High Half -> Low Half
+			sumsReg = _mm_add_ss(sumsReg, shufReg); // Result in the lower part of the SSE Register
+		}
+		__m128 res = _mm_cmpgt_ps(sumsReg, frustumCullingTestEps);
 
-		const __m128 dot2 = _mm_dp_ps(normal, v02, 0xFF);
-		res = _mm_and_ps(res, _mm_cmpgt_ps(dot2, frustumCullingTestEps));
+		{
+			// Dot Product
+			// From https://stackoverflow.com/a/42924346
+			mulRes = _mm_mul_ps(v01, normal);
 
-		if (_mm_movemask_ps(res) != 0)
+			// Calculates the sum of SSE Register - https://stackoverflow.com/a/35270026/195787
+			shufReg = _mm_movehdup_ps(mulRes);        // Broadcast elements 3,1 to 2,0
+			sumsReg = _mm_add_ps(mulRes, shufReg);
+			shufReg = _mm_movehl_ps(shufReg, sumsReg); // High Half -> Low Half
+			sumsReg = _mm_add_ss(sumsReg, shufReg); // Result in the lower part of the SSE Register
+		}
+		res = _mm_and_ps(res, _mm_cmpgt_ps(sumsReg, frustumCullingTestEps));
+
+		{
+			// Dot Product
+			// From https://stackoverflow.com/a/42924346
+			mulRes = _mm_mul_ps(v02, normal);
+
+			// Calculates the sum of SSE Register - https://stackoverflow.com/a/35270026/195787
+			shufReg = _mm_movehdup_ps(mulRes);        // Broadcast elements 3,1 to 2,0
+			sumsReg = _mm_add_ps(mulRes, shufReg);
+			shufReg = _mm_movehl_ps(shufReg, sumsReg); // High Half -> Low Half
+			sumsReg = _mm_add_ss(sumsReg, shufReg); // Result in the lower part of the SSE Register
+		}
+		res = _mm_and_ps(res, _mm_cmpgt_ps(sumsReg, frustumCullingTestEps));
+
+		if ((_mm_movemask_ps(res) & 1) != 0)
 		{
 			return false;
 		}
