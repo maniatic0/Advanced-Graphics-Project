@@ -943,6 +943,9 @@ inline bool TestFrustumAABBIntersection(const Frustum& f, const aabb& box) {
 }
 
 inline bool TestFrustumTriangle(const Frustum& f, const float4& v0, const float4& v1, const float4& v2) {
+#define FrustumTriangleSSI
+#ifndef FrustumTriangleSSI
+
 	float4 v02, v12, v22;
 	v02 = v0;
 	v12 = v1;
@@ -953,7 +956,8 @@ inline bool TestFrustumTriangle(const Frustum& f, const float4& v0, const float4
 
 	for (size_t i = 0; i < Frustum::kNumberOfPlanes; i++)
 	{
-		const bool test1 = dot(f.normals[i], v02) > kFrustumCullingTestEps;
+		
+	const bool test1 = dot(f.normals[i], v02) > kFrustumCullingTestEps;
 		const bool test2 = dot(f.normals[i], v12) > kFrustumCullingTestEps;
 		const bool test3 = dot(f.normals[i], v22) > kFrustumCullingTestEps;
 
@@ -963,6 +967,36 @@ inline bool TestFrustumTriangle(const Frustum& f, const float4& v0, const float4
 		}
 	}
 	return true;
+
+#else
+
+	const __m128  frustumCullingTestEps = _mm_set_ps1(kFrustumCullingTestEps);
+
+	const __m128 v00 = _mm_setr_ps(v0.x, v0.y, v0.z, 1);
+	const __m128 v01 = _mm_setr_ps(v1.x, v1.y, v1.z, 1);
+	const __m128 v02 = _mm_setr_ps(v2.x, v2.y, v2.z, 1);
+
+	for (size_t i = 0; i < Frustum::kNumberOfPlanes; i++)
+	{
+		const __m128 normal = _mm_setr_ps(f.normals[i].x, f.normals[i].y, f.normals[i].z, f.normals[i].w);
+
+		const __m128 dot0 = _mm_dp_ps(normal, v00, 0xFF);
+		__m128 res = _mm_cmpgt_ps(dot0, frustumCullingTestEps);
+
+		const __m128 dot1 = _mm_dp_ps(normal, v01, 0xFF);
+		res = _mm_and_ps(res, _mm_cmpgt_ps(dot1, frustumCullingTestEps));
+
+		const __m128 dot2 = _mm_dp_ps(normal, v02, 0xFF);
+		res = _mm_and_ps(res, _mm_cmpgt_ps(dot2, frustumCullingTestEps));
+
+		if (_mm_movemask_ps(res) != 0)
+		{
+			return false;
+		}
+	}
+	return true;
+
+#endif
 }
 
 }
