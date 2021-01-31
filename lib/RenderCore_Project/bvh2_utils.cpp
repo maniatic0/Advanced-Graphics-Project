@@ -304,20 +304,16 @@ namespace lh2core
 		return -1;
 	}
 
-	uint PartRays(const RayPacket& p, const Frustum& f, const aabb &box, int rayIndices[], int ia)
+	uint PartRays(const RayPacket& p, const float3 invDirs[RayPacket::kPacketSize], const Frustum& f, const aabb &box, int rayIndices[], int ia)
 	{
 		if (!TestFrustumAABBIntersection(f, box)) 
 		{ 
 #ifndef NDEBUG
 #ifdef BVH2_TEST_FRUSTUM_AABB_CULLING
 			// Test if all are really failed
-			Ray r;
-			float3 invDir;
 			for (int i = 0; i < ia; ++i)
 			{
-				p.GetRay(r, rayIndices[i]);
-				invDir = make_float3(r.InverseDirection());
-				assert(!TestAABBIntersection(r, box, invDir));
+				assert(!TestAABBIntersection(p.rays[rayIndices[i]], box, invDirs[rayIndices[i]]));
 			}
 #endif
 #endif
@@ -325,22 +321,10 @@ namespace lh2core
 		}
 
 		uint ie = 0;
-		Ray r;
-		float3 invDir;
-		int isDirNeg[3];
 
 		for (int i = 0; i < ia; ++i)
 		{
-			p.GetRay(r, rayIndices[i]);
-
-			invDir = make_float3(r.InverseDirection());
-
-			// Trick from http://www.pbr-book.org/3ed-2018/Primitives_and_Intersection_Acceleration/Bounding_Volume_Hierarchies.html#BVHAccel::splitMethod
-			isDirNeg[0] = r.direction.x > 0;
-			isDirNeg[1] = r.direction.y > 0;
-			isDirNeg[2] = r.direction.z > 0;
-
-			if (TestAABBIntersection(r, box, invDir))
+			if (TestAABBIntersection(p.rays[rayIndices[i]], box, invDirs[rayIndices[i]]))
 			{
 				swap(rayIndices[ie++], rayIndices[i]);
 			}

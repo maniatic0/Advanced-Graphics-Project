@@ -819,34 +819,45 @@ bool depthRayScene(const Ray& r, const vector<Mesh>& meshes, const int instId, c
 constexpr float kFrustumCullingTestEps = 0.1f;
 
 inline bool TestFrustumAABBIntersection(const Frustum& f, const aabb& box) {
-//#define USE_FRUSTUM_SSE
+// #define USE_FRUSTUM_SSE
 #ifndef USE_FRUSTUM_SSE // Normal Code
-	const float4 c000 = make_float4(box.bmin3.x, box.bmin3.y, box.bmin3.z, 1);
-	const float4 c001 = make_float4(box.bmin3.x, box.bmin3.y, box.bmax3.z, 1);
-	const float4 c010 = make_float4(box.bmin3.x, box.bmax3.y, box.bmin3.z, 1);
-	const float4 c011 = make_float4(box.bmin3.x, box.bmax3.y, box.bmax3.z, 1);
-	const float4 c100 = make_float4(box.bmax3.x, box.bmin3.y, box.bmin3.z, 1);
-	const float4 c101 = make_float4(box.bmax3.x, box.bmin3.y, box.bmax3.z, 1);
-	const float4 c110 = make_float4(box.bmax3.x, box.bmax3.y, box.bmin3.z, 1);
-	const float4 c111 = make_float4(box.bmax3.x, box.bmax3.y, box.bmax3.z, 1);
 
 	for (size_t i = 0; i < Frustum::kNumberOfPlanes; i++)
 	{
-		const bool test0 = dot(f.normals[i], c000) > kFrustumCullingTestEps;
-		const bool test1 = dot(f.normals[i], c001) > kFrustumCullingTestEps;
-		const bool test2 = dot(f.normals[i], c010) > kFrustumCullingTestEps;
-		const bool test3 = dot(f.normals[i], c011) > kFrustumCullingTestEps;
-		const bool test4 = dot(f.normals[i], c100) > kFrustumCullingTestEps;
-		const bool test5 = dot(f.normals[i], c101) > kFrustumCullingTestEps;
-		const bool test6 = dot(f.normals[i], c110) > kFrustumCullingTestEps;
-		const bool test7 = dot(f.normals[i], c111) > kFrustumCullingTestEps;
+		float4 nearestCorner;
+		nearestCorner.w = 1;
 
-		if (test0 && test1 && test2 && test3 && test4 && test5 && test6 && test7)
+		if (f.normals[i].x > 0)
 		{
-			return false;
+			nearestCorner.x = box.bmin3.x;
 		}
+		else
+		{
+			nearestCorner.x = box.bmax3.x;
+		}
+		if (f.normals[i].y > 0)
+		{
+			nearestCorner.y = box.bmin3.y;
+		}
+		else
+		{
+			nearestCorner.y = box.bmax3.y;
+		}
+
+		if (f.normals[i].z > 0)
+		{
+			nearestCorner.z = box.bmin3.z;
+		}
+		else
+		{
+			nearestCorner.z = box.bmax3.z;
+		}
+
+		const bool test = dot(f.normals[i], nearestCorner) > kFrustumCullingTestEps;
+		if (test) return false;
 	}
 	return true;
+	
 #else
 #ifndef NDEBUG
 	bool properResult = true;

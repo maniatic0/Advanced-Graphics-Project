@@ -137,7 +137,7 @@ namespace lh2core
 		friend class BVH4;
 	};
 
-	uint PartRays(const RayPacket& p, const Frustum& f, const aabb& box, int indices[], int ia);
+	uint PartRays(const RayPacket& p, const float3 invDirs[RayPacket::kPacketSize], const Frustum& f, const aabb& box, int indices[], int ia);
 
 	template <bool backCulling>
 	[[nodiscard]]

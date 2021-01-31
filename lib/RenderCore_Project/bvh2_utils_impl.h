@@ -133,10 +133,6 @@ namespace lh2core
 		int vPos;
 		int tIndex;
 
-		Ray r;
-		float3 invDir;
-		int isDirNeg[3];
-
 		RayTriangleInterceptInfo tempHitInfo;
 
 		int rayIndices[p.kPacketSize];
@@ -145,12 +141,15 @@ namespace lh2core
 			rayIndices[i] = i;
 		}
 
+		float3 invDirs[RayPacket::kPacketSize];
+		p.InverseDirection(invDirs);
+
 		StackNode currNode = stack[stackCurr--];
 
 		while (true)
 		{
 
-			ia = PartRays(p, f, pool[currNode.nodeId].bounds, rayIndices, currNode.ia);
+			ia = PartRays(p, invDirs, f, pool[currNode.nodeId].bounds, rayIndices, currNode.ia);
 			if (ia == (uint)-1)
 			{
 				if (stackCurr < 0)
@@ -179,17 +178,8 @@ namespace lh2core
 					{
 						for (int j = 0; j < (int)ia; ++j)
 						{
-							p.GetRay(r, rayIndices[j]);
-
-							invDir = make_float3(r.InverseDirection());
-
-							// Trick from http://www.pbr-book.org/3ed-2018/Primitives_and_Intersection_Acceleration/Bounding_Volume_Hierarchies.html#BVHAccel::splitMethod
-							isDirNeg[0] = r.direction.x > 0;
-							isDirNeg[1] = r.direction.y > 0;
-							isDirNeg[2] = r.direction.z > 0;
-								
 							tempHitInfo.Reset();
-							if (interceptRayTriangle<backCulling>(r, mesh.vertices[vPos + 0], mesh.vertices[vPos + 1], mesh.vertices[vPos + 2], tempHitInfo))
+							if (interceptRayTriangle<backCulling>(p.rays[rayIndices[j]], mesh.vertices[vPos + 0], mesh.vertices[vPos + 1], mesh.vertices[vPos + 2], tempHitInfo))
 							{
 								if (tempHitInfo < hitInfo[rayIndices[j]].triIntercept)
 								{
