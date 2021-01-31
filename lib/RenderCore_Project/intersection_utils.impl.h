@@ -9,6 +9,8 @@ bool interceptRayTriangle(
 	RayTriangleInterceptInfo& hitInfo)
 {
 	/// Modified from https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection
+#define USE_TRIANGLE_INTERCEPT_SSE
+#ifndef USE_TRIANGLE_INTERCEPT_SSE
 	float4 v0v1 = v1 - v0;
 	float4 v0v2 = v2 - v0;
 	float4 pvec = cross(r.direction, v0v2);
@@ -59,6 +61,64 @@ bool interceptRayTriangle(
 	}
 
 	return true;
+#else
+	const __m128 v00 = _mm_setr_ps(v0.x, v0.y, v0.z, 1);
+	const __m128 v10 = _mm_setr_ps(v1.x, v1.y, v1.z, 1);
+	const __m128 v20 = _mm_setr_ps(v2.x, v2.y, v2.z, 1);
+
+	const __m128 dir = _mm_setr_ps(r.direction.x, r.direction.y, r.direction.z, 1);
+	const __m128 ori = _mm_setr_ps(r.origin.x, r.origin.y, r.origin.z, 1);
+
+	const __m128 v0v1 = _mm_sub_ps(v10, v00);
+	const __m128 v0v2 = _mm_sub_ps(v20, v00);
+	const __m128 pvec = cross_3shuffles(dir, v0v2);
+	const float det = _mm_cvtss_f32(_mm_dp_ps(v0v1, pvec, 0xFF));
+
+	if constexpr (backCulling)
+	{
+		if (det < kEps) // Back culling triangles
+		{
+			// No intersection
+			return false;
+		}
+	}
+	else
+	{
+		if (fabs(det) < kEps) // Only cull parallel rays (No backculling)
+		{
+			// No intersection
+			return false;
+		}
+	}
+
+
+	hitInfo.backFacing = det < 0;
+
+	const float invDet = 1 / det;
+
+	const __m128 tvec = _mm_sub_ps(ori, v00);
+	hitInfo.u = _mm_cvtss_f32(_mm_dp_ps(tvec, pvec, 0xFF)) * invDet;
+	if (hitInfo.u < 0 || hitInfo.u > 1)
+	{
+		return false;
+	}
+
+	const __m128 qvec = cross_3shuffles(tvec, v0v1);
+	hitInfo.v = _mm_cvtss_f32(_mm_dp_ps(dir, qvec, 0xFF)) * invDet;
+	if (hitInfo.v < 0 || hitInfo.u + hitInfo.v > 1)
+	{
+		return false;
+	}
+
+	hitInfo.t = _mm_cvtss_f32(_mm_dp_ps(v0v2, qvec, 0xFF)) * invDet;
+
+	if (hitInfo.t < kEps)
+	{
+		return false;
+	}
+
+	return true;
+#endif
 }
 
 template <bool backCulling>
@@ -128,6 +188,8 @@ bool depthRayTriangle(
 	const float tD)
 {
 	/// Modified from https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection
+#define USE_TRIANGLE_DEPTH_SSE
+#ifndef USE_TRIANGLE_DEPTH_SSE
 	float4 v0v1 = v1 - v0;
 	float4 v0v2 = v2 - v0;
 	float4 pvec = cross(r.direction, v0v2);
@@ -176,6 +238,62 @@ bool depthRayTriangle(
 
 	// New triangle closer
 	return t - tD < kEps;
+#else
+	const __m128 v00 = _mm_setr_ps(v0.x, v0.y, v0.z, 1);
+	const __m128 v10 = _mm_setr_ps(v1.x, v1.y, v1.z, 1);
+	const __m128 v20 = _mm_setr_ps(v2.x, v2.y, v2.z, 1);
+
+	const __m128 dir = _mm_setr_ps(r.direction.x, r.direction.y, r.direction.z, 1);
+	const __m128 ori = _mm_setr_ps(r.origin.x, r.origin.y, r.origin.z, 1);
+
+	const __m128 v0v1 = _mm_sub_ps(v10, v00);
+	const __m128 v0v2 = _mm_sub_ps(v20, v00);
+	const __m128 pvec = cross_3shuffles(dir, v0v2);
+	const float det = _mm_cvtss_f32(_mm_dp_ps(v0v1, pvec, 0xFF));
+
+	if constexpr (backCulling)
+	{
+		if (det < kEps) // Back culling triangles
+		{
+			// No intersection
+			return false;
+		}
+	}
+	else
+	{
+		if (fabs(det) < kEps) // Only cull parallel rays (No backculling)
+		{
+			// No intersection
+			return false;
+		}
+	}
+
+	const float invDet = 1 / det;
+
+	const __m128 tvec = _mm_sub_ps(ori, v00);
+	const float u = _mm_cvtss_f32(_mm_dp_ps(tvec, pvec, 0xFF)) * invDet;
+	if (u < 0 || u > 1)
+	{
+		return false;
+	}
+
+	const __m128 qvec = cross_3shuffles(tvec, v0v1);
+	const float v = _mm_cvtss_f32(_mm_dp_ps(dir, qvec, 0xFF)) * invDet;
+	if (v < 0 || u + v > 1)
+	{
+		return false;
+	}
+
+	const float t = _mm_cvtss_f32(_mm_dp_ps(v0v2, qvec, 0xFF)) * invDet;
+
+	if (t < kEps)
+	{
+		return false;
+	}
+
+	// New triangle closer
+	return t - tD < kEps;
+#endif
 }
 
 template <bool backCulling>

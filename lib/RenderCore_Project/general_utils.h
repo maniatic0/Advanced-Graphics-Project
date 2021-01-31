@@ -48,6 +48,16 @@ namespace lh2core
 	/// <returns></returns>
 	inline float4 cross(float4 a, float4 b) { return make_float4(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x, 0); }
 
+	inline __m128 cross_3shuffles(__m128 a, __m128 b)
+	{
+		// From http://threadlocalmutex.com/?p=8
+		__m128 a_yzx = _mm_shuffle_ps(a, a, _MM_SHUFFLE(3, 0, 2, 1));
+		__m128 b_yzx = _mm_shuffle_ps(b, b, _MM_SHUFFLE(3, 0, 2, 1));
+		__m128 c = _mm_sub_ps(_mm_mul_ps(a, b_yzx), _mm_mul_ps(a_yzx, b));
+		return _mm_shuffle_ps(c, c, _MM_SHUFFLE(3, 0, 2, 1));
+	}
+
+
 	inline float4 uchar4ToFloat4(const uchar4 v)
 	{
 		constexpr float invVal = 1.0f / 255.0f;
