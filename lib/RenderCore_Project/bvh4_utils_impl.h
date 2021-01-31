@@ -147,8 +147,7 @@ namespace lh2core
 			float t;
 		};
 
-		Ray rays[RayPacket::kPacketSize];
-		pR.GetRays(rays);
+		const Ray* rays = pR.rays;
 
 		float3 invDirs[RayPacket::kPacketSize];
 		pR.InverseDirection(invDirs);
@@ -178,7 +177,7 @@ namespace lh2core
 		BVH4Node* nodeInfo = nullptr;
 		BVH4NodeCluster* nodeClusterInfo = nullptr;
 		aabb* nodeBounds = nullptr;
-		Ray* intRay = nullptr;
+		const Ray* intRay = nullptr;
 		float3* intInvDir = nullptr;
 		uchar* sign = nullptr;
 

@@ -119,14 +119,9 @@ public:
 	static constexpr uint kPacketSize = 64;
 
 	/// <summary>
-	/// Origins
+	/// Rays
 	/// </summary>
-	float4 origin[kPacketSize];
-
-	/// <summary>
-	/// Directions
-	/// </summary>
-	float4 direction[kPacketSize];
+	Ray rays[kPacketSize];
 
 	/// <summary>
 	/// Max number of active rays
@@ -140,9 +135,7 @@ public:
 	inline RayPacket Copy() const
 	{
 		RayPacket temp(maxActive);
-		memcpy(temp.origin, origin, kPacketSize * sizeof(float4));
-		memcpy(temp.direction, direction, kPacketSize * sizeof(float4));
-		
+		memcpy(temp.rays, rays, kPacketSize * sizeof(Ray));
 		return temp;
 	}
 
@@ -150,49 +143,42 @@ public:
 	{
 		assert(0 <= maxRayActive && maxRayActive <= kPacketSize);
 		maxActive = maxRayActive;
-		for (size_t i = 0; i < maxActive; i++)
-		{
-			origin[i] = make_float4(0);
-			direction[i] = make_float4(1, 0, 0, 0);
-		}
 	}
 
 	inline void SetOrigin(const float4 &ori, int index)
 	{
 		assert(0 <= (uint)index && (uint)index <= maxActive);
-		origin[index] = ori;
+		rays[index].SetOrigin(ori);
 	}
 	inline void SetOrigin(const float3 & ori, int index)
 	{
 		assert(0 <= (uint)index && (uint)index <= maxActive);
-		origin[index] = make_float4(ori);
+		rays[index].SetOrigin(ori);
 	}
 
 	inline void SetDirection(const float4 &dir, int index)
 	{
 		assert(0 <= (uint)index && (uint)index <= maxActive);
 		assert(almost_equal(1, length(dir))); // "Unormalized Vector"
-		direction[index] = dir;
+		rays[index].SetDirection(dir);
 	}
 	inline void SetDirection(const float3 &dir, int index)
 	{
 		assert(0 <= (uint)index && (uint)index <= maxActive);
 		assert(almost_equal(1, length(dir))); // "Unormalized Vector"
-		direction[index] = make_float4(dir);
+		rays[index].SetDirection(dir);
 	}
 
 	inline void SetRay(const Ray &r, int index)
 	{
 		assert(0 <= (uint)index && (uint)index <= maxActive);
-		SetOrigin(r.origin, index);
-		SetDirection(r.direction, index);
+		rays[index] = r;
 	}
 
 	inline void GetRay(Ray& r, int index) const
 	{
 		assert(0 <= (uint)index && (uint)index <= maxActive);
-		r.origin = origin[index];
-		r.direction = direction[index];
+		r = rays[index];
 	}
 
 	inline void GetRays(Ray rays[kPacketSize]) const {
@@ -205,7 +191,7 @@ public:
 	inline void GetSigns(uchar signs[kPacketSize]) const {
 		for (uint i = 0; i < maxActive; i++)
 		{
-			const float4& dir = direction[i];
+			const float4& dir = rays[i].direction;
 			signs[i] = ((dir.x >= 0) << 0) | ((dir.y >= 0) << 1) | ((dir.z >= 0) << 2);
 		}
 	}
@@ -219,26 +205,26 @@ public:
 	inline float4 Evaluate(const float t, int index) const
 	{
 		assert(0 <= (uint)index && (uint)index <= maxActive);
-		return origin[index] + (t * direction[index]);
+		return rays[index].Evaluate(t);
 	}
 
 	inline float4 InverseDirection(int index) const
 	{
 		assert(0 <= (uint)index && (uint)index <= maxActive);
-		return  1.0f / direction[index];
+		return  rays[index].InverseDirection();
 	}
 
 	inline void InverseDirection(float4 invDir[kPacketSize]) const {
-		for (size_t i = 0; i < maxActive; i++)
+		for (uint i = 0; i < maxActive; i++)
 		{
-			invDir[i] = 1.0f / direction[i];
+			invDir[i] = InverseDirection(i);
 		}
 	}
 
 	inline void InverseDirection(float3 invDir[kPacketSize]) const {
-		for (size_t i = 0; i < maxActive; i++)
+		for (uint i = 0; i < maxActive; i++)
 		{
-			invDir[i] = make_float3(1.0f / direction[i]);
+			invDir[i] = make_float3(InverseDirection(i));
 		}
 	}
 
@@ -249,11 +235,11 @@ public:
 		{
 			assert(0 <= corners[i] && corners[i] <= maxActive);
 			assert(0 <= corners[(i + 1) % 4] && corners[(i + 1) % 4] <= maxActive);
-			const float4& di = direction[corners[i]];
-			const float4& di2 = direction[corners[(i + 1) % 4]];
+			const float4& di = rays[corners[i]].direction;
+			const float4& di2 = rays[corners[(i + 1) % 4]].direction;
 
 			f.normals[i] = cross(di, di2); // calculate n_i
-			f.normals[i].w = -dot(f.normals[i], origin[corners[i]]); // Calculate b_i and save it at the end of the frustum normal
+			f.normals[i].w = -dot(f.normals[i], rays[corners[i]].origin); // Calculate b_i and save it at the end of the frustum normal
 		}
 
 		return f;
