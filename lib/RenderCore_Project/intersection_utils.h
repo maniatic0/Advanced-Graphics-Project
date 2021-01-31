@@ -894,13 +894,6 @@ inline bool TestFrustumAABBIntersection(const Frustum& f, const aabb& box) {
 	const __m128  frustumCullingTestEps = _mm_set_ps1(kFrustumCullingTestEps);
 	const __m128  zero = _mm_set_ps1(0);
 
-	__m128 res;
-	__m128 selector;
-	__m128 corner;
-
-	// Dot Product registers
-	__m128 mulRes, shufReg, sumsReg;
-
 	const __m128 mini = _mm_setr_ps(box.bmin3.x, box.bmin3.y, box.bmin3.z, 1);
 	const __m128 maxi = _mm_setr_ps(box.bmax3.x, box.bmax3.y, box.bmax3.z, 1);
 
@@ -908,23 +901,13 @@ inline bool TestFrustumAABBIntersection(const Frustum& f, const aabb& box) {
 	{
 		const __m128 normal = _mm_setr_ps(f.normals[i].x, f.normals[i].y, f.normals[i].z, f.normals[i].w);
 
-		selector = _mm_cmpgt_ps(normal, zero);
-		corner = _mm_blendv_ps(maxi, mini, selector);
+		const __m128 selector = _mm_cmpgt_ps(normal, zero);
+		const __m128 corner = _mm_blendv_ps(maxi, mini, selector);
 
-		{
-			// Dot Product
-			// From https://stackoverflow.com/a/42924346
-			mulRes = _mm_mul_ps(corner, normal);
+		// Dot and Compare
+		const __m128 res = _mm_cmpgt_ps(_mm_dp_ps(corner, normal, 0xFF), frustumCullingTestEps);
 
-			// Calculates the sum of SSE Register - https://stackoverflow.com/a/35270026/195787
-			shufReg = _mm_movehdup_ps(mulRes);        // Broadcast elements 3,1 to 2,0
-			sumsReg = _mm_add_ps(mulRes, shufReg);
-			shufReg = _mm_movehl_ps(shufReg, sumsReg); // High Half -> Low Half
-			sumsReg = _mm_add_ss(sumsReg, shufReg); // Result in the lower part of the SSE Register
-		}
-		res = _mm_cmpgt_ps(sumsReg, frustumCullingTestEps);
-
-		if ((_mm_movemask_ps(res) & 1) != 0)
+		if (_mm_movemask_ps(res) != 0)
 		{
 			assert(!properResult);
 			return false;
@@ -970,55 +953,19 @@ inline bool TestFrustumTriangle(const Frustum& f, const float4& v0, const float4
 	const __m128 v01 = _mm_setr_ps(v1.x, v1.y, v1.z, 1);
 	const __m128 v02 = _mm_setr_ps(v2.x, v2.y, v2.z, 1);
 
-	// Dot Product registers
-	__m128 mulRes, shufReg, sumsReg;
-
 	__m128 res;
 
 	for (size_t i = 0; i < Frustum::kNumberOfPlanes; i++)
 	{
 		const __m128 normal = _mm_setr_ps(f.normals[i].x, f.normals[i].y, f.normals[i].z, f.normals[i].w);
 
-		{
-			// Dot Product
-			// From https://stackoverflow.com/a/42924346
-			mulRes = _mm_mul_ps(v00, normal);
+		res = _mm_cmpgt_ps(_mm_dp_ps(v00, normal, 0xFF), frustumCullingTestEps);
 
-			// Calculates the sum of SSE Register - https://stackoverflow.com/a/35270026/195787
-			shufReg = _mm_movehdup_ps(mulRes);        // Broadcast elements 3,1 to 2,0
-			sumsReg = _mm_add_ps(mulRes, shufReg);
-			shufReg = _mm_movehl_ps(shufReg, sumsReg); // High Half -> Low Half
-			sumsReg = _mm_add_ss(sumsReg, shufReg); // Result in the lower part of the SSE Register
-		}
-		__m128 res = _mm_cmpgt_ps(sumsReg, frustumCullingTestEps);
+		res = _mm_and_ps(res, _mm_cmpgt_ps(_mm_dp_ps(v01, normal, 0xFF), frustumCullingTestEps));
 
-		{
-			// Dot Product
-			// From https://stackoverflow.com/a/42924346
-			mulRes = _mm_mul_ps(v01, normal);
+		res = _mm_and_ps(res, _mm_cmpgt_ps(_mm_dp_ps(v02, normal, 0xFF), frustumCullingTestEps));
 
-			// Calculates the sum of SSE Register - https://stackoverflow.com/a/35270026/195787
-			shufReg = _mm_movehdup_ps(mulRes);        // Broadcast elements 3,1 to 2,0
-			sumsReg = _mm_add_ps(mulRes, shufReg);
-			shufReg = _mm_movehl_ps(shufReg, sumsReg); // High Half -> Low Half
-			sumsReg = _mm_add_ss(sumsReg, shufReg); // Result in the lower part of the SSE Register
-		}
-		res = _mm_and_ps(res, _mm_cmpgt_ps(sumsReg, frustumCullingTestEps));
-
-		{
-			// Dot Product
-			// From https://stackoverflow.com/a/42924346
-			mulRes = _mm_mul_ps(v02, normal);
-
-			// Calculates the sum of SSE Register - https://stackoverflow.com/a/35270026/195787
-			shufReg = _mm_movehdup_ps(mulRes);        // Broadcast elements 3,1 to 2,0
-			sumsReg = _mm_add_ps(mulRes, shufReg);
-			shufReg = _mm_movehl_ps(shufReg, sumsReg); // High Half -> Low Half
-			sumsReg = _mm_add_ss(sumsReg, shufReg); // Result in the lower part of the SSE Register
-		}
-		res = _mm_and_ps(res, _mm_cmpgt_ps(sumsReg, frustumCullingTestEps));
-
-		if ((_mm_movemask_ps(res) & 1) != 0)
+		if (_mm_movemask_ps(res) != 0)
 		{
 			return false;
 		}
