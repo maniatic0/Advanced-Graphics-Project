@@ -291,7 +291,7 @@ inline float TestAABBIntersectionDistance(const Ray& r, const aabb& box, const f
 
 	if (low <= high)
 	{
-		return low;
+		return max(low, 0.0f);
 	}
 
 	return -1.0;
@@ -381,6 +381,8 @@ inline uchar TestAABB4Intersection(const Ray& r, const aabb boxes[4], const floa
 
 inline uchar TestAABB4IntersectionDistance(const Ray& r, const aabb boxes[4], const float3 invDir, float distances[4])
 {
+#define USE_AVX_TEST_4_AABB_DISTANCE
+#ifdef USE_AVX_TEST_4_AABB_DISTANCE
 	// Modified From https://medium.com/@bromanz/another-view-on-the-classic-ray-aabb-intersection-algorithm-for-bvh-traversal-41125138b525
 
 	uchar res = 0;
@@ -427,6 +429,18 @@ inline uchar TestAABB4IntersectionDistance(const Ray& r, const aabb boxes[4], co
 	}
 
 	return res;
+
+#else
+	uchar res = 0;
+
+	for (int i = 0; i < 4; i++)
+	{
+		distances[i] = TestAABBIntersectionDistance(r, boxes[i], invDir);
+		res |= ((distances[i] >= 0) << i);
+	}
+
+	return res;
+#endif
 }
 
 inline uchar TestAABB4IntersectionBounds(const Ray& r, const aabb boxes[4], const float3 invDir, const float minT, const float maxT)
@@ -471,6 +485,8 @@ inline uchar TestAABB4IntersectionBounds(const Ray& r, const aabb boxes[4], cons
 
 inline uchar Test4AABBIntersection(const aabb& box, const Ray rays[4], const float3 invDir[4])
 {
+#define USE_AVX_TEST_4_AABB
+#ifdef USE_AVX_TEST_4_AABB
 	// Modified From https://medium.com/@bromanz/another-view-on-the-classic-ray-aabb-intersection-algorithm-for-bvh-traversal-41125138b525
 
 	uchar res = 0;
@@ -520,6 +536,16 @@ inline uchar Test4AABBIntersection(const aabb& box, const Ray rays[4], const flo
 	}
 
 	return res;
+#else
+	uchar res = 0;
+
+	for (int i = 0; i < 4; i++)
+	{
+		res |= (TestAABBIntersection(rays[i], box, invDir[i]) << i);
+	}
+
+	return res;
+#endif
 }
 
 inline uchar Test4AABBIntersectionDistance(const aabb& box, const Ray rays[4], const float3 invDir[4], float distances[4])
