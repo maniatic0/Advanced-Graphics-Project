@@ -141,7 +141,7 @@ namespace lh2core
 			int childId;
 		};
 
-		struct StackElement {
+		struct ALIGN(16) StackElement {
 			StackNode node;
 			int rayId;
 			float t;
